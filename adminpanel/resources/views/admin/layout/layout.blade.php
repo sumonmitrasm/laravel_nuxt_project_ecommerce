@@ -385,6 +385,7 @@
                 $form.data({ url: $button.data('store-url'), method: 'POST' });
                 $form.find('.js-crud-errors').empty().addClass('d-none');
                 $form.find('[name="email"]').prop('readonly', false);
+                $form.find('[data-prevent-self-parent] option').prop('disabled', false);
                 $form.find('[data-image-preview], [data-image-preview-for]').attr('src', '').addClass('d-none');
                 $form.find('[data-section-source]').trigger('change');
                 $modal.find('[data-crud-title]').text($button.data('create-title') || 'Add Record');
@@ -401,7 +402,12 @@
                     $.each(record, function (field, value) {
                         var $field = $form.find('[name="' + field + '"]');
                         if (!$field.length || field === 'password' || $field.is('[type="file"]')) return;
-                        $field.val(field === 'status' ? (value ? '1' : '0') : (value || ''));
+                        var fieldValue = value === null || typeof value === 'undefined' ? '' : value;
+                        $field.val(field === 'status' ? (value ? '1' : '0') : fieldValue);
+                    });
+                    $form.find('[data-prevent-self-parent]').each(function () {
+                        $(this).find('option').prop('disabled', false)
+                            .filter('[value="' + record.id + '"]').prop('disabled', true);
                     });
                     $form.find('[name="email"]').prop('readonly', true);
                     var imageUrl = response.image_url || record.image_url || '';

@@ -105,7 +105,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="exampleInputName">Select category label</label>
-                            <select id="parent_id" name="parent_id" class="form-control">
+                            <select id="parent_id" name="parent_id" class="form-control" data-prevent-self-parent required>
                                 <option value="0">Main Category</option>
                                 @if (!empty($getCategories))
                                     @foreach ($getCategories as $parentcategory)
