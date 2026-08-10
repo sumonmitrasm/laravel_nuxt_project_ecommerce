@@ -8,6 +8,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\BrandController;
+use App\Http\Controllers\ColorController;
 
 Route::get('/clear-cache', function() {
     Artisan::call('view:clear');
@@ -73,14 +74,22 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::patch('tag/{tag}/status', [TagController::class, 'updateStatus'])->name('admin-tag.status');
         Route::delete('tag/{tag}', [TagController::class, 'destroy'])->name('admin-tag.delete');
         //>>>>>>>>>>>>>>>>>>>>>>>>Tags activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        //>>>>>>>>>>>>>>>>>>>>>>>>Brand activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        //>>>>>>>>>>>>>>>>>>>>>>>>Brand activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('brands', [BrandController::class, 'index'])->name('brands');
         Route::post('brand', [BrandController::class, 'store'])->name('admin-brand.store');
         Route::get('brand/{brand}', [BrandController::class, 'show'])->name('admin-brand.show');
         Route::put('brand/{brand}', [BrandController::class, 'update'])->name('admin-brand.update');
         Route::patch('brand/{brand}/status', [BrandController::class, 'updateStatus'])->name('admin-brand.status');
         Route::delete('brand/{brand}', [BrandController::class, 'destroy'])->name('admin-brand.delete');
-        //>>>>>>>>>>>>>>>>>>>>>>>>Brand activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        //>>>>>>>>>>>>>>>>>>>>>>>>Brand activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        //>>>>>>>>>>>>>>>>>>>>>>>>Color activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        Route::get('colors', [ColorController::class, 'index'])->name('colors');
+        Route::post('color', [ColorController::class, 'store'])->name('admin-color.store');
+        Route::get('color/{color}', [ColorController::class, 'show'])->name('admin-color.show');
+        Route::put('color/{color}', [ColorController::class, 'update'])->name('admin-color.update');
+        Route::patch('color/{color}/status', [ColorController::class, 'updateStatus'])->name('admin-color.status');
+        Route::delete('color/{color}', [ColorController::class, 'destroy'])->name('admin-color.delete');
+        //>>>>>>>>>>>>>>>>>>>>>>>>Color activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     });
 });
