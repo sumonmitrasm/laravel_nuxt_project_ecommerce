@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tag;
+use App\Support\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class TagController extends Controller
 {
+    public function __construct(private readonly ImageOptimizer $images) {}
+
     public function index(Request $request)
     {
         $title = 'Tags';
@@ -69,7 +72,7 @@ class TagController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('tags', 'name')->ignore($tag)],
-            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:8192'],
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'meta_title' => ['nullable', 'string', 'max:255'],
@@ -112,21 +115,11 @@ class TagController extends Controller
 
     private function storeImage($file): string
     {
-        $directory = public_path('admin/tagimage');
-        if (! is_dir($directory)) {
-            mkdir($directory, 0777, true);
-        }
-
-        $name = now()->format('YmdHis') . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-        $file->move($directory, $name);
-
-        return $name;
+        return $this->images->store($file, 'admin/tagimage', 'tag', 1200, 1200, 84);
     }
 
     private function deleteImage(?string $image): void
     {
-        if ($image && file_exists($path = public_path('admin/tagimage/' . basename($image)))) {
-            @unlink($path);
-        }
+        $this->images->delete($image, 'admin/tagimage');
     }
 }

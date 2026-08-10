@@ -386,6 +386,7 @@
                 $form.find('.js-crud-errors').empty().addClass('d-none');
                 $form.find('[name="email"]').prop('readonly', false);
                 $form.find('[data-image-preview], [data-image-preview-for]').attr('src', '').addClass('d-none');
+                $form.find('[data-section-source]').trigger('change');
                 $modal.find('[data-crud-title]').text($button.data('create-title') || 'Add Record');
                 $modal.find('[data-password-help]').text('(minimum 6 characters)');
                 bootstrap.Modal.getOrCreateInstance($modal[0]).show();
@@ -409,11 +410,22 @@
                     }
                     setImagePreview($form, imageUrl, $form.find('[name="image"]'));
                     setImagePreview($form, response.favicon_url || record.favicon_url || '', $form.find('[name="favicon"]'));
+                    $.each(response.image_urls || {}, function (field, url) {
+                        setImagePreview($form, url || '', $form.find('[name="' + field + '"]'));
+                    });
+                    $form.find('[data-section-source]').trigger('change');
                     $form.find('.js-crud-errors').empty().addClass('d-none');
                     $modal.find('[data-crud-title]').text('Edit Record');
                     $modal.find('[data-password-help]').text('(leave blank to keep the current password)');
                     bootstrap.Modal.getOrCreateInstance($modal[0]).show();
                 }).fail(function () { crudToast('error', 'Record load'); });
+            });
+
+            $(document).on('change', '[data-section-source]', function () {
+                var $category = $(this);
+                var $form = $category.closest('[data-crud-form]');
+                var sectionId = $category.find('option:selected').data('section-id') || '';
+                $form.find($category.data('section-source')).val(sectionId);
             });
 
             $(document).on('change', '[data-crud-form] input[type="file"][data-image-input], [data-crud-form] input[type="file"][accept*="image"]', function () {

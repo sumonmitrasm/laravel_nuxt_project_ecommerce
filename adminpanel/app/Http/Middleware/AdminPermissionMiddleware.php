@@ -69,6 +69,11 @@ class AdminPermissionMiddleware
             'admin-color.store' => ['color', 'add'],
             'admin-color.update', 'admin-color.status' => ['color', 'edit'],
             'admin-color.delete' => ['color', 'delete'],
+
+            'products', 'admin-product.show' => ['product', 'view'],
+            'admin-product.store' => ['product', 'add'],
+            'admin-product.update', 'admin-product.status' => ['product', 'edit'],
+            'admin-product.delete' => ['product', 'delete'],
             default => null,
         };
     }

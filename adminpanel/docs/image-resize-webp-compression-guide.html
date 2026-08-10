@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="bn">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Laravel Image Resize, WebP ও Compression Guide</title>
+    <style>
+        body{margin:0;background:#f4f7fb;color:#25324b;font:16px/1.7 system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:1050px;margin:35px auto;padding:0 20px 50px}section{background:#fff;border:1px solid #dfe6f1;border-radius:12px;padding:24px;margin:18px 0;box-shadow:0 7px 24px rgba(31,45,61,.05)}h1{color:#183153}h2{color:#2457a7;border-bottom:1px solid #e7edf6;padding-bottom:8px}h3{color:#334e75}code{background:#edf2f8;padding:2px 6px;border-radius:4px;color:#a22}pre{overflow:auto;background:#101827;color:#e7edf7;padding:18px;border-radius:9px;line-height:1.55}pre code{background:transparent;padding:0;color:inherit}.flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.flow span{background:#e8f1ff;border:1px solid #bad3fa;border-radius:8px;padding:10px 14px}.arrow{font-weight:700;color:#467fcf}.note,.ok,.warn{border-left:5px solid;padding:13px 16px;border-radius:6px;margin:14px 0}.note{background:#edf6ff;border-color:#3182ce}.ok{background:#edfff4;border-color:#2f9e62}.warn{background:#fff8e5;border-color:#e6a700}table{width:100%;border-collapse:collapse}th,td{border:1px solid #dce4ef;padding:10px;text-align:left}th{background:#edf3fa}.path{font-family:ui-monospace,monospace;color:#8a2d2d}ul li{margin:6px 0}
+    </style>
+</head>
+<body><main>
+    <h1>Image Resize, WebP Conversion ও Compression</h1>
+    <p>এই document-এ Category, Tag এবং Product image upload করার সময় কীভাবে ছবির aspect ratio ঠিক রেখে resize, WebP conversion ও compression করা হয়েছে তা code-সহ ব্যাখ্যা করা হলো।</p>
+
+    <section>
+        <h2>১. পুরো কাজের Flow</h2>
+        <div class="flow"><span>JPG / PNG / GIF / WebP Upload</span><b class="arrow">→</b><span>Laravel Validation</span><b class="arrow">→</b><span>Intervention Image + GD</span><b class="arrow">→</b><span>Proportional Resize</span><b class="arrow">→</b><span>WebP Quality 84</span><b class="arrow">→</b><span>Public Folder</span></div>
+        <div class="ok"><strong>গুরুত্বপূর্ণ:</strong> resize করার সময় crop বা stretch করা হয় না। তাই image ফেটে, লম্বা বা চ্যাপ্টা হয়ে যায় না।</div>
+    </section>
+
+    <section>
+        <h2>২. ব্যবহৃত Package ও Driver</h2>
+        <p><code>composer.json</code>-এ Intervention Image package আছে:</p>
+        <pre><code>"intervention/image": "^4.2"</code></pre>
+        <p>Server-এ PHP <code>gd</code> extension enabled। Shared optimizer-এ GD driver ব্যবহার করা হয়েছে:</p>
+        <pre><code>use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\ImageManager;
+
+$manager = ImageManager::usingDriver(GdDriver::class);</code></pre>
+    </section>
+
+    <section>
+        <h2>৩. Shared Image Optimizer</h2>
+        <p class="path">app/Support/ImageOptimizer.php</p>
+        <p>একই code তিন controller-এ copy না করে reusable class তৈরি করা হয়েছে।</p>
+        <pre><code>&lt;?php
+
+namespace App\Support;
+
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\Format;
+use Intervention\Image\ImageManager;
+
+class ImageOptimizer
+{
+    private ImageManager $manager;
+
+    public function __construct()
+    {
+        $this-&gt;manager = ImageManager::usingDriver(GdDriver::class);
+    }
+
+    public function store(
+        UploadedFile $file,
+        string $relativeDirectory,
+        string $prefix,
+        int $maxWidth,
+        int $maxHeight,
+        int $quality = 84,
+    ): string {
+        $directory = public_path(trim($relativeDirectory, '/\\'));
+
+        if (! is_dir($directory)
+            &amp;&amp; ! mkdir($directory, 0777, true)
+            &amp;&amp; ! is_dir($directory)) {
+            throw new \RuntimeException('Could not create the image directory.');
+        }
+
+        $filename = $prefix.'_'.now()-&gt;format('YmdHisv')
+            .'_'.Str::random(12).'.webp';
+
+        $image = $this-&gt;manager-&gt;decodePath($file-&gt;getRealPath());
+
+        // Ratio ঠিক রাখে, crop করে না এবং ছোট image বড় করে না।
+        $image-&gt;scaleDown(width: $maxWidth, height: $maxHeight);
+
+        $image-&gt;encodeUsingFormat(Format::WEBP, quality: $quality)
+            -&gt;save($directory.DIRECTORY_SEPARATOR.$filename);
+
+        return $filename;
+    }
+
+    public function delete(?string $filename, string $relativeDirectory): void
+    {
+        if (! $filename) {
+            return;
+        }
+
+        $path = public_path(
+            trim($relativeDirectory, '/\\')
+            .DIRECTORY_SEPARATOR.basename($filename)
+        );
+
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>৪. Resize-এ Image কেন ফাটে না?</h2>
+        <pre><code>$image-&gt;scaleDown(width: $maxWidth, height: $maxHeight);</code></pre>
+        <ul>
+            <li><code>scaleDown()</code> original aspect ratio সংরক্ষণ করে।</li>
+            <li>ছবি maximum box-এর মধ্যে proportionally fit হয়।</li>
+            <li>ছোট image upscale হয় না; ফলে unnecessary blur তৈরি হয় না।</li>
+            <li>কোনো crop না হওয়ায় ছবির অংশ কেটে যায় না।</li>
+        </ul>
+        <p>উদাহরণ: <code>2400×1600</code> image-কে <code>1200×1200</code> bounding box দিলে output হয় <code>1200×800</code>। Ratio আগের মতো <code>3:2</code> থাকে।</p>
+    </section>
+
+    <section>
+        <h2>৪.১ <code>Support</code> Folder কেন তৈরি করা হয়েছে?</h2>
+        <p><code>Support</code> Laravel-এর বাধ্যতামূলক folder নয়। Application-এর একাধিক জায়গায় ব্যবহারযোগ্য helper/service class সুন্দরভাবে আলাদা রাখার জন্য এই folder ব্যবহার করা হয়েছে।</p>
+        <pre><code>app/
+├── Http/Controllers/
+│   ├── CategoryController.php
+│   ├── TagController.php
+│   └── ProductController.php
+└── Support/
+    └── ImageOptimizer.php</code></pre>
+        <p>Category, Tag এবং Product—তিন controller-এই একই কাজ প্রয়োজন:</p>
+        <ul>
+            <li>Upload করা image decode করা</li>
+            <li>Aspect ratio ঠিক রেখে resize করা</li>
+            <li>WebP format-এ convert করা</li>
+            <li>Quality কমিয়ে storage বাঁচানো</li>
+            <li>Unique filename দিয়ে save করা</li>
+            <li>Update বা delete-এর সময় পুরোনো file remove করা</li>
+        </ul>
+        <p>এই code প্রতিটি controller-এ copy করলে একই code তিনবার লিখতে হতো। পরে quality <code>84</code> থেকে <code>86</code> করা বা processing পরিবর্তন করতে চাইলে তিন জায়গা edit করতে হতো। Shared <code>ImageOptimizer</code> থাকার কারণে এক জায়গার পরিবর্তন সব module-এ কাজ করে।</p>
+        <div class="flow"><span>CategoryController</span><span>TagController</span><span>ProductController</span><b class="arrow">→</b><span>ImageOptimizer</span><b class="arrow">→</b><span>Resize + WebP + Compression</span></div>
+    </section>
+
+    <section>
+        <h2>৪.২ Controller-এ <code>__construct()</code> কেন ব্যবহার হয়েছে?</h2>
+        <pre><code>use App\Support\ImageOptimizer;
+
+class ProductController extends Controller
+{
+    public function __construct(
+        private readonly ImageOptimizer $images
+    ) {}
+}</code></pre>
+        <p><code>__construct()</code> হলো PHP class-এর constructor method। Laravel যখন controller তৈরি করে, তখন এই method স্বয়ংক্রিয়ভাবে চলে। এখানে controller জানিয়েছে যে তার কাজ করার জন্য একটি <code>ImageOptimizer</code> object প্রয়োজন।</p>
+
+        <h3>Laravel object দিল কীভাবে?</h3>
+        <p>Laravel-এর Service Container type hint দেখে <code>ImageOptimizer</code> class-এর object স্বয়ংক্রিয়ভাবে তৈরি করে controller-এ inject করে। একে <strong>Dependency Injection</strong> বলা হয়।</p>
+        <pre><code>// নিজে object তৈরি করতে হয়নি:
+// $images = new ImageOptimizer();
+
+// Laravel নিজে object তৈরি করে এখানে দিয়ে দেয়:
+public function __construct(
+    private readonly ImageOptimizer $images
+) {}</code></pre>
+
+        <h3><code>private readonly</code>-এর অর্থ</h3>
+        <table><thead><tr><th>অংশ</th><th>কাজ</th></tr></thead><tbody>
+            <tr><td><code>private</code></td><td>Property শুধু ওই controller-এর ভিতরে ব্যবহার করা যাবে।</td></tr>
+            <tr><td><code>readonly</code></td><td>Object assign হওয়ার পরে property ভুল করে অন্য value দিয়ে পরিবর্তন করা যাবে না।</td></tr>
+            <tr><td><code>ImageOptimizer</code></td><td>Laravel-কে বলে দেয় কোন class-এর object দরকার।</td></tr>
+            <tr><td><code>$images</code></td><td>Controller-এর ভিতরে optimizer ব্যবহারের property name।</td></tr>
+        </tbody></table>
+        <div class="ok"><code>__construct()</code> ব্যবহার করায় code testable, reusable এবং maintain করা সহজ হয়েছে।</div>
+    </section>
+
+    <section>
+        <h2>৪.৩ Image-এর সঙ্গে Optimizer Attach হলো কীভাবে?</h2>
+        <p>Optimizer কোনো image-এর সঙ্গে স্থায়ীভাবে attach থাকে না। Form submit হওয়ার পরে controller upload করা file নিয়ে <code>store()</code> method-এ পাঠায়।</p>
+
+        <h3>Step 1 — Form থেকে image আসে</h3>
+        <pre><code>&lt;input type="file" name="image" accept="image/*"&gt;</code></pre>
+
+        <h3>Step 2 — Controller validation করে</h3>
+        <pre><code>$data = $request-&gt;validate([
+    'image' =&gt; [
+        'nullable',
+        'image',
+        'mimes:jpeg,jpg,png,gif,webp',
+        'max:8192',
+    ],
+]);</code></pre>
+
+        <h3>Step 3 — Uploaded file optimizer-এ পাঠানো হয়</h3>
+        <pre><code>if ($request-&gt;hasFile('image')) {
+    $data['image'] = $this-&gt;images-&gt;store(
+        $request-&gt;file('image'), // Upload করা temporary file
+        'admin/categoryimage',   // Save folder
+        'category',              // Filename prefix
+        1200,                    // Maximum width
+        1200,                    // Maximum height
+        84                       // WebP quality
+    );
+}</code></pre>
+        <p><code>$request-&gt;file('image')</code> form-এর temporary uploaded file দেয়। <code>$this-&gt;images</code> হলো constructor দিয়ে পাওয়া <code>ImageOptimizer</code> object।</p>
+
+        <h3>Step 4 — Optimizer process করে filename return করে</h3>
+        <pre><code>$image = $this-&gt;manager-&gt;decodePath($file-&gt;getRealPath());
+$image-&gt;scaleDown(width: 1200, height: 1200);
+$image-&gt;encodeUsingFormat(Format::WEBP, quality: 84)
+    -&gt;save($fullPath);
+
+return $filename;</code></pre>
+
+        <h3>Step 5 — Database-এ শুধু filename save হয়</h3>
+        <pre><code>// $data['image'] এখন এমন একটি filename:
+// category_20260810123456789_aBcDeFgH1234.webp
+
+Category::create($data);</code></pre>
+        <p>Database-এর image column-এ binary image বা পুরো computer path রাখা হয় না। শুধু generated filename রাখা হয়। Actual optimized file থাকে public folder-এ।</p>
+        <table><thead><tr><th>স্থান</th><th>যা থাকে</th></tr></thead><tbody>
+            <tr><td>Database <code>categories.image</code></td><td><code>category_...webp</code></td></tr>
+            <tr><td>Public folder</td><td><code>public/admin/categoryimage/category_...webp</code></td></tr>
+        </tbody></table>
+
+        <h3>Step 6 — Browser-এ image দেখানো হয়</h3>
+        <pre><code>asset('admin/categoryimage/' . $category-&gt;image)</code></pre>
+        <p><code>asset()</code> public folder-এর relative path থেকে browser-এর জন্য সম্পূর্ণ URL তৈরি করে।</p>
+        <pre><code>http://127.0.0.1:8000/admin/categoryimage/category_...webp</code></pre>
+    </section>
+
+    <section>
+        <h2>৪.৪ শুরু থেকে শেষ পর্যন্ত Connection Flow</h2>
+        <div class="flow"><span>HTML File Input</span><b class="arrow">→</b><span>Request</span><b class="arrow">→</b><span>Controller Validation</span><b class="arrow">→</b><span>$this-&gt;images-&gt;store()</span><b class="arrow">→</b><span>ImageOptimizer</span><b class="arrow">→</b><span>WebP File</span><b class="arrow">→</b><span>Database Filename</span><b class="arrow">→</b><span>asset() URL</span></div>
+        <pre><code>Form-এর image
+      ↓
+$request-&gt;file('image')
+      ↓
+Controller validation
+      ↓
+ImageOptimizer::store()
+      ↓
+Resize + WebP + compression
+      ↓
+public/admin/... folder-এ optimized image
+      ↓
+Database-এ শুধু filename
+      ↓
+asset() দিয়ে browser-এ display</code></pre>
+    </section>
+
+    <section>
+        <h2>৫. WebP Conversion ও Compression</h2>
+        <pre><code>$image-&gt;encodeUsingFormat(Format::WEBP, quality: 84)
+    -&gt;save($fullPath);</code></pre>
+        <ul>
+            <li><code>Format::WEBP</code> upload করা JPG/PNG/GIF/WebP-কে WebP output-এ encode করে।</li>
+            <li>নতুন filename সবসময় <code>.webp</code> extension পায়।</li>
+            <li><code>quality: 84</code> clarity ও file-size-এর মধ্যে উচ্চমানের balance দেয়।</li>
+            <li>Transparent PNG-এর transparency WebP support করে।</li>
+        </ul>
+        <div class="note">Quality 100 রাখলে file অনেক বড় হতে পারে। খুব কম quality দিলে detail নষ্ট হয়। Product/catalog image-এর জন্য 82–86 সাধারণত পরিষ্কার result দেয়; এই project-এ 84 রাখা হয়েছে।</div>
+    </section>
+
+    <section>
+        <h2>৬. Module অনুযায়ী Settings</h2>
+        <table><thead><tr><th>Module/Image</th><th>Maximum Box</th><th>Quality</th><th>Folder</th></tr></thead><tbody>
+            <tr><td>Category Image</td><td>1200×1200</td><td>84</td><td><code>public/admin/categoryimage</code></td></tr>
+            <tr><td>Tag Image</td><td>1200×1200</td><td>84</td><td><code>public/admin/tagimage</code></td></tr>
+            <tr><td>Product Image</td><td>1600×1600</td><td>84</td><td><code>public/admin/productimage</code></td></tr>
+            <tr><td>Product Meta Image</td><td>1200×630</td><td>84</td><td><code>public/admin/productimage</code></td></tr>
+        </tbody></table>
+        <div class="note"><code>1200×630</code> একটি bounding box, forced canvas নয়। Meta image-এর original ratio ভিন্ন হলে ratio বজায় রেখে এই box-এর ভেতরে fit হবে।</div>
+    </section>
+
+    <section>
+        <h2>৭. CategoryController Integration</h2>
+        <p class="path">app/Http/Controllers/CategoryController.php</p>
+        <pre><code>use App\Support\ImageOptimizer;
+
+public function __construct(private readonly ImageOptimizer $images) {}
+
+private function uploadImage($file): string
+{
+    return $this-&gt;images-&gt;store(
+        $file,
+        'admin/categoryimage',
+        'category',
+        1200,
+        1200,
+        84
+    );
+}
+
+private function deleteOldImage(?string $imageName): void
+{
+    $this-&gt;images-&gt;delete($imageName, 'admin/categoryimage');
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>৮. TagController Integration</h2>
+        <p class="path">app/Http/Controllers/TagController.php</p>
+        <pre><code>use App\Support\ImageOptimizer;
+
+public function __construct(private readonly ImageOptimizer $images) {}
+
+private function storeImage($file): string
+{
+    return $this-&gt;images-&gt;store(
+        $file,
+        'admin/tagimage',
+        'tag',
+        1200,
+        1200,
+        84
+    );
+}
+
+private function deleteImage(?string $image): void
+{
+    $this-&gt;images-&gt;delete($image, 'admin/tagimage');
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>৯. ProductController Integration</h2>
+        <p class="path">app/Http/Controllers/ProductController.php</p>
+        <pre><code>use App\Support\ImageOptimizer;
+
+public function __construct(private readonly ImageOptimizer $images) {}
+
+private function storeImage($file, string $prefix): string
+{
+    [$width, $height] = $prefix === 'meta_image'
+        ? [1200, 630]
+        : [1600, 1600];
+
+    return $this-&gt;images-&gt;store(
+        $file,
+        'admin/productimage',
+        $prefix,
+        $width,
+        $height,
+        84
+    );
+}
+
+private function deleteImage(?string $image): void
+{
+    $this-&gt;images-&gt;delete($image, 'admin/productimage');
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>১০. Upload Validation</h2>
+        <pre><code>'image' =&gt; [
+    'nullable',
+    'image',
+    'mimes:jpeg,jpg,png,gif,webp',
+    'max:8192',
+],</code></pre>
+        <p><code>max:8192</code> মানে সর্বোচ্চ 8MB source file। High-resolution source প্রথমে accept হয়, এরপর resize/compress হয়ে ছোট WebP হিসেবে save হয়। এটি output file 8MB হবে—এমন নয়।</p>
+    </section>
+
+    <section>
+        <h2>১১. Update ও Delete Lifecycle</h2>
+        <pre><code>if ($request-&gt;hasFile('image')) {
+    // প্রথমে নতুন optimized image save হয়।
+    $data['image'] = $this-&gt;storeImage($request-&gt;file('image'));
+
+    // সফল হলে আগের image disk থেকে remove হয়।
+    if ($record) {
+        $this-&gt;deleteImage($record-&gt;image);
+    }
+}</code></pre>
+        <ul>
+            <li>Edit-এর সময় নতুন image না দিলে existing filename অপরিবর্তিত থাকে।</li>
+            <li>নতুন image upload হলে নতুন optimized file save হয় এবং পুরোনো file delete হয়।</li>
+            <li>Record delete হলে তার image-ও public folder থেকে delete হয়।</li>
+            <li><code>basename()</code> ব্যবহারে directory traversal থেকে delete path নিরাপদ রাখা হয়েছে।</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>১২. বাস্তব Verification</h2>
+        <pre><code>Input:  2400 × 1600 JPG
+Limit:  1200 × 1200
+Output: 1200 × 800 WebP
+MIME:   image/webp</code></pre>
+        <div class="ok">Output dimension প্রমাণ করে aspect ratio ঠিক আছে। Output MIME প্রমাণ করে WebP conversion সফল হয়েছে।</div>
+        <div class="warn"><strong>Existing images:</strong> এই optimization নতুন upload ও image re-upload-এর সময় কাজ করে। আগে থেকে disk/database-এ থাকা পুরোনো image নিজে থেকে পরিবর্তিত হয় না।</div>
+    </section>
+
+    <section>
+        <h2>১৩. সংক্ষিপ্ত Checklist</h2>
+        <ul>
+            <li>PHP GD extension enabled</li>
+            <li>Intervention Image package installed</li>
+            <li>Upload validation সর্বোচ্চ 8MB</li>
+            <li><code>scaleDown()</code> দিয়ে proportional resize</li>
+            <li>WebP quality 84</li>
+            <li>Unique WebP filename</li>
+            <li>Update/delete-এর সময় old-file cleanup</li>
+            <li>Category, Tag, Product এবং Product Meta Image supported</li>
+        </ul>
+    </section>
+</main></body></html>

@@ -4,15 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Section;
+use App\Support\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\Format;
-use Intervention\Image\ImageManager;
 
 class CategoryController extends Controller
 {
+    public function __construct(private readonly ImageOptimizer $images) {}
+
     public function category(Request $request)
     {
         $title = 'Category Page';
@@ -92,7 +91,7 @@ class CategoryController extends Controller
             'section_id' => ['required', 'exists:sections,id'],
             'category_name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:8192'],
             'position' => ['nullable', 'integer', 'min:0'],
             'url' => ['nullable', 'string', 'max:255'],
             'url_structure' => ['nullable', 'string', 'max:255'],
@@ -132,24 +131,12 @@ class CategoryController extends Controller
 
     private function uploadImage($file): string
     {
-        $destinationPath = public_path('admin/categoryimage');
-        if (! file_exists($destinationPath)) {
-            mkdir($destinationPath, 0777, true);
-        }
-        $imageName = time() . '_' . Str::random(10) . '.webp';
-        $manager = ImageManager::usingDriver(GdDriver::class);
-        $image = $manager->decodePath($file->getRealPath());
-        $image->scaleDown(width: 1200, height: 1200);
-        $image->encodeUsingFormat(Format::WEBP, quality: 75)->save($destinationPath . '/' . $imageName);
-
-        return $imageName;
+        return $this->images->store($file, 'admin/categoryimage', 'category', 1200, 1200, 84);
     }
 
     private function deleteOldImage(?string $imageName): void
     {
-        if ($imageName && file_exists($path = public_path('admin/categoryimage/' . $imageName))) {
-            @unlink($path);
-        }
+        $this->images->delete($imageName, 'admin/categoryimage');
     }
 
     /**

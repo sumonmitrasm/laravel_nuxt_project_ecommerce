@@ -79,7 +79,8 @@
                         </ul>
                     </li>
                 @endif
-                <li class="slide">
+                @if ($canManageProducts)
+                <li class="slide {{ request()->routeIs('products') ? 'is-expanded' : '' }}">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -92,9 +93,10 @@
                         <li class="side-menu-label1">
                             <a href="javascript:void(0)">Products</a>
                         </li>
-                         @if ($canManageProducts)<li><a href="{{ route('products') }}" class="slide-item {{ request()->routeIs('products') ? 'active' : '' }}">Products</a></li>@endif
+                         <li><a href="{{ route('products') }}" class="slide-item {{ request()->routeIs('products') ? 'active' : '' }}">Products</a></li>
                     </ul>
                 </li>
+                @endif
 
                 @if ($canManageSettings || $canManageTags || $canManageBrands || $canManageColors)
                 <li class="slide {{ request()->routeIs('settings') || request()->routeIs('tags') || request()->routeIs('brands') || request()->routeIs('colors') ? 'is-expanded' : '' }}">
