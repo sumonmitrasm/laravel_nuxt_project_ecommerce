@@ -59,6 +59,11 @@ class AdminPermissionMiddleware
             'admin-tag.store' => ['tag', 'add'],
             'admin-tag.update', 'admin-tag.status' => ['tag', 'edit'],
             'admin-tag.delete' => ['tag', 'delete'],
+
+            'brands', 'admin-brand.show' => ['brand', 'view'],
+            'admin-brand.store' => ['brand', 'add'],
+            'admin-brand.update', 'admin-brand.status' => ['brand', 'edit'],
+            'admin-brand.delete' => ['brand', 'delete'],
             default => null,
         };
     }

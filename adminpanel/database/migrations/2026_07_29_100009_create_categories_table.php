@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('category_name');
             $table->text('description')->nullable();
             $table->string('image')->nullable();
+            $table->float('category_discount')->nullable();
             $table->integer('position')->nullable()->default(0);
             $table->string('url')->nullable();
             $table->string('url_structure')->nullable();
