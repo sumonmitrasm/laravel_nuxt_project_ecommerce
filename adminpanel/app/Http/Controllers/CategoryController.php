@@ -16,7 +16,7 @@ class CategoryController extends Controller
     {
         $title = 'Category Page';
         $search = trim((string) $request->query('search', ''));
-        $categories = Category::select('id', 'parent_id', 'section_id', 'category_name', 'status')
+        $categories = Category::select('id', 'parent_id', 'section_id', 'category_name', 'category_discount', 'status')
             ->with('section:id,name', 'parentcategory:id,category_name')
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('category_name', 'like', "%{$search}%")
@@ -30,6 +30,7 @@ class CategoryController extends Controller
                 'parent_category_name' => $category->parentcategory?->category_name,
                 'section_name' => $category->section?->name,
                 'category_name' => $category->category_name,
+                'category_discount' => $category->category_discount,
                 'status' => $category->status,
             ]);
 
@@ -91,6 +92,7 @@ class CategoryController extends Controller
             'section_id' => ['required', 'exists:sections,id'],
             'category_name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'category_discount' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:8192'],
             'position' => ['nullable', 'integer', 'min:0'],
             'url' => ['nullable', 'string', 'max:255'],
@@ -104,6 +106,8 @@ class CategoryController extends Controller
             'meta_robot' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'boolean'],
         ]);
+
+        $data['category_discount'] ??= 0;
 
         if (($data['parent_id'] ?? 0) && ! Category::whereKey($data['parent_id'])->where('section_id', $data['section_id'])->exists()) {
             abort(422, 'The parent category must belong to the selected section.');
@@ -145,6 +149,9 @@ class CategoryController extends Controller
     private function clearCategoryCache(): void
     {
         Cache::forget('api.sections-with-categories.v1');
+        Cache::forget('api.sections-with-categories.v2');
+        Cache::forget('api.sections-with-categories.v3');
+        Cache::forget('api.sections-with-categories.v4');
         Cache::forget('admin.category-form.sections.v3');
         Cache::forget('admin.category-form.parents.v3');
     }

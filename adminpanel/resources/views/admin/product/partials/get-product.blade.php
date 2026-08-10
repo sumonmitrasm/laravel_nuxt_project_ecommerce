@@ -67,13 +67,15 @@
                 <button class="btn btn-sm btn-success" data-table-export="#products-table" data-table-export-type="excel">Excel</button><button class="btn btn-sm btn-primary" data-table-export="#products-table" data-table-export-type="word">Word</button>
             </div>
             <div class="table-responsive"><table id="products-table" data-server-pagination class="table table-bordered text-nowrap key-buttons">
-                <thead><tr><th>ID</th><th>Image</th><th>Product</th><th>Code</th><th>Section</th><th>Category</th><th>Brand</th><th>Color</th><th>Price</th><th>Featured</th><th>Status</th><th>Action</th></tr></thead>
+                <thead><tr><th>ID</th><th>Image</th><th>Product</th><th>Code</th><th>Section</th><th>Category</th><th>Brand</th><th>Color</th><th>Price</th><th>Discount</th><th>Final Price</th><th>Featured</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody>@foreach ($getProducts as $product)<tr>
                     <td>{{ $product['id'] }}</td>
                     <td>@if ($product['product_image'])<img src="{{ asset('admin/productimage/'.basename($product['product_image'])) }}" alt="{{ $product['product_name'] }}" class="rounded border" width="45" height="45" style="object-fit:cover">@else - @endif</td>
                     <td>{{ $product['product_name'] }}</td><td>{{ $product['product_code'] }}</td><td>{{ $product['section_name'] ?? '-' }}</td><td>{{ $product['category_name'] ?? '-' }}</td><td>{{ $product['brand_name'] ?? '-' }}</td>
                     <td>@if ($product['product_color'])<span class="d-inline-block border rounded me-1 align-middle" style="width:20px;height:20px;background:{{ $product['product_color'] }}"></span>{{ $product['product_color'] }}@else - @endif</td>
-                    <td>{{ number_format((float) $product['product_price'], 2) }}</td><td>{{ $product['is_featured'] }}</td>
+                    <td>{{ number_format((float) $product['product_price'], 2) }}</td>
+                    <td>{{ number_format((float) $product['effective_discount'], 2) }}% <small class="d-block text-muted">{{ (float) $product['product_discount'] > 0 ? 'Product' : ((float) $product['category_discount'] > 0 ? 'Category' : 'None') }}</small></td>
+                    <td>{{ number_format((float) $product['final_price'], 2) }}</td><td>{{ $product['is_featured'] }}</td>
                     <td>@if ($canEditProducts)<button type="button" class="btn btn-sm {{ $product['status'] ? 'btn-success' : 'btn-secondary' }}" data-crud-status data-url="{{ route('admin-product.status',$product['id']) }}">{{ $product['status'] ? 'Active' : 'Inactive' }}</button>@else {{ $product['status'] ? 'Active' : 'Inactive' }} @endif</td>
                     <td>@if ($canEditProducts)<button type="button" class="btn btn-sm btn-primary" data-crud-edit data-crud-modal="#product-form-modal" data-url="{{ route('admin-product.show',$product['id']) }}" data-update-url="{{ route('admin-product.update',$product['id']) }}">Edit</button>@endif
                         @if ($canDeleteProducts)<button type="button" class="btn btn-sm btn-danger" data-crud-delete data-url="{{ route('admin-product.delete',$product['id']) }}">Delete</button>@endif</td>
@@ -116,7 +118,7 @@
         <div class="col-md-3 mb-3"><label class="form-label">Product Code *</label><input name="product_code" class="form-control" maxlength="100" required></div>
         <div class="col-md-3 mb-3"><label class="form-label">Color</label><select name="product_color" class="form-select"><option value="">No Color</option>@foreach ($colors as $color)<option value="{{ $color->color_code }}">{{ $color->name }} ({{ $color->color_code }})</option>@endforeach</select></div>
         <div class="col-md-4 mb-3"><label class="form-label">Price *</label><input type="number" name="product_price" class="form-control" step="0.01" min="0" required></div>
-        <div class="col-md-4 mb-3"><label class="form-label">Discount (%)</label><input type="number" name="product_discount" class="form-control" value="0" step="0.01" min="0" max="100"></div>
+        <div class="col-md-4 mb-3"><label class="form-label">Product Discount (%)</label><input type="number" name="product_discount" class="form-control" value="0" step="0.01" min="0" max="100"><small class="text-muted">Keep 0 to use the selected category's discount.</small></div>
         <div class="col-md-4 mb-3"><label class="form-label">Weight</label><input type="number" name="product_weight" class="form-control" step="0.01" min="0"></div>
         <div class="col-md-4 mb-3"><label class="form-label">Product Image</label><input type="file" name="product_image" class="form-control" accept="image/*"><img data-image-preview-for="product_image" class="d-none mt-2 rounded border" width="100" height="100" style="object-fit:cover"></div>
         <div class="col-md-4 mb-3"><label class="form-label">Video URL</label><input type="url" name="product_video" class="form-control" maxlength="255"></div>

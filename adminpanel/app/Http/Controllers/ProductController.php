@@ -10,6 +10,7 @@ use App\Models\Section;
 use App\Support\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
@@ -24,8 +25,8 @@ class ProductController extends Controller
         $title = 'Products';
         $search = trim((string) $request->query('search', ''));
         $getProducts = Product::query()
-            ->with(['section:id,name', 'category:id,category_name', 'brand:id,name'])
-            ->select('id', 'section_id', 'category_id', 'brand_id', 'product_name', 'product_code', 'product_image', 'product_color', 'product_price', 'is_featured', 'status')
+            ->with(['section:id,name', 'category:id,category_name,category_discount', 'brand:id,name'])
+            ->select('id', 'section_id', 'category_id', 'brand_id', 'product_name', 'product_code', 'product_image', 'product_color', 'product_price', 'product_discount', 'is_featured', 'status')
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('product_name', 'like', "%{$search}%")
                     ->orWhere('product_code', 'like', "%{$search}%")
@@ -36,10 +37,13 @@ class ProductController extends Controller
             ->cursorPaginate($this->perPage($request))
             ->withQueryString()
             ->through(fn (Product $product) => [
-                ...$product->only(['id', 'product_name', 'product_code', 'product_image', 'product_color', 'product_price', 'is_featured', 'status']),
+                ...$product->only(['id', 'product_name', 'product_code', 'product_image', 'product_color', 'product_price', 'product_discount', 'is_featured', 'status']),
                 'section_name' => $product->section?->name,
                 'category_name' => $product->category?->category_name,
                 'brand_name' => $product->brand?->name,
+                'category_discount' => $product->category?->category_discount,
+                'effective_discount' => $product->effective_discount,
+                'final_price' => $product->final_price,
             ]);
 
         $sections = Section::where('status', true)->orderBy('name')->get(['id', 'name']);
@@ -57,6 +61,7 @@ class ProductController extends Controller
         $data['admin_id'] = $admin?->id;
         $data['admin_type'] = $admin?->type;
         Product::create($data);
+        $this->clearMenuCache();
         return response()->json(['message' => 'Product created successfully.'], 201);
     }
 
@@ -88,6 +93,7 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $product->update($this->validatedData($request, $product));
+        $this->clearMenuCache();
 
         return response()->json(['message' => 'Product updated successfully.']);
     }
@@ -100,6 +106,7 @@ class ProductController extends Controller
         $this->deleteImage($product->product_image);
         $this->deleteImage($product->meta_image);
         $product->delete();
+        $this->clearMenuCache();
 
         return response()->json(['message' => 'Product deleted successfully.']);
     }
@@ -107,6 +114,7 @@ class ProductController extends Controller
     public function updateStatus(Product $product)
     {
         $product->update(['status' => ! $product->status]);
+        $this->clearMenuCache();
 
         return response()->json(['message' => 'Product status updated successfully.']);
     }
@@ -218,4 +226,10 @@ class ProductController extends Controller
             $this->appendCategoryChildren($category->id, $childrenByParent, $options, $depth + 1, $visited);
         }
     }
+
+    private function clearMenuCache(): void
+    {
+        Cache::forget('api.sections-with-categories.v4');
+    }
+
 }

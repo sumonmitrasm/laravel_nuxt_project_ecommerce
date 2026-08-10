@@ -85,6 +85,9 @@ class SectionController extends Controller
     private function clearSectionCache(): void
     {
         Cache::forget('api.sections-with-categories.v1');
+        Cache::forget('api.sections-with-categories.v2');
+        Cache::forget('api.sections-with-categories.v3');
+        Cache::forget('api.sections-with-categories.v4');
     }
 
 }

@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="bn">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Section Category Product API Flow Guide</title>
+    <style>
+        body{margin:0;background:#f3f6fb;color:#24324a;font:16px/1.7 system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:1100px;margin:35px auto;padding:0 20px 50px}section{background:#fff;border:1px solid #dce5f0;border-radius:13px;padding:24px;margin:18px 0;box-shadow:0 8px 25px rgba(26,45,75,.05)}h1{color:#16335b}h2{color:#2459a7;border-bottom:1px solid #e5ebf4;padding-bottom:8px}h3{color:#36577e}code{background:#edf2f8;color:#a22;padding:2px 6px;border-radius:4px}pre{overflow:auto;background:#101827;color:#e9eef7;padding:18px;border-radius:9px;line-height:1.55}pre code{background:transparent;color:inherit;padding:0}.flow{display:flex;flex-wrap:wrap;gap:9px;align-items:center}.flow span{padding:10px 13px;border:1px solid #b9d2f8;background:#eaf2ff;border-radius:8px}.arrow{color:#467fcf;font-weight:800}.ok,.note,.warn{padding:13px 16px;border-left:5px solid;border-radius:6px;margin:14px 0}.ok{background:#edfff4;border-color:#2f9e62}.note{background:#edf6ff;border-color:#3182ce}.warn{background:#fff8e5;border-color:#e6a700}table{width:100%;border-collapse:collapse}th,td{padding:10px;border:1px solid #dce4ee;text-align:left;vertical-align:top}th{background:#edf3fa}.path{font-family:ui-monospace,monospace;color:#8b3030}li{margin:6px 0}
+    </style>
+</head>
+<body><main>
+    <h1>Section → Category → Product API: Model ও Controller Flow</h1>
+    <p>এই document-এ <code>/api/menu</code>, <code>/api/listing/{url}</code> এবং <code>/api/detail/{id}</code> request কীভাবে Route, Controller ও Model relation-এর মাধ্যমে database data নিয়ে JSON response তৈরি করে তা code-সহ দেখানো হয়েছে।</p>
+
+    <section>
+        <h2>১. এক নজরে সম্পূর্ণ Flow</h2>
+        <div class="flow"><span>Postman / Nuxt</span><b class="arrow">→</b><span>routes/api.php</span><b class="arrow">→</b><span>FrontController</span><b class="arrow">→</b><span>Section Model</span><b class="arrow">→</b><span>Category Model</span><b class="arrow">→</b><span>Product Model</span><b class="arrow">→</b><span>MySQL</span><b class="arrow">→</b><span>JSON</span></div>
+        <pre><code>GET /api/menu
+    ↓
+FrontController::menu()
+    ↓
+Section::sections()
+    ↓
+Section::categories()
+    ↓
+Category::subcategories()
+Category::products()
+    ↓
+Product::brand()
+Product image_url / effective_discount / final_price
+    ↓
+Nested JSON Response</code></pre>
+    </section>
+
+    <section>
+        <h2>২. API Routes</h2>
+        <p class="path">routes/api.php</p>
+        <pre><code>use App\Http\Controllers\Api\FrontController;
+
+Route::get('/sections', [FrontController::class, 'sections'])
+    -&gt;name('api.sections');
+
+Route::get('/menu', [FrontController::class, 'menu'])
+    -&gt;name('api.menu');
+
+// পুরোনো spelling support
+Route::get('/manu', [FrontController::class, 'menu']);
+
+Route::get('/listing/{url}', [FrontController::class, 'listing'])
+    -&gt;name('api.listing');
+
+Route::get('/detail/{id}', [FrontController::class, 'details'])
+    -&gt;whereNumber('id')
+    -&gt;name('api.detail');</code></pre>
+        <table><thead><tr><th>URL</th><th>Controller Function</th><th>কাজ</th></tr></thead><tbody>
+            <tr><td><code>/api/menu</code></td><td><code>menu()</code></td><td>Section → Category/Subcategory → Products</td></tr>
+            <tr><td><code>/api/manu</code></td><td><code>menu()</code></td><td><code>/menu</code>-এর alias</td></tr>
+            <tr><td><code>/api/sections</code></td><td><code>sections()</code></td><td><code>menu()</code> call করে</td></tr>
+            <tr><td><code>/api/listing/{url}</code></td><td><code>listing()</code></td><td>নির্দিষ্ট Category ও child categories-এর products</td></tr>
+            <tr><td><code>/api/detail/{id}</code></td><td><code>details()</code></td><td>একটি Product-এর details ও relations</td></tr>
+        </tbody></table>
+    </section>
+
+    <section>
+        <h2>৩. Database Relationship</h2>
+        <pre><code>sections.id
+    └── categories.section_id
+            ├── categories.parent_id → categories.id
+            └── products.category_id
+
+products.section_id → sections.id
+products.brand_id   → brands.id</code></pre>
+        <table><thead><tr><th>Parent</th><th>Child</th><th>Relation</th></tr></thead><tbody>
+            <tr><td>Section</td><td>Category</td><td><code>hasMany</code></td></tr>
+            <tr><td>Category</td><td>Subcategory</td><td>Self <code>hasMany</code></td></tr>
+            <tr><td>Category</td><td>Product</td><td><code>hasMany</code></td></tr>
+            <tr><td>Product</td><td>Brand</td><td><code>belongsTo</code></td></tr>
+        </tbody></table>
+    </section>
+
+    <section>
+        <h2>৪. Section Model কীভাবে Category আনে?</h2>
+        <p class="path">app/Models/Section.php</p>
+        <pre><code>public function categories(): HasMany
+{
+    return $this-&gt;hasMany(Category::class)
+        -&gt;where('parent_id', 0)
+        -&gt;where('status', true)
+        -&gt;with(['subcategories', 'products.brand'])
+        -&gt;orderBy('position')
+        -&gt;orderBy('category_name');
+}</code></pre>
+        <ul>
+            <li><code>hasMany(Category::class)</code> Section-এর categories আনে। Eloquent নিজে <code>section_id</code> foreign key ব্যবহার করে।</li>
+            <li><code>parent_id = 0</code> শুধু Main Category আনে।</li>
+            <li><code>status = true</code> শুধু active category আনে।</li>
+            <li><code>with(['subcategories', 'products.brand'])</code> category-এর child tree, products এবং product brand একসঙ্গে load করে।</li>
+        </ul>
+
+        <h3><code>Section::sections()</code> Static Function</h3>
+        <pre><code>public static function sections(): array
+{
+    return self::with('categories')
+        -&gt;where('status', true)
+        -&gt;orderBy('name')
+        -&gt;get(['id', 'name'])
+        -&gt;toArray();
+}</code></pre>
+        <p><code>with('categories')</code> call করার সঙ্গে সঙ্গে উপরের <code>categories()</code> relation চলে। সেই relation আবার Category-এর <code>subcategories()</code> ও <code>products()</code> call করে।</p>
+    </section>
+
+    <section>
+        <h2>৫. Category Model-এর Functions কীভাবে Link হয়েছে?</h2>
+        <p class="path">app/Models/Category.php</p>
+
+        <h3>Section relation</h3>
+        <pre><code>public function section(): BelongsTo
+{
+    return $this-&gt;belongsTo(Section::class, 'section_id')
+        -&gt;select('id', 'name');
+}</code></pre>
+
+        <h3>Parent Category relation</h3>
+        <pre><code>public function parentcategory(): BelongsTo
+{
+    return $this-&gt;belongsTo(Category::class, 'parent_id')
+        -&gt;withDefault(['category_name' =&gt; 'Root / Main Category']);
+}</code></pre>
+
+        <h3>Recursive Subcategory relation</h3>
+        <pre><code>public function subcategories(): HasMany
+{
+    return $this-&gt;hasMany(Category::class, 'parent_id')
+        -&gt;where('status', 1)
+        -&gt;with(['subcategories', 'products.brand'])
+        -&gt;orderBy('position')
+        -&gt;orderBy('category_name');
+}</code></pre>
+        <p>এখানে relation নিজের ভিতরে আবার <code>subcategories</code> load করে। তাই Category → Subcategory → Child Subcategory যত level থাকুক JSON-এ আসবে। প্রতিটি level-এ <code>products.brand</code> load হয়।</p>
+
+        <h3>Category-এর Products relation</h3>
+        <pre><code>public function products(): HasMany
+{
+    return $this-&gt;hasMany(Product::class, 'category_id')
+        -&gt;where('status', true)
+        -&gt;with('brand:id,name')
+        -&gt;latest('id');
+}</code></pre>
+        <ul>
+            <li>Product-এর <code>category_id</code> current Category-এর <code>id</code>-এর সঙ্গে match করে।</li>
+            <li>শুধু active Product আসে।</li>
+            <li>প্রতিটি Product-এর Brand relation-ও আসে।</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>৬. Dynamic Listing-এর <code>categoryDetails()</code></h2>
+        <p class="path">app/Models/Category.php</p>
+        <pre><code>public static function categoryDetails(string $url): ?array
+{
+    $category = self::with('subcategories')
+        -&gt;where('url', $url)
+        -&gt;where('status', true)
+        -&gt;first();
+
+    if (! $category) {
+        return null;
+    }
+
+    $categoryDetails = $category-&gt;toArray();
+
+    $catIds = [
+        $category-&gt;id,
+        ...self::descendantIds(
+            $categoryDetails['subcategories'] ?? []
+        )
+    ];
+
+    return [
+        'catIds' =&gt; array_values(array_unique($catIds)),
+        'categoryDetails' =&gt; $categoryDetails,
+        'breadcrumbs' =&gt; $breadcrumbs,
+    ];
+}</code></pre>
+        <p>যেমন <code>politics</code> Main Category-এর ID 3 এবং তার child IDs 7 ও 9 হলে:</p>
+        <pre><code>'catIds' =&gt; [3, 7, 9]</code></pre>
+        <p>Controller তখন <code>whereIn('category_id', [3, 7, 9])</code> ব্যবহার করে Main Category ও সব descendants-এর products আনে।</p>
+    </section>
+
+    <section>
+        <h2>৭. Product Model: Relations, Image ও Discount</h2>
+        <p class="path">app/Models/Product.php</p>
+        <pre><code>public function section(): BelongsTo
+{
+    return $this-&gt;belongsTo(Section::class);
+}
+
+public function category(): BelongsTo
+{
+    return $this-&gt;belongsTo(Category::class);
+}
+
+public function brand(): BelongsTo
+{
+    return $this-&gt;belongsTo(Brand::class);
+}</code></pre>
+
+        <h3>Automatic API fields</h3>
+        <pre><code>protected $appends = [
+    'image_url',
+    'effective_discount',
+    'final_price',
+];</code></pre>
+        <p>Eloquent Product-কে array/JSON করলে এই তিনটি computed field automatic response-এ যোগ হয়।</p>
+
+        <h3>Effective Discount</h3>
+        <pre><code>public function getEffectiveDiscountAttribute(): float
+{
+    $productDiscount = (float) $this-&gt;product_discount;
+
+    if ($productDiscount &gt; 0) {
+        return $productDiscount;
+    }
+
+    $categoryDiscount = $this-&gt;relationLoaded('category')
+        ? $this-&gt;category?-&gt;category_discount
+        : $this-&gt;category()-&gt;value('category_discount');
+
+    return (float) ($categoryDiscount ?? 0);
+}</code></pre>
+        <pre><code>Product discount &gt; 0 → Product discount
+Product discount = 0 → Category discount
+দুটিই 0 → কোনো discount নেই</code></pre>
+
+        <h3>Final Price</h3>
+        <pre><code>public function getFinalPriceAttribute(): string
+{
+    $price = (float) $this-&gt;product_price;
+    $discount = $this-&gt;effective_discount;
+
+    return number_format(
+        max(0, $price - ($price * $discount / 100)),
+        2,
+        '.',
+        ''
+    );
+}</code></pre>
+
+        <h3>Full Image URL</h3>
+        <pre><code>public function getImageUrlAttribute(): ?string
+{
+    return $this-&gt;product_image
+        ? asset('admin/productimage/'.basename($this-&gt;product_image))
+        : null;
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>৮. FrontController: Menu API</h2>
+        <p class="path">app/Http/Controllers/Api/FrontController.php</p>
+        <pre><code>public function menu(): JsonResponse
+{
+    $sections = Cache::remember(
+        'api.sections-with-categories.v4',
+        now()-&gt;addHours(6),
+        fn () =&gt; Section::sections(),
+    );
+
+    return response()-&gt;json([
+        'status' =&gt; true,
+        'categories' =&gt; $sections,
+    ], 200);
+}</code></pre>
+        <p>Controller-এর ভিতরে complex relation query নেই। শুধু <code>Section::sections()</code> call করা হয়েছে। Model relations বাকি nested data তৈরি করে।</p>
+        <div class="flow"><span>menu()</span><b class="arrow">→</b><span>Section::sections()</span><b class="arrow">→</b><span>categories()</span><b class="arrow">→</b><span>subcategories()</span><b class="arrow">→</b><span>products()</span><b class="arrow">→</b><span>brand()</span></div>
+    </section>
+
+    <section>
+        <h2>৯. FrontController: Listing API</h2>
+        <pre><code>public function listing(string $url): JsonResponse
+{
+    $categoryDetails = Category::categoryDetails($url);
+
+    if (! $categoryDetails) {
+        return response()-&gt;json([
+            'status' =&gt; false,
+            'message' =&gt; 'Category not found.',
+        ], 404);
+    }
+
+    $products = Product::with([
+            'brand:id,name',
+            'category:id,category_discount'
+        ])
+        -&gt;whereIn('category_id', $categoryDetails['catIds'])
+        -&gt;where('status', true)
+        -&gt;latest('id')
+        -&gt;get();
+
+    return response()-&gt;json([
+        'status' =&gt; true,
+        'categoryDetails' =&gt; $categoryDetails['categoryDetails'],
+        'breadcrumbs' =&gt; $categoryDetails['breadcrumbs'],
+        'products' =&gt; $products,
+    ], 200);
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>১০. FrontController: Product Detail API</h2>
+        <pre><code>public function details(int $id): JsonResponse
+{
+    $product = Product::with([
+            'section:id,name',
+            'category:id,category_name,url,category_discount',
+            'brand:id,name',
+        ])
+        -&gt;whereKey($id)
+        -&gt;where('status', true)
+        -&gt;first();
+
+    if (! $product) {
+        return response()-&gt;json([
+            'status' =&gt; false,
+            'message' =&gt; 'Product not found.',
+        ], 404);
+    }
+
+    return response()-&gt;json([
+        'status' =&gt; true,
+        'product' =&gt; $product,
+    ], 200);
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>১১. Menu JSON Structure</h2>
+        <pre><code>{
+  "status": true,
+  "categories": [
+    {
+      "id": 1,
+      "name": "Section Name",
+      "categories": [
+        {
+          "id": 10,
+          "category_name": "Main Category",
+          "category_discount": "10.00",
+          "products": [
+            {
+              "id": 100,
+              "product_name": "Product",
+              "image_url": "http://.../image.webp",
+              "effective_discount": 10,
+              "final_price": "180.00",
+              "brand": {
+                "id": 1,
+                "name": "Brand"
+              }
+            }
+          ],
+          "subcategories": [
+            {
+              "id": 11,
+              "category_name": "Subcategory",
+              "products": [],
+              "subcategories": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>১২. Cache কীভাবে Link হয়েছে?</h2>
+        <pre><code>Cache::remember(
+    'api.sections-with-categories.v4',
+    now()-&gt;addHours(6),
+    fn () =&gt; Section::sections()
+);</code></pre>
+        <p>প্রথম request database query করে result cache-এ রাখে। পরের request একই result দ্রুত cache থেকে পায়।</p>
+
+        <h3>Data change হলে Cache Clear</h3>
+        <pre><code>Cache::forget('api.sections-with-categories.v4');</code></pre>
+        <table><thead><tr><th>Controller</th><th>কখন clear হয়</th></tr></thead><tbody>
+            <tr><td>SectionController</td><td>Create, Update, Status, Delete</td></tr>
+            <tr><td>CategoryController</td><td>Create, Update, Status, Delete</td></tr>
+            <tr><td>ProductController</td><td>Create, Update, Status, Delete</td></tr>
+            <tr><td>BrandController</td><td>Create, Update, Status, Delete</td></tr>
+        </tbody></table>
+    </section>
+
+    <section>
+        <h2>১৩. Postman Testing</h2>
+        <p>প্রতিটি request:</p>
+        <pre><code>Method: GET
+Header: Accept: application/json</code></pre>
+
+        <h3>Section → Category/Subcategory → Products</h3>
+        <pre><code>http://127.0.0.1:8000/api/menu</code></pre>
+
+        <h3>Category URL দিয়ে Products</h3>
+        <pre><code>http://127.0.0.1:8000/api/listing/politics</code></pre>
+
+        <h3>Product ID দিয়ে Details</h3>
+        <pre><code>http://127.0.0.1:8000/api/detail/1</code></pre>
+        <div class="warn">Postman URL field-এর মধ্যে <code>GET</code> লিখবেন না। বাম পাশের dropdown-এ GET select করে URL field-এ শুধু <code>http://...</code> লিখবেন।</div>
+    </section>
+
+    <section>
+        <h2>১৪. কোন Function কার সঙ্গে Link?</h2>
+        <table><thead><tr><th>Function</th><th>যাকে Call/Load করে</th><th>Result</th></tr></thead><tbody>
+            <tr><td><code>FrontController::menu()</code></td><td><code>Section::sections()</code></td><td>সম্পূর্ণ menu tree</td></tr>
+            <tr><td><code>Section::sections()</code></td><td><code>Section::categories()</code></td><td>Active sections ও main categories</td></tr>
+            <tr><td><code>Section::categories()</code></td><td><code>Category::subcategories()</code>, <code>Category::products()</code></td><td>Category tree ও products</td></tr>
+            <tr><td><code>Category::subcategories()</code></td><td>নিজেকেই recursiveভাবে</td><td>Unlimited child category levels</td></tr>
+            <tr><td><code>Category::products()</code></td><td><code>Product::brand()</code></td><td>Active products ও brand</td></tr>
+            <tr><td><code>FrontController::listing()</code></td><td><code>Category::categoryDetails()</code></td><td>Selected category এবং child IDs</td></tr>
+            <tr><td><code>Product::effective_discount</code></td><td>Product/Category discount</td><td>যে discount বাস্তবে apply হবে</td></tr>
+            <tr><td><code>Product::final_price</code></td><td><code>effective_discount</code></td><td>Discount-এর পর price</td></tr>
+        </tbody></table>
+        <div class="ok"><strong>মূল কথা:</strong> Route শুধু Controller method নির্বাচন করে। Controller Model-এর static function call করে। Eloquent relations nested Section, Category, Subcategory, Product ও Brand data automatic load করে। Accessors image URL ও final price automatic JSON-এ যোগ করে।</div>
+    </section>
+</main></body></html>
