@@ -9,6 +9,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\ColorController;
+use App\Http\Controllers\ProductController;
 
 Route::get('/clear-cache', function() {
     Artisan::call('view:clear');
@@ -89,7 +90,15 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::put('color/{color}', [ColorController::class, 'update'])->name('admin-color.update');
         Route::patch('color/{color}/status', [ColorController::class, 'updateStatus'])->name('admin-color.status');
         Route::delete('color/{color}', [ColorController::class, 'destroy'])->name('admin-color.delete');
-        //>>>>>>>>>>>>>>>>>>>>>>>>Color activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        //>>>>>>>>>>>>>>>>>>>>>>>>Color activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        //>>>>>>>>>>>>>>>>>>>>>>>>Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        Route::get('products', [ProductController::class, 'index'])->name('products');
+        Route::post('product', [ProductController::class, 'store'])->name('admin-product.store');
+        Route::get('product/{product}', [ProductController::class, 'show'])->name('admin-product.show');
+        Route::put('product/{product}', [ProductController::class, 'update'])->name('admin-product.update');
+        Route::patch('product/{product}/status', [ProductController::class, 'updateStatus'])->name('admin-product.status');
+        Route::delete('product/{product}', [ProductController::class, 'destroy'])->name('admin-product.delete');
+        //>>>>>>>>>>>>>>>>>>>>>>>>Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     });
 });
