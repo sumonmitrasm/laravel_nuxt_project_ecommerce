@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Brand;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
 class BrandController extends Controller
@@ -40,6 +41,7 @@ class BrandController extends Controller
     public function store(Request $request)
     {
         Brand::create($this->validatedData($request));
+        $this->clearMenuCache();
 
         return response()->json(['message' => 'Brand created successfully.'], 201);
     }
@@ -66,6 +68,7 @@ class BrandController extends Controller
     public function update(Request $request, Brand $brand)
     {
         $brand->update($this->validatedData($request, $brand));
+        $this->clearMenuCache();
 
         return response()->json(['message' => 'Brand updated successfully.']);
     }
@@ -76,6 +79,7 @@ class BrandController extends Controller
     public function destroy(Brand $brand)
     {
         $brand->delete();
+        $this->clearMenuCache();
 
         return response()->json(['message' => 'Brand deleted successfully.']);
     }
@@ -83,6 +87,7 @@ class BrandController extends Controller
     public function updateStatus(Brand $brand)
     {
         $brand->update(['status' => ! $brand->status]);
+        $this->clearMenuCache();
 
         return response()->json(['message' => 'Brand status updated successfully.']);
     }
@@ -96,4 +101,10 @@ class BrandController extends Controller
             'name.unique' => 'This brand name already exists.',
         ]);
     }
+
+    private function clearMenuCache(): void
+    {
+        Cache::forget('api.sections-with-categories.v4');
+    }
+
 }

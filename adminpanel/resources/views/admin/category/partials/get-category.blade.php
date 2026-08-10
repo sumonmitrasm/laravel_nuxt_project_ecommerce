@@ -33,6 +33,7 @@
                                             <th class="border-bottom-0">Parent Category</th>
                                             <th class="border-bottom-0">Section Name</th>
                                             <th class="border-bottom-0">Category Name</th>
+                                            <th class="border-bottom-0">Discount</th>
                                             <th class="border-bottom-0">Status</th>
                                             <th class="border-bottom-0">Action</th>
                                         </tr>
@@ -44,6 +45,7 @@
                                                 <td>{{ $category['parent_category_name'] ?? 'Root / Main Category' }}</td>
                                                 <td>{{ $category['section_name'] ?? '' }}</td>
                                                 <td>{{ $category['category_name'] ?? '-' }}</td>
+                                                <td>{{ number_format((float) ($category['category_discount'] ?? 0), 2) }}%</td>
                                                 <td>@if ($canEditCategories)<button type="button"
                                                         class="btn btn-sm {{ ($category['status'] ?? false) ? 'btn-success' : 'btn-secondary' }}"
                                                         data-crud-status
@@ -122,6 +124,13 @@
                         <div class="col-md-6">
                             <label class="form-label">Position / Order</label>
                             <input type="number" name="position" class="form-control" value="0">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Category Discount (%)</label>
+                            <input type="number" name="category_discount" class="form-control" value="0"
+                                min="0" max="100" step="0.01">
+                            <small class="text-muted">Applied only when the product has no product-level discount.</small>
                         </div>
 
                         <div class="col-md-6">

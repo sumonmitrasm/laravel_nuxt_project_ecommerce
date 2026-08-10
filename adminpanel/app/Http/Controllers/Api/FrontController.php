@@ -3,66 +3,79 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
+use App\Models\Product;
 use App\Models\Section;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
-use Throwable;
 
 class FrontController extends Controller
 {
-    public function index()
+    public function menu(): JsonResponse
     {
-        //
+        $sections = Cache::remember(
+            'api.sections-with-categories.v4',
+            now()->addHours(6),
+            fn () => Section::sections(),
+        );
+
+        return response()->json([
+            'status' => true,
+            'categories' => $sections,
+        ], 200);
     }
 
-    /**
-     * Active sections with their active categories, ready for nested Nuxt loops.
-     */
-    public function sections()
+    public function sections(): JsonResponse
     {
-        try {
-            $sections = Cache::remember(
-                'api.sections-with-categories.v1',
-                now()->addHours(6),
-                fn () => $this->sectionPayload(),
-            );
-        } catch (Throwable $exception) {
-            // A failed cache service must never take down the public API.
-            report($exception);
-            $sections = $this->sectionPayload();
+        return $this->menu();
+    }
+
+    public function listing(string $url): JsonResponse
+    {
+        $categoryDetails = Category::categoryDetails($url);
+
+        if (! $categoryDetails) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Category not found.',
+            ], 404);
         }
 
-        return response()
-            ->json(['data' => $sections])
-            ->header('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+        $products = Product::with(['brand:id,name', 'category:id,category_discount'])
+            ->whereIn('category_id', $categoryDetails['catIds'])
+            ->where('status', true)
+            ->latest('id')
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'categoryDetails' => $categoryDetails['categoryDetails'],
+            'breadcrumbs' => $categoryDetails['breadcrumbs'],
+            'products' => $products,
+        ], 200);
     }
 
-    private function sectionPayload()
+    public function details(int $id): JsonResponse
     {
-        return Section::query()
-                ->select('id', 'name')
-                ->where('status', true)
-                ->with([
-                    'categories:id,section_id,parent_id,category_name,url,image,position',
-                    'categories.subcategories:id,section_id,parent_id,category_name,url,image,position',
-                ])
-                ->orderBy('name')
-                ->get()
-                ->map(fn (Section $section) => [
-                    'id' => $section->id,
-                    'name' => $section->name,
-                    'categories' => $section->categories->map(fn ($category) => [
-                        'id' => $category->id,
-                        'name' => $category->category_name,
-                        'url' => $category->url,
-                        'image' => $category->image ? asset('admin/categoryimage/' . $category->image) : null,
-                        'subcategories' => $category->subcategories->map(fn ($subcategory) => [
-                            'id' => $subcategory->id,
-                            'name' => $subcategory->category_name,
-                            'url' => $subcategory->url,
-                            'image' => $subcategory->image ? asset('admin/categoryimage/' . $subcategory->image) : null,
-                    ])->values()->all(),
-                ])->values()->all(),
-            ])->values()->all();
-    }
+        $product = Product::with([
+                'section:id,name',
+                'category:id,category_name,url,category_discount',
+                'brand:id,name',
+            ])
+            ->whereKey($id)
+            ->where('status', true)
+            ->first();
 
+        if (! $product) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Product not found.',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'product' => $product,
+        ], 200);
+    }
 }
