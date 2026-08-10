@@ -133,25 +133,8 @@
 
     <!-- Admin AJAX navigation, pagination, export, and reusable CRUD -->
     <script>
-        /*
-         * ADMIN PANEL JAVASCRIPT OVERVIEW
-         * --------------------------------
-         * This block provides shared behaviour for all admin pages:
-         * 1. AJAX page navigation, pagination, search, and table export.
-         * 2. User create/edit/status/delete actions.
-         * 3. Reusable modal CRUD actions used by sections, categories, products, etc.
-         * 4. Image previews, category-to-section synchronization, and permissions.
-         *
-         * Event delegation is used with $(document).on(...), because page content is
-         * replaced by AJAX. Delegated handlers also work for newly loaded elements.
-         */
         $(function () {
-            /*
-             * AJAX PAGE LOADER
-             * Requests a complete page, extracts only #ajax-page-content, and replaces
-             * the current content. The header and sidebar therefore remain in place.
-             * pushHistory=true adds the new URL to browser history.
-             */
+            // Loads only #ajax-page-content so header/sidebar stay in place.
             window.loadAjaxPage = function (url, pushHistory, tablePages) {
                 var $content = $('#ajax-page-content');
                 $content.css('opacity', '.5');
@@ -183,8 +166,6 @@
                 });
             };
 
-            // Open internal sidebar links through the AJAX page loader.
-            // Normal browser behaviour is preserved for special/external links and Ctrl/Command-click.
             $(document).on('click', '.side-menu a[href]', function (event) {
                 var href = $(this).attr('href');
 
@@ -203,7 +184,6 @@
                 window.loadAjaxPage(url.href, true);
             });
 
-            // Any link marked data-ajax-page can use the same AJAX navigation system.
             $(document).on('click', '[data-ajax-page]', function (event) {
                 var url = new URL(this.href, window.location.href);
 
@@ -215,13 +195,11 @@
                 window.loadAjaxPage(url.href, true);
             });
 
-            // Load server-side pagination links without refreshing the full layout.
             $(document).on('click', '#ajax-page-content .pagination a', function (event) {
                 event.preventDefault();
                 window.loadAjaxPage(this.href, true);
             });
 
-            // Change the number of rows per page and return to pagination page one.
             $(document).on('change', '[data-server-per-page]', function () {
                 var url = new URL(window.location.href);
                 url.searchParams.set('per_page', this.value);
@@ -229,11 +207,6 @@
                 window.loadAjaxPage(url.href, true);
             });
 
-            /*
-             * SERVER-SIDE SEARCH INITIALIZER
-             * Adds one search form beside each server-paginated table. A data flag
-             * prevents duplicate forms when AJAX navigation initializes the page again.
-             */
             window.initServerSearch = function () {
                 $('[data-server-pagination]').each(function () {
                     var $table = $(this);
@@ -247,10 +220,8 @@
                 });
             };
 
-            // Add search controls to tables present during the first page load.
             window.initServerSearch();
 
-            // Submit a table search through the URL's `search` query parameter.
             $(document).on('submit', '[data-server-search]', function (event) {
                 event.preventDefault();
                 var url = new URL(window.location.href), search = $(this).find('[name="search"]').val().trim();
@@ -259,11 +230,6 @@
                 window.loadAjaxPage(url.href, true);
             });
 
-            /*
-             * TABLE EXPORT
-             * Reads the visible HTML table and downloads it as CSV (Excel-compatible)
-             * or as an HTML-based .doc file, depending on data-table-export-type.
-             */
             $(document).on('click', '[data-table-export]', function () {
                 var $table = $($(this).data('table-export'));
                 if (!$table.length) return;
@@ -281,22 +247,15 @@
                 var link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = name; link.click(); URL.revokeObjectURL(link.href);
             });
 
-            // Reload AJAX content when the browser Back or Forward button is pressed.
             window.addEventListener('popstate', function () {
                 window.loadAjaxPage(window.location.href, false);
             });
 
-            // Convert Laravel validation errors into HTML and show them in the user modal.
             function showUserFormErrors(errors) {
                 var messages = $.map(errors, function (items) { return items.join('<br>'); });
                 $('#user-form-errors').html(messages.join('<br>')).removeClass('d-none');
             }
 
-            /*
-             * CREATE OR UPDATE A USER
-             * Sends the user modal through AJAX. Laravel's _method value allows the
-             * same POST request mechanism to perform POST/PUT actions.
-             */
             function saveUserForm(url, method) {
                 var $form = $('#user-form');
                 var data = $form.serializeArray();
@@ -318,7 +277,6 @@
                 });
             }
 
-            // Reset and prepare the user modal for a new record.
             $(document).on('click', '.js-user-create', function () {
                 var form = document.getElementById('user-form');
                 form.reset();
@@ -329,7 +287,6 @@
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('user-form-modal')).show();
             });
 
-            // Fetch an existing user, fill the modal fields, and prepare a PUT request.
             $(document).on('click', '.js-user-edit', function () {
                 var $button = $(this);
                 $.get($button.data('url')).done(function (response) {
@@ -348,13 +305,11 @@
                 }).fail(function () { alert('Could not load this user.'); });
             });
 
-            // Route user-form submission to the shared saveUserForm function.
             $(document).on('submit', '#user-form', function (event) {
                 event.preventDefault();
                 saveUserForm($(this).data('url'), $(this).data('method'));
             });
 
-            // Toggle a user's active/inactive status, then refresh the current list.
             $(document).on('click', '.js-user-status', function () {
                 var url = $(this).data('url');
                 $.post(url, { _token: $('input[name="_token"]').first().val(), _method: 'PATCH' }).done(function (response) {
@@ -363,7 +318,6 @@
                 }).fail(function () { alert('Status update failed.'); });
             });
 
-            // Delete a user after native browser confirmation.
             $(document).on('click', '.js-user-delete', function () {
                 var url = $(this).data('url');
                 if (!window.confirm('Do you want to delete this user?')) return;
@@ -376,12 +330,7 @@
                 });
             });
 
-            /*
-             * REUSABLE CRUD HELPERS
-             * Sections, categories, brands, colors, tags, and products share these
-             * functions by adding data-crud-* attributes to their buttons and forms.
-             */
-            // Show a SweetAlert toast when available; otherwise fall back to alert().
+            // Reusable CRUD: any module can use this by adding data-crud-* attributes to its form/buttons.
             function crudToast(icon, title) {
                 if (window.Swal) {
                     Swal.fire({ position: 'top-end', icon: icon, title: title, showConfirmButton: false, timer: 1500 });
@@ -390,24 +339,15 @@
                 }
             }
 
-            // Display Laravel 422 validation messages inside the current CRUD form.
             function crudErrors($form, errors) {
                 var messages = $.map(errors, function (items) { return items.join('<br>'); });
                 $form.find('.js-crud-errors').html(messages.join('<br>')).removeClass('d-none');
             }
 
-            // Resolve the modal selector stored in the clicked button's data-crud-modal attribute.
             function crudModal($button) {
                 return $($button.data('crud-modal'));
             }
 
-            /*
-             * IMAGE PREVIEW
-             * Finds the preview belonging to a file field, or creates a 100x100 preview
-             * if one does not exist. `source` may be a saved image URL or a temporary
-             * browser Object URL for a newly selected file. This does not upload/resize
-             * the image; server-side ImageOptimizer handles optimization during saving.
-             */
             function setImagePreview($form, source, $input) {
                 var $preview = $();
                 if ($input && $input.length) $preview = $form.find('[data-image-preview-for="' + $input.attr('name') + '"]');
@@ -433,17 +373,12 @@
                 }
             }
 
-            // Refresh the current server-paginated page and then show a success message.
+            // Refreshes the current server-paginated page after a CRUD action.
             function refreshCrudPage(message) {
                 window.loadAjaxPage(window.location.href, false);
                 setTimeout(function () { crudToast('success', message); }, 250);
             }
 
-            /*
-             * OPEN CREATE MODAL
-             * Clears old values/errors/previews, sets the store URL and POST method,
-             * enables all parent options, and opens the Bootstrap modal.
-             */
             $(document).on('click', '[data-crud-create]', function () {
                 var $button = $(this), $modal = crudModal($button), $form = $modal.find('[data-crud-form]');
                 $form[0].reset();
@@ -458,12 +393,6 @@
                 bootstrap.Modal.getOrCreateInstance($modal[0]).show();
             });
 
-            /*
-             * OPEN EDIT MODAL
-             * Gets the record as JSON, fills matching fields by their `name`, prevents
-             * a category from selecting itself as parent, restores saved previews,
-             * and prepares the form to send a PUT request to the update URL.
-             */
             $(document).on('click', '[data-crud-edit]', function () {
                 var $button = $(this), $modal = crudModal($button), $form = $modal.find('[data-crud-form]');
                 $.get($button.data('url')).done(function (response) {
@@ -487,7 +416,6 @@
                     }
                     setImagePreview($form, imageUrl, $form.find('[name="image"]'));
                     setImagePreview($form, response.favicon_url || record.favicon_url || '', $form.find('[name="favicon"]'));
-                    // Support forms with multiple image fields, e.g. image, meta_image, and thumbnail.
                     $.each(response.image_urls || {}, function (field, url) {
                         setImagePreview($form, url || '', $form.find('[name="' + field + '"]'));
                     });
@@ -499,11 +427,6 @@
                 }).fail(function () { crudToast('error', 'Record load'); });
             });
 
-            /*
-             * CATEGORY -> SECTION SYNCHRONIZATION
-             * A category option contains data-section-id. When it is selected in the
-             * product form, its section ID is copied into the configured hidden field.
-             */
             $(document).on('change', '[data-section-source]', function () {
                 var $category = $(this);
                 var $form = $category.closest('[data-crud-form]');
@@ -511,7 +434,6 @@
                 $form.find($category.data('section-source')).val(sectionId);
             });
 
-            // Immediately preview a newly selected image file before the form is saved.
             $(document).on('change', '[data-crud-form] input[type="file"][data-image-input], [data-crud-form] input[type="file"][accept*="image"]', function () {
                 var file = this.files && this.files[0];
                 var $form = $(this).closest('[data-crud-form]');
@@ -520,11 +442,6 @@
                 setImagePreview($form, URL.createObjectURL(file), $(this));
             });
 
-            /*
-             * SUBMIT ANY REUSABLE CRUD FORM
-             * FormData preserves file uploads. The request is sent as POST while
-             * Laravel uses _method=PUT for updates. Buttons stay disabled in flight.
-             */
             $(document).on('submit', '[data-crud-form]', function (event) {
                 event.preventDefault();
                 var $form = $(this), data = new FormData(this);
@@ -546,21 +463,18 @@
                 }).always(function () { $form.find('[data-crud-submit]').prop('disabled', false); });
             });
 
-            // "Full Access" checks/unchecks every individual permission in its module.
             $(document).on('change', '#permission-form [data-full-access]', function () {
                 var $module = $(this).closest('[data-permission-module]');
                 $module.find('[data-access-checkbox]').prop('checked', this.checked);
                 if (this.checked) $module.find('[data-no-access]').prop('checked', false);
             });
 
-            // "No Access" clears all permissions and Full Access for its module.
             $(document).on('change', '#permission-form [data-no-access]', function () {
                 if (!this.checked) return;
                 var $module = $(this).closest('[data-permission-module]');
                 $module.find('[data-access-checkbox], [data-full-access]').prop('checked', false);
             });
 
-            // Keep Full Access and No Access synchronized with individual permission choices.
             $(document).on('change', '#permission-form [data-access-checkbox]', function () {
                 var $module = $(this).closest('[data-permission-module]');
                 var allSelected = $module.find('[data-access-checkbox]').length === $module.find('[data-access-checkbox]:checked').length;
@@ -568,7 +482,6 @@
                 if (this.checked) $module.find('[data-no-access]').prop('checked', false);
             });
 
-            // Save the complete permission form through AJAX and prevent double submission.
             $(document).on('submit', '#permission-form', function (event) {
                 event.preventDefault();
 
@@ -592,7 +505,6 @@
                 });
             });
 
-            // Toggle the active/inactive status of any reusable CRUD record.
             $(document).on('click', '[data-crud-status]', function () {
                 var url = $(this).data('url'), token = $('[data-crud-form] input[name="_token"]').first().val();
                 $.post(url, { _token: token, _method: 'PATCH' }).done(function (response) {
@@ -600,7 +512,6 @@
                 }).fail(function () { crudToast('error', 'Status update failed.'); });
             });
 
-            // Confirm and delete any CRUD record; SweetAlert is used when it is available.
             $(document).on('click', '[data-crud-delete]', function () {
                 var url = $(this).data('url'), token = $('[data-crud-form] input[name="_token"]').first().val();
                 if (!window.Swal) {
@@ -615,7 +526,6 @@
                 });
             });
         });
-    // Open a record's permission page through the shared AJAX page loader.
     $(document).on('click', '[data-crud-permission]', function () {
         var url = $(this).data('url');
         if (url) {
