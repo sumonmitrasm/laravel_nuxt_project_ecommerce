@@ -28,5 +28,25 @@ function loadScript(src: string) {
 export default defineNuxtPlugin((nuxtApp) => {
   nuxtApp.hook('app:mounted', async () => {
     for (const src of scripts) await loadScript(src)
+
+    const bootstrap = (window as typeof window & {
+      bootstrap?: {
+        Carousel: {
+          getOrCreateInstance: (element: Element, options?: { interval: number; ride: string }) => {
+            cycle: () => void
+          }
+        }
+      }
+    }).bootstrap
+
+    if (!bootstrap) return
+
+    document.querySelectorAll('.carousel').forEach((element) => {
+      const carousel = bootstrap.Carousel.getOrCreateInstance(element, {
+        interval: Number(element.getAttribute('data-bs-interval')) || 5000,
+        ride: 'carousel',
+      })
+      carousel.cycle()
+    })
   })
 })

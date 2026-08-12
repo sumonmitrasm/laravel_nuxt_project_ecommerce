@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initInteractions() {
     const toast = m => { const e = document.querySelector('#liveToast'); if (!e) return; e.querySelector('.toast-body').textContent = m; bootstrap.Toast.getOrCreateInstance(e).show() };
     document.querySelectorAll('[data-toast]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); toast(b.dataset.toast || 'Done') }));
     document.querySelectorAll('.qty').forEach(g => { const i = g.querySelector('input'); g.querySelector('.minus')?.addEventListener('click', () => i.value = Math.max(1, (+i.value || 1) - 1)); g.querySelector('.plus')?.addEventListener('click', () => i.value = (+i.value || 1) + 1) });
@@ -48,4 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const wishlist = document.querySelector('[data-wishlist-items]'); if (wishlist) wishlist.addEventListener('click', e => { const item = e.target.closest('[data-wishlist-item]'); if (!item) return; if (e.target.closest('[data-wishlist-remove],[data-wishlist-remove-mobile]')) { item.classList.add('removing'); setTimeout(() => item.remove(), 250) } if (e.target.closest('[data-wishlist-cart]')) toast('Added to cart') });
     const cart = document.querySelector('[data-cart-items]'); if (cart) { const money = v => '৳' + v.toLocaleString(), update = () => { let s = 0; document.querySelectorAll('[data-cart-item]').forEach(x => { const q = Math.max(1, +x.querySelector('input').value || 1), v = +x.dataset.price * q; x.querySelector('input').value = q; x.querySelector('.cart-line-total').textContent = money(v); s += v }); document.querySelector('[data-cart-subtotal]').textContent = money(s); document.querySelector('[data-cart-total]').textContent = money(s + (+(document.querySelector('input[name="shipping"]:checked')?.value || 0))) }; cart.addEventListener('click', e => { const x = e.target.closest('[data-cart-item]'); if (x && e.target.closest('[data-remove-item],[data-move-wishlist]')) { x.remove(); update() } if (e.target.closest('.minus,.plus')) setTimeout(update) }); document.querySelectorAll('input[name="shipping"]').forEach(x => x.addEventListener('change', update)); update() }
     const checkout = document.querySelector('[data-checkout-form]'); if (checkout) { const update = () => { const s = +(document.querySelector('input[name="checkoutShipping"]:checked')?.value || 0), v = 19230 + s; document.querySelector('[data-checkout-shipping]').textContent = s ? '৳' + s : 'Free'; document.querySelector('[data-checkout-total]').textContent = '৳' + v.toLocaleString(); document.querySelector('[data-checkout-mobile-total]').textContent = '৳' + v.toLocaleString() }; document.querySelectorAll('.checkout-options>label>input').forEach(x => x.addEventListener('change', () => { document.querySelectorAll('input[name="' + x.name + '"]').forEach(y => y.closest('label').classList.toggle('selected', y.checked)); if (x.name === 'payment') document.querySelector('.card-fields').style.display = x.value === 'card' ? 'grid' : 'none'; update() })); checkout.addEventListener('submit', e => { e.preventDefault(); if (checkout.reportValidity()) document.querySelector('[data-checkout-success]').classList.add('show') }); document.querySelector('[data-place-order]')?.addEventListener('click', () => checkout.requestSubmit()); update() }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initInteractions, { once: true });
+} else {
+    initInteractions();
+}
