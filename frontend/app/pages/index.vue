@@ -5,130 +5,130 @@
                 <aside class="col-lg-3 category-sidebar">
                     <div class="category-sidebar-title"><i class="bi bi-list me-2"></i>Browse Categories</div>
                     <nav aria-label="Product categories">
-                        <div class="desktop-category-item"><a href="shop.html"><span><i class="bi bi-phone"></i>
-                                    Electronics</span><i class="bi bi-chevron-right"></i></a>
+                        <div class="desktop-category-item"><NuxtLink to="/shop"><span><i class="bi bi-phone"></i>
+                                    Electronics</span><i class="bi bi-chevron-right"></i></NuxtLink>
                             <div class="category-flyout">
                                 <div>
-                                    <h3>Mobiles &amp; Computing</h3><a href="shop.html">Smartphones</a><a
-                                        href="shop.html">Feature Phones</a><a href="shop.html">Laptop &amp;
-                                        Notebook</a><a href="shop.html">Desktop Computers</a><a
-                                        href="shop.html">Tablets</a>
+                                    <h3>Mobiles &amp; Computing</h3><NuxtLink to="/shop">Smartphones</NuxtLink><NuxtLink
+                                        to="/shop">Feature Phones</NuxtLink><NuxtLink to="/shop">Laptop &amp;
+                                        Notebook</NuxtLink><NuxtLink to="/shop">Desktop Computers</NuxtLink><NuxtLink
+                                        to="/shop">Tablets</NuxtLink>
                                 </div>
                                 <div>
-                                    <h3>TV &amp; Entertainment</h3><a href="shop.html">Smart Televisions</a><a
-                                        href="shop.html">Headphones</a><a href="shop.html">Speakers</a><a
-                                        href="shop.html">Gaming Consoles</a><a href="shop.html">Cameras</a>
+                                    <h3>TV &amp; Entertainment</h3><NuxtLink to="/shop">Smart Televisions</NuxtLink><NuxtLink
+                                        to="/shop">Headphones</NuxtLink><NuxtLink to="/shop">Speakers</NuxtLink><NuxtLink
+                                        to="/shop">Gaming Consoles</NuxtLink><NuxtLink to="/shop">Cameras</NuxtLink>
                                 </div>
                                 <div class="flyout-feature"><i class="bi bi-laptop"></i><small>Featured
-                                        collection</small><strong>Technology that works for you</strong><a
-                                        href="shop.html">Explore now <i class="bi bi-arrow-right"></i></a></div>
+                                        collection</small><strong>Technology that works for you</strong><NuxtLink
+                                        to="/shop">Explore now <i class="bi bi-arrow-right"></i></NuxtLink></div>
                             </div>
                         </div>
-                        <div class="desktop-category-item"><a href="shop.html"><span><i class="bi bi-bag"></i> Fashion
-                                    &amp; Lifestyle</span><i class="bi bi-chevron-right"></i></a>
+                        <div class="desktop-category-item"><NuxtLink to="/shop"><span><i class="bi bi-bag"></i> Fashion
+                                    &amp; Lifestyle</span><i class="bi bi-chevron-right"></i></NuxtLink>
                             <div class="category-flyout">
                                 <div>
-                                    <h3>Women's Fashion</h3><a href="shop.html">Dresses</a><a href="shop.html">Tops
-                                        &amp; T-shirts</a><a href="shop.html">Shoes</a><a
-                                        href="shop.html">Handbags</a><a href="shop.html">Jewellery</a>
+                                    <h3>Women's Fashion</h3><NuxtLink to="/shop">Dresses</NuxtLink><NuxtLink to="/shop">Tops
+                                        &amp; T-shirts</NuxtLink><NuxtLink to="/shop">Shoes</NuxtLink><NuxtLink
+                                        to="/shop">Handbags</NuxtLink><NuxtLink to="/shop">Jewellery</NuxtLink>
                                 </div>
                                 <div>
-                                    <h3>Men's Fashion</h3><a href="shop.html">Shirts</a><a href="shop.html">Jeans &amp;
-                                        Trousers</a><a href="shop.html">Footwear</a><a href="shop.html">Watches</a><a
-                                        href="shop.html">Accessories</a>
+                                    <h3>Men's Fashion</h3><NuxtLink to="/shop">Shirts</NuxtLink><NuxtLink to="/shop">Jeans &amp;
+                                        Trousers</NuxtLink><NuxtLink to="/shop">Footwear</NuxtLink><NuxtLink to="/shop">Watches</NuxtLink><NuxtLink
+                                        to="/shop">Accessories</NuxtLink>
                                 </div>
                                 <div>
-                                    <h3>Kids &amp; Lifestyle</h3><a href="shop.html">Boys' Clothing</a><a
-                                        href="shop.html">Girls' Clothing</a><a href="shop.html">Beauty &amp; Care</a><a
-                                        href="shop.html">Travel Accessories</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="desktop-category-item"><a href="shop.html"><span><i class="bi bi-house-heart"></i>
-                                    Home &amp; Living</span><i class="bi bi-chevron-right"></i></a>
-                            <div class="category-flyout">
-                                <div>
-                                    <h3>Furniture</h3><a href="shop.html">Living Room</a><a
-                                        href="shop.html">Bedroom</a><a href="shop.html">Office Furniture</a><a
-                                        href="shop.html">Storage</a>
-                                </div>
-                                <div>
-                                    <h3>Kitchen &amp; Dining</h3><a href="shop.html">Cookware</a><a
-                                        href="shop.html">Kitchen Appliances</a><a href="shop.html">Dinnerware</a><a
-                                        href="shop.html">Drinkware</a>
-                                </div>
-                                <div>
-                                    <h3>Home Improvement</h3><a href="shop.html">Lighting</a><a href="shop.html">Home
-                                        Decor</a><a href="shop.html">Tools &amp; Hardware</a><a
-                                        href="shop.html">Garden</a>
+                                    <h3>Kids &amp; Lifestyle</h3><NuxtLink to="/shop">Boys' Clothing</NuxtLink><NuxtLink
+                                        to="/shop">Girls' Clothing</NuxtLink><NuxtLink to="/shop">Beauty &amp; Care</NuxtLink><NuxtLink
+                                        to="/shop">Travel Accessories</NuxtLink>
                                 </div>
                             </div>
                         </div>
-                        <div class="desktop-category-item"><a href="shop.html"><span><i class="bi bi-heart-pulse"></i>
-                                    Health &amp; Beauty</span><i class="bi bi-chevron-right"></i></a>
+                        <div class="desktop-category-item"><NuxtLink to="/shop"><span><i class="bi bi-house-heart"></i>
+                                    Home &amp; Living</span><i class="bi bi-chevron-right"></i></NuxtLink>
                             <div class="category-flyout">
                                 <div>
-                                    <h3>Beauty</h3><a href="shop.html">Skin Care</a><a href="shop.html">Hair Care</a><a
-                                        href="shop.html">Makeup</a><a href="shop.html">Fragrance</a>
+                                    <h3>Furniture</h3><NuxtLink to="/shop">Living Room</NuxtLink><NuxtLink
+                                        to="/shop">Bedroom</NuxtLink><NuxtLink to="/shop">Office Furniture</NuxtLink><NuxtLink
+                                        to="/shop">Storage</NuxtLink>
                                 </div>
                                 <div>
-                                    <h3>Personal Care</h3><a href="shop.html">Bath &amp; Body</a><a
-                                        href="shop.html">Grooming</a><a href="shop.html">Wellness</a><a
-                                        href="shop.html">Medical Supplies</a>
+                                    <h3>Kitchen &amp; Dining</h3><NuxtLink to="/shop">Cookware</NuxtLink><NuxtLink
+                                        to="/shop">Kitchen Appliances</NuxtLink><NuxtLink to="/shop">Dinnerware</NuxtLink><NuxtLink
+                                        to="/shop">Drinkware</NuxtLink>
+                                </div>
+                                <div>
+                                    <h3>Home Improvement</h3><NuxtLink to="/shop">Lighting</NuxtLink><NuxtLink to="/shop">Home
+                                        Decor</NuxtLink><NuxtLink to="/shop">Tools &amp; Hardware</NuxtLink><NuxtLink
+                                        to="/shop">Garden</NuxtLink>
                                 </div>
                             </div>
                         </div>
-                        <div class="desktop-category-item"><a href="shop.html"><span><i class="bi bi-controller"></i>
-                                    Gaming &amp; Accessories</span><i class="bi bi-chevron-right"></i></a>
+                        <div class="desktop-category-item"><NuxtLink to="/shop"><span><i class="bi bi-heart-pulse"></i>
+                                    Health &amp; Beauty</span><i class="bi bi-chevron-right"></i></NuxtLink>
                             <div class="category-flyout">
                                 <div>
-                                    <h3>Gaming</h3><a href="shop.html">Consoles</a><a href="shop.html">Controllers</a><a
-                                        href="shop.html">Gaming Headsets</a><a href="shop.html">Games</a>
+                                    <h3>Beauty</h3><NuxtLink to="/shop">Skin Care</NuxtLink><NuxtLink to="/shop">Hair Care</NuxtLink><NuxtLink
+                                        to="/shop">Makeup</NuxtLink><NuxtLink to="/shop">Fragrance</NuxtLink>
                                 </div>
                                 <div>
-                                    <h3>Computer Accessories</h3><a href="shop.html">Keyboard &amp; Mouse</a><a
-                                        href="shop.html">Monitors</a><a href="shop.html">Storage</a><a
-                                        href="shop.html">Networking</a>
+                                    <h3>Personal Care</h3><NuxtLink to="/shop">Bath &amp; Body</NuxtLink><NuxtLink
+                                        to="/shop">Grooming</NuxtLink><NuxtLink to="/shop">Wellness</NuxtLink><NuxtLink
+                                        to="/shop">Medical Supplies</NuxtLink>
                                 </div>
                             </div>
                         </div>
-                        <div class="desktop-category-item"><a href="shop.html"><span><i class="bi bi-bicycle"></i>
-                                    Sports &amp; Outdoor</span><i class="bi bi-chevron-right"></i></a>
+                        <div class="desktop-category-item"><NuxtLink to="/shop"><span><i class="bi bi-controller"></i>
+                                    Gaming &amp; Accessories</span><i class="bi bi-chevron-right"></i></NuxtLink>
                             <div class="category-flyout">
                                 <div>
-                                    <h3>Sports</h3><a href="shop.html">Fitness Equipment</a><a
-                                        href="shop.html">Cycling</a><a href="shop.html">Team Sports</a><a
-                                        href="shop.html">Sportswear</a>
+                                    <h3>Gaming</h3><NuxtLink to="/shop">Consoles</NuxtLink><NuxtLink to="/shop">Controllers</NuxtLink><NuxtLink
+                                        to="/shop">Gaming Headsets</NuxtLink><NuxtLink to="/shop">Games</NuxtLink>
                                 </div>
                                 <div>
-                                    <h3>Outdoor</h3><a href="shop.html">Camping</a><a href="shop.html">Travel Gear</a><a
-                                        href="shop.html">Garden &amp; Outdoor</a>
+                                    <h3>Computer Accessories</h3><NuxtLink to="/shop">Keyboard &amp; Mouse</NuxtLink><NuxtLink
+                                        to="/shop">Monitors</NuxtLink><NuxtLink to="/shop">Storage</NuxtLink><NuxtLink
+                                        to="/shop">Networking</NuxtLink>
                                 </div>
                             </div>
                         </div>
-                        <div class="desktop-category-item"><a href="shop.html"><span><i class="bi bi-balloon"></i> Baby,
-                                    Kids &amp; Toys</span><i class="bi bi-chevron-right"></i></a>
+                        <div class="desktop-category-item"><NuxtLink to="/shop"><span><i class="bi bi-bicycle"></i>
+                                    Sports &amp; Outdoor</span><i class="bi bi-chevron-right"></i></NuxtLink>
                             <div class="category-flyout">
                                 <div>
-                                    <h3>Baby Care</h3><a href="shop.html">Feeding</a><a href="shop.html">Diapers</a><a
-                                        href="shop.html">Nursery</a>
+                                    <h3>Sports</h3><NuxtLink to="/shop">Fitness Equipment</NuxtLink><NuxtLink
+                                        to="/shop">Cycling</NuxtLink><NuxtLink to="/shop">Team Sports</NuxtLink><NuxtLink
+                                        to="/shop">Sportswear</NuxtLink>
                                 </div>
                                 <div>
-                                    <h3>Toys</h3><a href="shop.html">Educational Toys</a><a href="shop.html">Outdoor
-                                        Toys</a><a href="shop.html">Games &amp; Puzzles</a>
+                                    <h3>Outdoor</h3><NuxtLink to="/shop">Camping</NuxtLink><NuxtLink to="/shop">Travel Gear</NuxtLink><NuxtLink
+                                        to="/shop">Garden &amp; Outdoor</NuxtLink>
                                 </div>
                             </div>
                         </div>
-                        <div class="desktop-category-item"><a href="shop.html"><span><i class="bi bi-car-front"></i>
-                                    Automotive</span><i class="bi bi-chevron-right"></i></a>
+                        <div class="desktop-category-item"><NuxtLink to="/shop"><span><i class="bi bi-balloon"></i> Baby,
+                                    Kids &amp; Toys</span><i class="bi bi-chevron-right"></i></NuxtLink>
                             <div class="category-flyout">
                                 <div>
-                                    <h3>Car Accessories</h3><a href="shop.html">Interior Accessories</a><a
-                                        href="shop.html">Car Electronics</a><a href="shop.html">Cleaning &amp; Care</a>
+                                    <h3>Baby Care</h3><NuxtLink to="/shop">Feeding</NuxtLink><NuxtLink to="/shop">Diapers</NuxtLink><NuxtLink
+                                        to="/shop">Nursery</NuxtLink>
                                 </div>
                                 <div>
-                                    <h3>Parts &amp; Tools</h3><a href="shop.html">Motorcycle Accessories</a><a
-                                        href="shop.html">Tyres &amp; Wheels</a><a href="shop.html">Automotive Tools</a>
+                                    <h3>Toys</h3><NuxtLink to="/shop">Educational Toys</NuxtLink><NuxtLink to="/shop">Outdoor
+                                        Toys</NuxtLink><NuxtLink to="/shop">Games &amp; Puzzles</NuxtLink>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="desktop-category-item"><NuxtLink to="/shop"><span><i class="bi bi-car-front"></i>
+                                    Automotive</span><i class="bi bi-chevron-right"></i></NuxtLink>
+                            <div class="category-flyout">
+                                <div>
+                                    <h3>Car Accessories</h3><NuxtLink to="/shop">Interior Accessories</NuxtLink><NuxtLink
+                                        to="/shop">Car Electronics</NuxtLink><NuxtLink to="/shop">Cleaning &amp; Care</NuxtLink>
+                                </div>
+                                <div>
+                                    <h3>Parts &amp; Tools</h3><NuxtLink to="/shop">Motorcycle Accessories</NuxtLink><NuxtLink
+                                        to="/shop">Tyres &amp; Wheels</NuxtLink><NuxtLink to="/shop">Automotive Tools</NuxtLink>
                                 </div>
                             </div>
                         </div>
@@ -150,9 +150,9 @@
                                         <h1>Built for your everyday.</h1>
                                         <p>Considered technology and modern essentials, selected for a smarter life.</p>
                                         <div class="hero-offer"><small>From</small><strong>৳6,990</strong><span>Free
-                                                delivery</span></div><a href="shop.html"
+                                                delivery</span></div><NuxtLink to="/shop"
                                             class="btn btn-brand rounded-pill px-4 py-3">Shop collection <i
-                                                class="bi bi-arrow-right ms-2"></i></a>
+                                                class="bi bi-arrow-right ms-2"></i></NuxtLink>
                                         <div class="hero-assurance"><span><i class="bi bi-check2-circle"></i> Genuine
                                                 products</span><span><i class="bi bi-arrow-counterclockwise"></i> Easy
                                                 returns</span></div>
@@ -168,9 +168,9 @@
                                         <h1>Power your next big idea.</h1>
                                         <p>Fast laptops, crisp displays and accessories built to keep up with you.</p>
                                         <div class="hero-offer"><small>Save up
-                                                to</small><strong>25%</strong><span>Official warranty</span></div><a
-                                            href="shop.html" class="btn btn-dark rounded-pill px-4 py-3">Explore
-                                            technology <i class="bi bi-arrow-right ms-2"></i></a>
+                                                to</small><strong>25%</strong><span>Official warranty</span></div><NuxtLink
+                                            to="/shop" class="btn btn-dark rounded-pill px-4 py-3">Explore
+                                            technology <i class="bi bi-arrow-right ms-2"></i></NuxtLink>
                                         <div class="hero-assurance"><span><i class="bi bi-check2-circle"></i> Genuine
                                                 products</span><span><i class="bi bi-arrow-counterclockwise"></i> Easy
                                                 returns</span></div>
@@ -186,9 +186,9 @@
                                         <h1>Turn up every moment.</h1>
                                         <p>Premium wireless audio with all-day comfort and incredible clarity.</p>
                                         <div class="hero-offer"><small>Special
-                                                price</small><strong>৳8,490</strong><span>40-hour battery</span></div><a
-                                            href="shop.html" class="btn btn-brand rounded-pill px-4 py-3">Shop audio <i
-                                                class="bi bi-arrow-right ms-2"></i></a>
+                                                price</small><strong>৳8,490</strong><span>40-hour battery</span></div><NuxtLink
+                                            to="/shop" class="btn btn-brand rounded-pill px-4 py-3">Shop audio <i
+                                                class="bi bi-arrow-right ms-2"></i></NuxtLink>
                                         <div class="hero-assurance"><span><i class="bi bi-check2-circle"></i> Genuine
                                                 products</span><span><i class="bi bi-arrow-counterclockwise"></i> Easy
                                                 returns</span></div>
@@ -216,58 +216,58 @@
                         data-category-prev="" aria-label="Previous categories" disabled><i
                             class="bi bi-arrow-left"></i></button><button class="category-arrow" type="button"
                         data-category-next="" aria-label="Next categories" disabled><i
-                            class="bi bi-arrow-right"></i></button><a href="shop.html"
-                        class="category-view-all ms-2">View all</a></div>
+                            class="bi bi-arrow-right"></i></button><NuxtLink to="/shop"
+                        class="category-view-all ms-2">View all</NuxtLink></div>
             </div>
-            <div class="category-slider" data-category-slider=""><a href="shop.html" class="category-slide"><span
+            <div class="category-slider" data-category-slider=""><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual coral category-photo"
                         style="--category-column: 0; --category-row: 0;"></span><strong>Computers</strong><small>86
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual violet category-photo"
                         style="--category-column: 1; --category-row: 0;"></span><strong>Smartphones</strong><small>128
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual blue category-photo"
                         style="--category-column: 2; --category-row: 0;"></span><strong>Audio</strong><small>74
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual amber category-photo"
                         style="--category-column: 3; --category-row: 0;"></span><strong>Wearables</strong><small>42
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual green category-photo"
                         style="--category-column: 0; --category-row: 1;"></span><strong>Televisions</strong><small>39
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual rose category-photo"
                         style="--category-column: 1; --category-row: 1;"></span><strong>Fashion</strong><small>244
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual sky category-photo"
                         style="--category-column: 2; --category-row: 1;"></span><strong>Home &
-                        Living</strong><small>96 products</small></a><a href="shop.html" class="category-slide"><span
+                        Living</strong><small>96 products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual lime category-photo"
                         style="--category-column: 3; --category-row: 1;"></span><strong>Kitchen</strong><small>61
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual peach category-photo"
                         style="--category-column: 0; --category-row: 2;"></span><strong>Gaming</strong><small>53
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual indigo category-photo"
                         style="--category-column: 1; --category-row: 2;"></span><strong>Cameras</strong><small>35
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual mint category-photo"
                         style="--category-column: 2; --category-row: 2;"></span><strong>Sports</strong><small>83
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual sand category-photo"
                         style="--category-column: 3; --category-row: 2;"></span><strong>Gift Ideas</strong><small>107
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual office category-photo"
                         style="--category-column: 0; --category-row: 3;"></span><strong>Office
-                        Supplies</strong><small>48 products</small></a><a href="shop.html" class="category-slide"><span
+                        Supplies</strong><small>48 products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual baby category-photo"
                         style="--category-column: 1; --category-row: 3;"></span><strong>Baby &
-                        Kids</strong><small>72 products</small></a><a href="shop.html" class="category-slide"><span
+                        Kids</strong><small>72 products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual auto category-photo"
                         style="--category-column: 2; --category-row: 3;"></span><strong>Automotive</strong><small>55
-                        products</small></a><a href="shop.html" class="category-slide"><span
+                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
                         class="category-visual books category-photo"
                         style="--category-column: 3; --category-row: 3;"></span><strong>Books &
-                        Media</strong><small>91 products</small></a></div>
+                        Media</strong><small>91 products</small></NuxtLink></div>
         </section>
         <section class="hot-deals py-5" id="hot-deals">
             <div class="container">
@@ -289,7 +289,7 @@
                                     class="deal-add-cart" type="button" data-toast="Added to cart"><i
                                         class="bi bi-cart3"></i><span>Add to cart</span></button></div>
                             <small>Furniture</small>
-                            <h3><a href="product.html">Nordic Wooden Stool</a></h3>
+                            <h3><NuxtLink to="/product">Nordic Wooden Stool</NuxtLink></h3>
                             <div class="deal-price">৳5,299 <del>৳6,500</del></div>
                             <div class="deal-rating"><span>★★★★★</span> <small>(2 Reviews)</small></div>
                         </article>
@@ -304,7 +304,7 @@
                             <div class="deal-countdown" data-countdown="28800">
                                 <b><span>08</span><small>hours</small></b><em>:</em><b><span>00</span><small>mins</small></b><em>:</em><b><span>00</span><small>secs</small></b>
                             </div><small>Electronics</small>
-                            <h3><a href="product.html">Pulse Wireless Headphones</a></h3>
+                            <h3><NuxtLink to="/product">Pulse Wireless Headphones</NuxtLink></h3>
                             <div class="deal-price">৳8,490 <del>৳9,900</del></div>
                             <div class="deal-rating"><span>★★★★★</span> <small>(4 Reviews)</small></div>
                             <div class="deal-colors"><i class="blue"></i><i class="coral"></i><i class="black"></i>
@@ -316,7 +316,7 @@
                                     class="deal-add-cart" type="button" data-toast="Added to cart"><i
                                         class="bi bi-cart3"></i><span>Add to cart</span></button></div>
                             <small>Furniture</small>
-                            <h3><a href="product.html">Modern 2-Seater Sofa</a></h3>
+                            <h3><NuxtLink to="/product">Modern 2-Seater Sofa</NuxtLink></h3>
                             <div class="deal-price">৳35,000 <del>৳42,000</del></div>
                             <div class="deal-rating"><span>★★★★<i>★</i></span> <small>(6 Reviews)</small></div>
                         </article>
@@ -326,7 +326,7 @@
                                     class="deal-add-cart" type="button" data-toast="Added to cart"><i
                                         class="bi bi-cart3"></i><span>Add to cart</span></button></div>
                             <small>Clothes</small>
-                            <h3><a href="product.html">Premium Biker Jacket</a></h3>
+                            <h3><NuxtLink to="/product">Premium Biker Jacket</NuxtLink></h3>
                             <div class="deal-price">৳12,400 <del>৳15,500</del></div>
                             <div class="deal-rating"><span>★★★★<i>★</i></span> <small>(4 Reviews)</small></div>
                             <div class="deal-colors"><i class="brown"></i><i class="grey"></i></div>
@@ -342,7 +342,7 @@
                             <div class="deal-countdown" data-countdown="23400">
                                 <b><span>06</span><small>hours</small></b><em>:</em><b><span>30</span><small>mins</small></b><em>:</em><b><span>00</span><small>secs</small></b>
                             </div><small>Electronics</small>
-                            <h3><a href="product.html">Vision Class 4K Smart TV</a></h3>
+                            <h3><NuxtLink to="/product">Vision Class 4K Smart TV</NuxtLink></h3>
                             <div class="deal-price">৳69,999 <del>৳79,999</del></div>
                             <div class="deal-rating"><span>★★★★<i>★</i></span> <small>(10 Reviews)</small></div>
                         </article>
@@ -352,7 +352,7 @@
                                     class="deal-add-cart" type="button" data-toast="Added to cart"><i
                                         class="bi bi-cart3"></i><span>Add to cart</span></button></div>
                             <small>Accessories</small>
-                            <h3><a href="product.html">Orbit Smart Watch S2</a></h3>
+                            <h3><NuxtLink to="/product">Orbit Smart Watch S2</NuxtLink></h3>
                             <div class="deal-price">৳6,990 <del>৳8,200</del></div>
                             <div class="deal-rating"><span>★★★★★</span> <small>(8 Reviews)</small></div>
                         </article>
@@ -377,18 +377,18 @@
                     <div><small>Smart technology</small>
                         <h3>Your everyday essentials, upgraded.</h3>
                         <p>Selected devices at prices worth discovering.</p>
-                    </div><a href="shop.html">Shop now <i class="bi bi-arrow-right"></i></a>
+                    </div><NuxtLink to="/shop">Shop now <i class="bi bi-arrow-right"></i></NuxtLink>
                 </div>
                 <div class="col-6 col-lg-3" data-trending-group="selling">
-                    <div class="product-card card h-100 p-2"><a href="product.html" class="product-media"><img
+                    <div class="product-card card h-100 p-2"><NuxtLink to="/product" class="product-media"><img
                                 src="/assets/images/product-1.svg" alt="Wireless headphones"><span
                                 class="smart-badge">Best seller</span><button class="smart-wishlist" type="button"
-                                aria-label="Add to wishlist"><i class="bi bi-heart"></i></button></a>
+                                aria-label="Add to wishlist"><i class="bi bi-heart"></i></button></NuxtLink>
                         <div class="card-body">
                             <div class="smart-rating"><span>★★★★★</span><small> 4.8</small></div><small
                                 class="text-secondary">Audio</small>
-                            <h6 class="mt-1"><a class="text-dark text-decoration-none" href="product.html">Pulse
-                                    Wireless Headphones</a></h6>
+                            <h6 class="mt-1"><NuxtLink class="text-dark text-decoration-none" to="/product">Pulse
+                                    Wireless Headphones</NuxtLink></h6>
                             <div><span class="price">৳8,490</span> <span class="old-price">৳9,900</span></div><button
                                 class="btn btn-dark w-100 mt-3" data-toast="Added to cart">Add to cart</button>
                         </div>
@@ -440,23 +440,23 @@
         </section>
         <section class="more-products-section">
             <div class="container">
-                <div class="more-products-head"><div><small>Explore more</small><h2>Products you may love</h2><p>Fresh finds selected across our most popular categories.</p></div><a href="shop.html">Shop all products <i class="bi bi-arrow-right"></i></a></div>
+                <div class="more-products-head"><div><small>Explore more</small><h2>Products you may love</h2><p>Fresh finds selected across our most popular categories.</p></div><NuxtLink to="/shop">Shop all products <i class="bi bi-arrow-right"></i></NuxtLink></div>
                 <div class="more-products-grid">
-                    <article class="more-product-card" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:0;--my:0"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Computers</small><h3><a href="product.html">NovaBook Air Laptop</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(5)</small></div><div class="more-product-price">৳74,900</div></div></article>
-                    <article class="more-product-card" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:1;--my:0"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Smartphones</small><h3><a href="product.html">Nova X Pro Smartphone</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(6)</small></div><div class="more-product-price">৳54,500</div></div></article>
-                    <article class="more-product-card" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:2;--my:0"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Audio</small><h3><a href="product.html">Pulse Wireless Headphones</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(7)</small></div><div class="more-product-price">৳8,490</div></div></article>
-                    <article class="more-product-card" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:3;--my:0"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Wearables</small><h3><a href="product.html">Orbit Smart Watch S2</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(8)</small></div><div class="more-product-price">৳6,990</div></div></article>
-                    <article class="more-product-card" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:0;--my:1"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Televisions</small><h3><a href="product.html">Vision Class 4K Smart TV</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(9)</small></div><div class="more-product-price">৳69,999</div></div></article>
-                    <article class="more-product-card" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:1;--my:1"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Fashion</small><h3><a href="product.html">Everyday Leather Tote</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(10)</small></div><div class="more-product-price">৳4,850</div></div></article>
-                    <article class="more-product-card" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:2;--my:1"></span><em class="popular">Popular</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Furniture</small><h3><a href="product.html">Nordic Lounge Chair</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(11)</small></div><div class="more-product-price">৳18,900</div></div></article>
-                    <article class="more-product-card" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:3;--my:1"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Kitchen</small><h3><a href="product.html">Pro Kitchen Blender</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(12)</small></div><div class="more-product-price">৳7,250</div></div></article>
-                    <article class="more-product-card" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:0;--my:2"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Gaming</small><h3><a href="product.html">Nova Gaming Controller</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(5)</small></div><div class="more-product-price">৳4,390</div></div></article>
-                    <article class="more-product-card" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:1;--my:2"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Cameras</small><h3><a href="product.html">Pocket Mirrorless Camera</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(6)</small></div><div class="more-product-price">৳42,800</div></div></article>
-                    <article class="more-product-card more-product-hidden" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:2;--my:2"></span><em class="popular">Popular</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Sports</small><h3><a href="product.html">Aero Cycling Helmet</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(7)</small></div><div class="more-product-price">৳3,750</div></div></article>
-                    <article class="more-product-card more-product-hidden" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:3;--my:2"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Gifts</small><h3><a href="product.html">Signature Gift Box</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(8)</small></div><div class="more-product-price">৳2,490</div></div></article>
-                    <article class="more-product-card more-product-hidden" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:0;--my:3"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Office</small><h3><a href="product.html">Compact Office Printer</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(9)</small></div><div class="more-product-price">৳16,500</div></div></article>
-                    <article class="more-product-card more-product-hidden" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:1;--my:3"></span><em class="popular">Popular</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Baby & Kids</small><h3><a href="product.html">Wooden Learning Set</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(10)</small></div><div class="more-product-price">৳3,150</div></div></article>
-                    <article class="more-product-card more-product-hidden" data-more-product><a class="more-product-media" href="product.html"><span style="--mx:2;--my:3"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></a><div class="more-product-info"><small>Automotive</small><h3><a href="product.html">Smart City Car Kit</a></h3><div class="more-product-rating"><span>★★★★★</span><small>(11)</small></div><div class="more-product-price">৳8,900</div></div></article>
+                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:0;--my:0"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Computers</small><h3><NuxtLink to="/product">NovaBook Air Laptop</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(5)</small></div><div class="more-product-price">৳74,900</div></div></article>
+                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:1;--my:0"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Smartphones</small><h3><NuxtLink to="/product">Nova X Pro Smartphone</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(6)</small></div><div class="more-product-price">৳54,500</div></div></article>
+                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:2;--my:0"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Audio</small><h3><NuxtLink to="/product">Pulse Wireless Headphones</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(7)</small></div><div class="more-product-price">৳8,490</div></div></article>
+                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:3;--my:0"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Wearables</small><h3><NuxtLink to="/product">Orbit Smart Watch S2</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(8)</small></div><div class="more-product-price">৳6,990</div></div></article>
+                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:0;--my:1"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Televisions</small><h3><NuxtLink to="/product">Vision Class 4K Smart TV</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(9)</small></div><div class="more-product-price">৳69,999</div></div></article>
+                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:1;--my:1"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Fashion</small><h3><NuxtLink to="/product">Everyday Leather Tote</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(10)</small></div><div class="more-product-price">৳4,850</div></div></article>
+                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:2;--my:1"></span><em class="popular">Popular</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Furniture</small><h3><NuxtLink to="/product">Nordic Lounge Chair</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(11)</small></div><div class="more-product-price">৳18,900</div></div></article>
+                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:3;--my:1"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Kitchen</small><h3><NuxtLink to="/product">Pro Kitchen Blender</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(12)</small></div><div class="more-product-price">৳7,250</div></div></article>
+                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:0;--my:2"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Gaming</small><h3><NuxtLink to="/product">Nova Gaming Controller</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(5)</small></div><div class="more-product-price">৳4,390</div></div></article>
+                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:1;--my:2"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Cameras</small><h3><NuxtLink to="/product">Pocket Mirrorless Camera</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(6)</small></div><div class="more-product-price">৳42,800</div></div></article>
+                    <article class="more-product-card more-product-hidden" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:2;--my:2"></span><em class="popular">Popular</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Sports</small><h3><NuxtLink to="/product">Aero Cycling Helmet</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(7)</small></div><div class="more-product-price">৳3,750</div></div></article>
+                    <article class="more-product-card more-product-hidden" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:3;--my:2"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Gifts</small><h3><NuxtLink to="/product">Signature Gift Box</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(8)</small></div><div class="more-product-price">৳2,490</div></div></article>
+                    <article class="more-product-card more-product-hidden" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:0;--my:3"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Office</small><h3><NuxtLink to="/product">Compact Office Printer</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(9)</small></div><div class="more-product-price">৳16,500</div></div></article>
+                    <article class="more-product-card more-product-hidden" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:1;--my:3"></span><em class="popular">Popular</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Baby & Kids</small><h3><NuxtLink to="/product">Wooden Learning Set</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(10)</small></div><div class="more-product-price">৳3,150</div></div></article>
+                    <article class="more-product-card more-product-hidden" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:2;--my:3"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Automotive</small><h3><NuxtLink to="/product">Smart City Car Kit</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(11)</small></div><div class="more-product-price">৳8,900</div></div></article>
                 </div>
                 <div class="more-products-action"><button type="button" data-view-more-products><span>View more products</span><i class="bi bi-chevron-down"></i></button><small>Showing 10 of 15 products</small></div>
             </div>

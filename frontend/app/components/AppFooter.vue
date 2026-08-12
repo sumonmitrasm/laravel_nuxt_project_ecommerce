@@ -7,12 +7,12 @@
                     <p class="col-lg-8">An original Bootstrap 5 commerce UI foundation, ready for your backend.</p>
                 </div>
                 <div class="col-6 col-lg-2">
-                    <h6 class="text-white">Shop</h6><a class="d-block my-2" href="shop.html">All products</a><a
-                        class="d-block my-2" href="wishlist.html">Wishlist</a>
+                    <h6 class="text-white">Shop</h6><NuxtLink class="d-block my-2" to="/shop">All products</NuxtLink><NuxtLink
+                        class="d-block my-2" to="/wishlist">Wishlist</NuxtLink>
                 </div>
                 <div class="col-6 col-lg-2">
-                    <h6 class="text-white">Account</h6><a class="d-block my-2" href="login.html">Login</a><a
-                        class="d-block my-2" href="register.html">Register</a>
+                    <h6 class="text-white">Account</h6><NuxtLink class="d-block my-2" to="/login">Login</NuxtLink><NuxtLink
+                        class="d-block my-2" to="/register">Register</NuxtLink>
                 </div>
                 <div class="col-lg-3">
                     <h6 class="text-white">Newsletter</h6>
@@ -23,49 +23,49 @@
         </div>
     </footer>
     <div class="offcanvas offcanvas-start" id="menu">
-        <div class="mobile-menu-head"><a class="mobile-menu-brand" href="index.html">NOVA<span>CART</span></a><button
+        <div class="mobile-menu-head"><NuxtLink class="mobile-menu-brand" to="/">NOVA<span>CART</span></NuxtLink><button
                 class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
         <div class="mobile-menu-body">
             <form class="mobile-search" action="shop.html"><input type="search" placeholder="Search products"><button
                     aria-label="Search"><i class="bi bi-search"></i></button></form>
-            <div class="mobile-quick"><a href="login.html"><i class="bi bi-person"></i><span>Account</span></a><a
-                    href="wishlist.html"><i class="bi bi-heart"></i><span>Wishlist</span></a><a href="cart.html"><i
-                        class="bi bi-cart3"></i><span>Cart</span></a></div>
+            <div class="mobile-quick"><NuxtLink to="/login"><i class="bi bi-person"></i><span>Account</span></NuxtLink><NuxtLink
+                    to="/wishlist"><i class="bi bi-heart"></i><span>Wishlist</span></NuxtLink><NuxtLink to="/cart"><i
+                        class="bi bi-cart3"></i><span>Cart</span></NuxtLink></div>
             <div class="mobile-nav-label">Shop by section</div>
             <nav class="mobile-nav">
                 <div class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
                         data-bs-target="#mobileElectronics" aria-expanded="true"><span><i class="bi bi-phone"></i>
                             Electronics</span><i class="bi bi-chevron-down"></i></button>
-                    <div class="collapse show" id="mobileElectronics"><a href="shop.html">Smartphones</a><a
-                            href="shop.html">Computers &amp; Laptop</a><a href="shop.html">TV &amp; Audio</a><a
-                            href="shop.html">Cameras</a></div>
+                    <div class="collapse show" id="mobileElectronics"><NuxtLink to="/shop">Smartphones</NuxtLink><NuxtLink
+                            to="/shop">Computers &amp; Laptop</NuxtLink><NuxtLink to="/shop">TV &amp; Audio</NuxtLink><NuxtLink
+                            to="/shop">Cameras</NuxtLink></div>
                 </div>
                 <div class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
                         data-bs-target="#mobileFashion"><span><i class="bi bi-bag"></i> Fashion &amp; Lifestyle</span><i
                             class="bi bi-chevron-down"></i></button>
-                    <div class="collapse" id="mobileFashion"><a href="shop.html">Women's Fashion</a><a
-                            href="shop.html">Men's Fashion</a><a href="shop.html">Watches</a><a href="shop.html">Bags
-                            &amp; Accessories</a></div>
+                    <div class="collapse" id="mobileFashion"><NuxtLink to="/shop">Women's Fashion</NuxtLink><NuxtLink
+                            to="/shop">Men's Fashion</NuxtLink><NuxtLink to="/shop">Watches</NuxtLink><NuxtLink to="/shop">Bags
+                            &amp; Accessories</NuxtLink></div>
                 </div>
                 <div class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
                         data-bs-target="#mobileHome"><span><i class="bi bi-house-heart"></i> Home &amp; Living</span><i
                             class="bi bi-chevron-down"></i></button>
-                    <div class="collapse" id="mobileHome"><a href="shop.html">Furniture</a><a href="shop.html">Kitchen
-                            Appliances</a><a href="shop.html">Home Decor</a><a href="shop.html">Lighting</a></div>
+                    <div class="collapse" id="mobileHome"><NuxtLink to="/shop">Furniture</NuxtLink><NuxtLink to="/shop">Kitchen
+                            Appliances</NuxtLink><NuxtLink to="/shop">Home Decor</NuxtLink><NuxtLink to="/shop">Lighting</NuxtLink></div>
                 </div>
                 <div class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
                         data-bs-target="#mobileMore"><span><i class="bi bi-grid"></i> More Categories</span><i
                             class="bi bi-chevron-down"></i></button>
-                    <div class="collapse" id="mobileMore"><a href="shop.html">Sports &amp; Outdoor</a><a
-                            href="shop.html">Baby &amp; Kids</a><a href="shop.html">Automotive</a><a
-                            href="shop.html">Books &amp; Media</a></div>
+                    <div class="collapse" id="mobileMore"><NuxtLink to="/shop">Sports &amp; Outdoor</NuxtLink><NuxtLink
+                            to="/shop">Baby &amp; Kids</NuxtLink><NuxtLink to="/shop">Automotive</NuxtLink><NuxtLink
+                            to="/shop">Books &amp; Media</NuxtLink></div>
                 </div>
             </nav>
             <div class="mobile-nav-label">Discover</div>
-            <div class="mobile-menu-links"><a href="shop.html">New Arrivals <i class="bi bi-arrow-right"></i></a><a
-                    href="shop.html">Best Sellers <i class="bi bi-arrow-right"></i></a><a href="shop.html">Offers <i
-                        class="bi bi-arrow-right"></i></a><a href="compare.html">Compare <i
-                        class="bi bi-arrow-right"></i></a></div>
+            <div class="mobile-menu-links"><NuxtLink to="/shop">New Arrivals <i class="bi bi-arrow-right"></i></NuxtLink><NuxtLink
+                    to="/shop">Best Sellers <i class="bi bi-arrow-right"></i></NuxtLink><NuxtLink to="/shop">Offers <i
+                        class="bi bi-arrow-right"></i></NuxtLink><NuxtLink to="/compare">Compare <i
+                        class="bi bi-arrow-right"></i></NuxtLink></div>
         </div>
         <div class="mobile-menu-footer"><i class="bi bi-headset"></i>
             <div><small>Need help?</small><strong>Customer support</strong></div>
@@ -76,11 +76,11 @@
             <h5>Categories</h5><button class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body">
-            <h6>Technology</h6><a class="d-block p-2" href="shop.html">Phones</a><a class="d-block p-2"
-                href="shop.html">Computers</a><a class="d-block p-2" href="shop.html">Audio</a>
+            <h6>Technology</h6><NuxtLink class="d-block p-2" to="/shop">Phones</NuxtLink><NuxtLink class="d-block p-2"
+                to="/shop">Computers</NuxtLink><NuxtLink class="d-block p-2" to="/shop">Audio</NuxtLink>
             <hr>
-            <h6>Fashion</h6><a class="d-block p-2" href="shop.html">Men</a><a class="d-block p-2"
-                href="shop.html">Women</a>
+            <h6>Fashion</h6><NuxtLink class="d-block p-2" to="/shop">Men</NuxtLink><NuxtLink class="d-block p-2"
+                to="/shop">Women</NuxtLink>
         </div>
     </div>
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
