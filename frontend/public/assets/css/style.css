@@ -1900,8 +1900,12 @@ body {
     font-size: .65rem
 }
 
-.shop-topbar a {
+.shop-topbar a,
+.shop-topbar .topbar-link {
     margin-left: 26px;
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: #69736e;
     text-decoration: none;
     text-transform: uppercase
@@ -1919,7 +1923,11 @@ body {
     margin-left: 55px
 }
 
-.shop-main-nav a {
+.shop-main-nav a,
+.shop-main-nav .nav-placeholder {
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--ink);
     font-size: .82rem;
     font-weight: 600;
@@ -1928,6 +1936,7 @@ body {
 }
 
 .shop-main-nav a.active,
+.shop-main-nav a.router-link-active,
 .shop-main-nav a:hover {
     color: var(--brand)
 }
@@ -2535,7 +2544,8 @@ body {
     gap: 5px
 }
 
-.shop-pagination a {
+.shop-pagination a,
+.shop-pagination span {
     width: 36px;
     height: 36px;
     display: grid;
@@ -2550,7 +2560,7 @@ body {
     color: var(--brand)
 }
 
-.shop-pagination a.disabled {
+.shop-pagination .disabled {
     opacity: .35
 }
 

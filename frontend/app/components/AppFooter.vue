@@ -26,7 +26,7 @@
         <div class="mobile-menu-head"><NuxtLink class="mobile-menu-brand" to="/">NOVA<span>CART</span></NuxtLink><button
                 class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
         <div class="mobile-menu-body">
-            <form class="mobile-search" action="shop.html"><input type="search" placeholder="Search products"><button
+      <form class="mobile-search" @submit.prevent="navigateTo('/shop')"><input type="search" placeholder="Search products here..."><button type="submit"
                     aria-label="Search"><i class="bi bi-search"></i></button></form>
             <div class="mobile-quick"><NuxtLink to="/login"><i class="bi bi-person"></i><span>Account</span></NuxtLink><NuxtLink
                     to="/wishlist"><i class="bi bi-heart"></i><span>Wishlist</span></NuxtLink><NuxtLink to="/cart"><i
