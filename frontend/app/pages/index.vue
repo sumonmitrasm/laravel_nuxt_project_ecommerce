@@ -2,6 +2,9 @@
 definePageMeta({
   layout: 'home'
 })
+
+const activeDealFilter = ref('all')
+const activeTrendingFilter = ref('all')
 </script>
 
 
@@ -280,17 +283,17 @@ definePageMeta({
             <div class="container">
                 <div class="deals-heading">
                     <h2>Hot Deals Products</h2>
-                    <div class="deal-tabs" role="tablist" aria-label="Filter hot deals"><button class="active"
-                            type="button" data-deal-filter="all">All</button><button type="button"
-                            data-deal-filter="electronics">Electronics</button><button type="button"
-                            data-deal-filter="furniture">Furniture</button><button type="button"
-                            data-deal-filter="clothes">Clothes</button><button type="button"
-                            data-deal-filter="accessories">Accessories</button></div>
+                    <div class="deal-tabs" role="tablist" aria-label="Filter hot deals"><button
+                            :class="{ active: activeDealFilter === 'all' }" type="button" @click="activeDealFilter = 'all'">All</button><button
+                            :class="{ active: activeDealFilter === 'electronics' }" type="button" @click="activeDealFilter = 'electronics'">Electronics</button><button
+                            :class="{ active: activeDealFilter === 'furniture' }" type="button" @click="activeDealFilter = 'furniture'">Furniture</button><button
+                            :class="{ active: activeDealFilter === 'clothes' }" type="button" @click="activeDealFilter = 'clothes'">Clothes</button><button
+                            :class="{ active: activeDealFilter === 'accessories' }" type="button" @click="activeDealFilter = 'accessories'">Accessories</button></div>
                 </div>
                 <div class="deals-wrap"><button class="deal-arrow deal-prev" type="button" aria-label="Previous deals"
                         disabled><i class="bi bi-chevron-left"></i></button>
                     <div class="deals-track" data-deals-track="">
-                        <article class="deal-card" data-deal-category="furniture">
+                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'furniture' }">
                             <div class="deal-media"><span class="deal-badge sale">Sale</span><img
                                     src="/assets/images/product-4.svg" alt="Nordic wooden stool"><button
                                     class="deal-add-cart" type="button" data-toast="Added to cart"><i
@@ -300,7 +303,7 @@ definePageMeta({
                             <div class="deal-price">৳5,299 <del>৳6,500</del></div>
                             <div class="deal-rating"><span>★★★★★</span> <small>(2 Reviews)</small></div>
                         </article>
-                        <article class="deal-card" data-deal-category="electronics">
+                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'electronics' }">
                             <div class="deal-media">
                                 <div class="badge-stack"><span class="deal-badge top">Top</span><span
                                         class="deal-badge sale">Sale</span></div><img src="/assets/images/product-1.svg"
@@ -317,7 +320,7 @@ definePageMeta({
                             <div class="deal-colors"><i class="blue"></i><i class="coral"></i><i class="black"></i>
                             </div>
                         </article>
-                        <article class="deal-card" data-deal-category="furniture">
+                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'furniture' }">
                             <div class="deal-media"><span class="deal-badge sale">Sale</span><img
                                     src="/assets/images/product-3.svg" alt="Modern two seater sofa"><button
                                     class="deal-add-cart" type="button" data-toast="Added to cart"><i
@@ -327,7 +330,7 @@ definePageMeta({
                             <div class="deal-price">৳35,000 <del>৳42,000</del></div>
                             <div class="deal-rating"><span>★★★★<i>★</i></span> <small>(6 Reviews)</small></div>
                         </article>
-                        <article class="deal-card" data-deal-category="clothes">
+                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'clothes' }">
                             <div class="deal-media"><span class="deal-badge sale">Sale</span><img
                                     src="/assets/images/product-2.svg" alt="Premium biker jacket"><button
                                     class="deal-add-cart" type="button" data-toast="Added to cart"><i
@@ -338,7 +341,7 @@ definePageMeta({
                             <div class="deal-rating"><span>★★★★<i>★</i></span> <small>(4 Reviews)</small></div>
                             <div class="deal-colors"><i class="brown"></i><i class="grey"></i></div>
                         </article>
-                        <article class="deal-card" data-deal-category="electronics">
+                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'electronics' }">
                             <div class="deal-media">
                                 <div class="badge-stack"><span class="deal-badge top">Top</span><span
                                         class="deal-badge sale">Sale</span></div><img src="/assets/images/product-4.svg"
@@ -353,7 +356,7 @@ definePageMeta({
                             <div class="deal-price">৳69,999 <del>৳79,999</del></div>
                             <div class="deal-rating"><span>★★★★<i>★</i></span> <small>(10 Reviews)</small></div>
                         </article>
-                        <article class="deal-card" data-deal-category="accessories">
+                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'accessories' }">
                             <div class="deal-media"><span class="deal-badge top">Top</span><img
                                     src="/assets/images/product-2.svg" alt="Orbit smart watch"><button
                                     class="deal-add-cart" type="button" data-toast="Added to cart"><i
@@ -375,9 +378,9 @@ definePageMeta({
                     <div class="eyebrow">This week’s favourites</div>
                     <h2 class="section-title">Trending Products</h2>
                 </div>
-                <div class="trending-tabs"><button class="active" type="button" data-trending-filter="all">Top
-                        Rated</button><button type="button" data-trending-filter="selling">Best Selling</button><button
-                        type="button" data-trending-filter="sale">On Sale</button></div>
+                <div class="trending-tabs"><button :class="{ active: activeTrendingFilter === 'all' }" type="button" @click="activeTrendingFilter = 'all'">Top
+                        Rated</button><button :class="{ active: activeTrendingFilter === 'selling' }" type="button" @click="activeTrendingFilter = 'selling'">Best Selling</button><button
+                        :class="{ active: activeTrendingFilter === 'sale' }" type="button" @click="activeTrendingFilter = 'sale'">On Sale</button></div>
             </div>
             <div class="row g-3" id="products">
                 <div class="trending-promo">
@@ -386,7 +389,7 @@ definePageMeta({
                         <p>Selected devices at prices worth discovering.</p>
                     </div><NuxtLink to="/shop">Shop now <i class="bi bi-arrow-right"></i></NuxtLink>
                 </div>
-                <div class="col-6 col-lg-3" data-trending-group="selling">
+                <div class="col-6 col-lg-3" :class="{ 'trending-muted': activeTrendingFilter !== 'all' && activeTrendingFilter !== 'selling' }">
                     <div class="product-card card h-100 p-2"><NuxtLink to="/product" class="product-media"><img
                                 src="/assets/images/product-1.svg" alt="Wireless headphones"><span
                                 class="smart-badge">Best seller</span><button class="smart-wishlist" type="button"
@@ -401,7 +404,7 @@ definePageMeta({
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-lg-3" data-trending-group="sale">
+                <div class="col-6 col-lg-3" :class="{ 'trending-muted': activeTrendingFilter !== 'all' && activeTrendingFilter !== 'sale' }">
                     <div class="product-card card h-100 p-2">
                         <div class="product-media"><img src="/assets/images/product-2.svg" alt="Smartwatch"><span
                                 class="smart-badge">Popular</span><button class="smart-wishlist" type="button"
@@ -415,7 +418,7 @@ definePageMeta({
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-lg-3" data-trending-group="selling">
+                <div class="col-6 col-lg-3" :class="{ 'trending-muted': activeTrendingFilter !== 'all' && activeTrendingFilter !== 'selling' }">
                     <div class="product-card card h-100 p-2">
                         <div class="product-media"><img src="/assets/images/product-3.svg" alt="Speaker"><span
                                 class="smart-badge">Popular</span><button class="smart-wishlist" type="button"
@@ -429,7 +432,7 @@ definePageMeta({
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-lg-3" data-trending-group="all">
+                <div class="col-6 col-lg-3" :class="{ 'trending-muted': activeTrendingFilter !== 'all' }">
                     <div class="product-card card h-100 p-2">
                         <div class="product-media"><img src="/assets/images/product-4.svg" alt="Camera"><span
                                 class="smart-badge">New</span><button class="smart-wishlist" type="button"
