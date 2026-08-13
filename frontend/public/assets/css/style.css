@@ -2660,6 +2660,66 @@ body {
     }
 }
 
+@media(max-width:575.98px) {
+    html,
+    body,
+    #__nuxt,
+    .page-wrapper {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: clip
+    }
+
+    .shop-navbar .container {
+        width: 100%;
+        min-width: 0;
+        flex-wrap: nowrap
+    }
+
+    .shop-navbar .navbar-brand {
+        min-width: 0;
+        margin-right: .5rem;
+        font-size: 1.25rem !important
+    }
+
+    .shop-toolbar {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 8px;
+        width: 100%
+    }
+
+    .shop-toolbar > div:not(.shop-sort) {
+        min-width: 0;
+        text-align: center;
+        line-height: 1.35
+    }
+
+    .shop-sort {
+        min-width: 0;
+        gap: 0
+    }
+
+    .shop-sort select {
+        width: 105px;
+        max-width: 100%;
+        padding-right: 20px
+    }
+
+    .mobile-filter-btn {
+        padding-right: 9px;
+        padding-left: 9px;
+        white-space: nowrap
+    }
+
+    .shop-product,
+    .shop-product-info,
+    .shop-product-info h2 {
+        min-width: 0;
+        overflow-wrap: anywhere
+    }
+}
+
 .shop-heart.active {
     opacity: 1;
     transform: none;

@@ -1,3 +1,10 @@
+<script setup>
+definePageMeta({
+  layout: 'home'
+})
+</script>
+
+
 <template>
   <main>
         <section class="hero-market container py-4 py-lg-5">
