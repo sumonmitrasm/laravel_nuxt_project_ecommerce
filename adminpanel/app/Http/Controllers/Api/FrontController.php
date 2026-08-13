@@ -25,11 +25,6 @@ class FrontController extends Controller
         ], 200);
     }
 
-    public function sections(): JsonResponse
-    {
-        return $this->menu();
-    }
-
     public function listing(string $url): JsonResponse
     {
         $categoryDetails = Category::categoryDetails($url);
