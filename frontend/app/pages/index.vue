@@ -5,6 +5,13 @@ definePageMeta({
 
 const activeDealFilter = ref('all')
 const activeTrendingFilter = ref('all')
+//base url setup
+const config = useRuntimeConfig()
+const { data, pending, error } = await useFetch('/menu', {
+  baseURL: config.public.apiBase
+})
+// console.log('API Response:', data.value)
+// console.log('API Error:', error.value)
 </script>
 
 

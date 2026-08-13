@@ -3,6 +3,13 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  // API Base URL Setup
+  runtimeConfig: {
+    public: {
+      apiBase: 'http://127.0.0.1:8000/api',
+    }
+  },
+
   app: {
     head: {
       title: 'Bootstrap eCommerce Template',
@@ -15,7 +22,6 @@ export default defineNuxtConfig({
         { name: 'apple-mobile-web-app-title', content: 'Molla' },
         { name: 'application-name', content: 'Molla' },
         { name: 'msapplication-TileColor', content: '#cc9966' },
-       
         { name: 'theme-color', content: '#ffffff' }
       ],
       link: [

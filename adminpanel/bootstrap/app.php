@@ -13,6 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+
+        // CORS Middleware যুক্ত করুন (Nuxt থেকে API কল করার জন্য)
+        // $middleware->api(prepend: [
+        //     \Illuminate\Http\Middleware\HandleCors::class,
+        // ]);
         //admin middle ware register
         $middleware->alias([
             'admin.auth' => \App\Http\Middleware\AdminMiddleware::class,
