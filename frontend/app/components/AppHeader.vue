@@ -9,7 +9,7 @@
                     ><NuxtLink to="/wishlist"><i class="bi bi-heart"></i> Wishlist (2)</NuxtLink
                     ><NuxtLink class="topbar-link" to="/about">About us</NuxtLink
                     ><NuxtLink class="topbar-link" to="/contact">Contact us</NuxtLink
-                    ><NuxtLink to="/login"><i class="bi bi-person"></i> Login</NuxtLink>
+                    ><NuxtLink to="/account"><i class="bi bi-person"></i> My Account</NuxtLink>
                 </div>
             </div>
         </div>
