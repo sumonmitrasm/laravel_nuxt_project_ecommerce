@@ -1,3 +1,8 @@
+<script setup>
+const { data } = await useCatalogMenu()
+const sections = computed(() => data.value?.categories ?? [])
+</script>
+
 <template>
   <header>
      <div class="topbar py-2">
@@ -10,9 +15,12 @@
                 to="/">NOVA<span class="brand-dot">CART</span></NuxtLink>
             <form class="d-none d-lg-flex flex-grow-1 mx-5">
                 <div class="input-group"><select class="form-select flex-grow-0" style="width:150px">
-                        <option>All categories</option>
-                        <option>Technology</option>
-                        <option>Fashion</option>
+                        <option value="">All categories</option>
+                        <optgroup v-for="section in sections" :key="section.id" :label="section.name">
+                            <option v-for="category in section.categories" :key="category.id" :value="category.url">
+                                {{ category.category_name }}
+                            </option>
+                        </optgroup>
                     </select><input class="form-control" placeholder="Search products, brands and categories"><button
                         class="btn btn-brand px-4"><i class="bi bi-search"></i></button></div>
             </form>

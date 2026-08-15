@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f7faf8"/><stop offset="1" stop-color="#eef4f0"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-opacity=".12"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#ff5941"/></marker>
+    <style>
+      .title{font:700 28px Arial;fill:#17211d}.sub{font:14px Arial;fill:#63716a}.box{fill:#fff;stroke:#dce5df;stroke-width:2;rx:14;filter:url(#shadow)}
+      .head{font:700 18px Arial;fill:#17211d}.text{font:14px Arial;fill:#5f6d66}.code{font:13px Consolas,monospace;fill:#25322c}
+      .tag{fill:#fff0ec;stroke:#ff5941;rx:8}.tagtext{font:700 12px Arial;fill:#d94331}.line{stroke:#ff5941;stroke-width:3;fill:none;marker-end:url(#arrow)}
+      .smallline{stroke:#8fa299;stroke-width:2;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1400" height="760" fill="url(#bg)"/>
+  <text x="60" y="55" class="title">Section → Category → Nuxt Frontend Data Flow</text>
+  <text x="60" y="82" class="sub">NOVACART implementation — one API, multiple frontend views</text>
+
+  <rect x="55" y="125" width="220" height="150" class="box"/>
+  <rect x="75" y="145" width="74" height="26" class="tag"/><text x="88" y="163" class="tagtext">ADMIN</text>
+  <text x="75" y="200" class="head">Admin Form</text><text x="75" y="228" class="text">Section name + image</text><text x="75" y="251" class="text">Category + section_id</text>
+
+  <rect x="340" y="125" width="240" height="150" class="box"/>
+  <rect x="360" y="145" width="88" height="26" class="tag"/><text x="373" y="163" class="tagtext">DATABASE</text>
+  <text x="360" y="200" class="head">MySQL Tables</text><text x="360" y="228" class="code">sections.id</text><text x="360" y="251" class="code">categories.section_id</text>
+
+  <rect x="645" y="125" width="250" height="150" class="box"/>
+  <rect x="665" y="145" width="82" height="26" class="tag"/><text x="678" y="163" class="tagtext">LARAVEL</text>
+  <text x="665" y="200" class="head">Models</text><text x="665" y="228" class="code">Section::categories()</text><text x="665" y="251" class="code">Category::subcategories()</text>
+
+  <rect x="960" y="125" width="380" height="150" class="box"/>
+  <rect x="980" y="145" width="60" height="26" class="tag"/><text x="993" y="163" class="tagtext">API</text>
+  <text x="980" y="200" class="head">FrontController::menu()</text><text x="980" y="228" class="code">GET http://127.0.0.1:8000/api/menu</text><text x="980" y="251" class="text">Returns Section + Category + Subcategory JSON</text>
+
+  <path d="M275 200 H330" class="line"/><path d="M580 200 H635" class="line"/><path d="M895 200 H950" class="line"/>
+
+  <rect x="450" y="350" width="500" height="125" class="box"/>
+  <rect x="470" y="370" width="66" height="26" class="tag"/><text x="483" y="388" class="tagtext">NUXT</text>
+  <text x="470" y="425" class="head">useCatalogMenu()</text><text x="470" y="451" class="code">useFetch('/menu', { baseURL: config.public.apiBase })</text>
+  <path d="M1150 275 V320 H700 V340" class="line"/>
+
+  <rect x="55" y="555" width="280" height="135" class="box"/><text x="75" y="592" class="head">HomeHeader.vue</text><text x="75" y="620" class="text">All categories select</text><text x="75" y="647" class="code">section → optgroup</text><text x="75" y="670" class="code">category → option</text>
+  <rect x="370" y="555" width="280" height="135" class="box"/><text x="390" y="592" class="head">index.vue Hero</text><text x="390" y="620" class="text">Section sidebar + image</text><text x="390" y="647" class="code">category → flyout</text><text x="390" y="670" class="code">subcategory → link</text>
+  <rect x="685" y="555" width="280" height="135" class="box"/><text x="705" y="592" class="head">Category Grid</text><text x="705" y="620" class="text">Section tabs</text><text x="705" y="647" class="code">activeSection.categories</text><text x="705" y="670" class="code">→ /shop?category=url</text>
+  <rect x="1000" y="555" width="340" height="135" class="box"/><text x="1020" y="592" class="head">AppFooter.vue / Mobile</text><text x="1020" y="620" class="text">Bootstrap collapse menu</text><text x="1020" y="647" class="code">mobile-section-${section.id}</text><text x="1020" y="670" class="text">Unique id links button to its panel</text>
+
+  <path d="M700 475 V515 H195 V545" class="smallline"/><path d="M700 475 V515 H510 V545" class="smallline"/><path d="M700 475 V545" class="smallline"/><path d="M700 475 V515 H1170 V545" class="smallline"/>
+  <text x="60" y="735" class="sub">Core rule: fetch once through a shared composable, then render the same JSON with different Vue templates.</text>
+</svg>

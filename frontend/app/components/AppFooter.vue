@@ -1,3 +1,9 @@
+<script setup>
+const { data } = await useCatalogMenu()
+const sections = computed(() => data.value?.categories ?? [])
+const mobileSectionId = section => `mobile-section-${section.id}`
+</script>
+
 <template>
  <footer class="footer py-5">
         <div class="container">
@@ -33,27 +39,41 @@
                         class="bi bi-cart3"></i><span>Cart</span></NuxtLink></div>
             <div class="mobile-nav-label">Shop by section</div>
             <nav class="mobile-nav">
-                <div class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
+                <div v-for="(section, index) in sections" :key="section.id" class="mobile-nav-group">
+                    <button type="button" data-bs-toggle="collapse" :data-bs-target="`#${mobileSectionId(section)}`"
+                        :aria-expanded="index === 0"><span>
+                            <img v-if="section.image_url" :src="section.image_url" alt="">
+                            <i v-else class="bi bi-grid"></i> {{ section.name }}</span><i class="bi bi-chevron-down"></i>
+                    </button>
+                    <div class="collapse" :class="{ show: index === 0 }" :id="mobileSectionId(section)">
+                        <template v-for="category in section.categories" :key="category.id">
+                            <NuxtLink :to="{ path: '/shop', query: { category: category.url } }">{{ category.category_name }}</NuxtLink>
+                            <NuxtLink v-for="subcategory in category.subcategories" :key="subcategory.id"
+                                :to="{ path: '/shop', query: { category: subcategory.url } }">— {{ subcategory.category_name }}</NuxtLink>
+                        </template>
+                    </div>
+                </div>
+                <div v-if="!sections.length" class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
                         data-bs-target="#mobileElectronics" aria-expanded="true"><span><i class="bi bi-phone"></i>
                             Electronics</span><i class="bi bi-chevron-down"></i></button>
                     <div class="collapse show" id="mobileElectronics"><NuxtLink to="/shop">Smartphones</NuxtLink><NuxtLink
                             to="/shop">Computers &amp; Laptop</NuxtLink><NuxtLink to="/shop">TV &amp; Audio</NuxtLink><NuxtLink
                             to="/shop">Cameras</NuxtLink></div>
                 </div>
-                <div class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
+                <div v-if="!sections.length" class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
                         data-bs-target="#mobileFashion"><span><i class="bi bi-bag"></i> Fashion &amp; Lifestyle</span><i
                             class="bi bi-chevron-down"></i></button>
                     <div class="collapse" id="mobileFashion"><NuxtLink to="/shop">Women's Fashion</NuxtLink><NuxtLink
                             to="/shop">Men's Fashion</NuxtLink><NuxtLink to="/shop">Watches</NuxtLink><NuxtLink to="/shop">Bags
                             &amp; Accessories</NuxtLink></div>
                 </div>
-                <div class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
+                <div v-if="!sections.length" class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
                         data-bs-target="#mobileHome"><span><i class="bi bi-house-heart"></i> Home &amp; Living</span><i
                             class="bi bi-chevron-down"></i></button>
                     <div class="collapse" id="mobileHome"><NuxtLink to="/shop">Furniture</NuxtLink><NuxtLink to="/shop">Kitchen
                             Appliances</NuxtLink><NuxtLink to="/shop">Home Decor</NuxtLink><NuxtLink to="/shop">Lighting</NuxtLink></div>
                 </div>
-                <div class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
+                <div v-if="!sections.length" class="mobile-nav-group"><button type="button" data-bs-toggle="collapse"
                         data-bs-target="#mobileMore"><span><i class="bi bi-grid"></i> More Categories</span><i
                             class="bi bi-chevron-down"></i></button>
                     <div class="collapse" id="mobileMore"><NuxtLink to="/shop">Sports &amp; Outdoor</NuxtLink><NuxtLink
@@ -76,11 +96,12 @@
             <h5>Categories</h5><button class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body">
-            <h6>Technology</h6><NuxtLink class="d-block p-2" to="/shop">Phones</NuxtLink><NuxtLink class="d-block p-2"
-                to="/shop">Computers</NuxtLink><NuxtLink class="d-block p-2" to="/shop">Audio</NuxtLink>
-            <hr>
-            <h6>Fashion</h6><NuxtLink class="d-block p-2" to="/shop">Men</NuxtLink><NuxtLink class="d-block p-2"
-                to="/shop">Women</NuxtLink>
+            <template v-for="section in sections" :key="section.id">
+                <h6>{{ section.name }}</h6>
+                <NuxtLink v-for="category in section.categories" :key="category.id" class="d-block p-2"
+                    :to="{ path: '/shop', query: { category: category.url } }">{{ category.category_name }}</NuxtLink>
+                <hr>
+            </template>
         </div>
     </div>
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
@@ -91,3 +112,7 @@
         </div>
     </div>
 </template>
+
+<style scoped>
+.mobile-nav-group>button span img{width:20px;height:20px;margin-right:1px;border-radius:4px;object-fit:cover}
+</style>

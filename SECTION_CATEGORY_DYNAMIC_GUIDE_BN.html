@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Laravel API থেকে Nuxt 4 Dynamic Section ও Category</title>
+  <style>
+    :root{--ink:#17211d;--muted:#63716a;--brand:#ff5941;--line:#dfe7e2;--soft:#f4f8f5;--code:#101814}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#eef3ef;color:var(--ink);font-family:"Noto Sans Bengali","Segoe UI",Arial,sans-serif;line-height:1.75}.page{width:min(1180px,calc(100% - 28px));margin:28px auto;background:#fff;box-shadow:0 18px 55px rgba(20,38,29,.1)}header{padding:62px clamp(24px,6vw,75px);background:linear-gradient(135deg,#13211b,#22372e);color:#fff}header small{color:#ff8a78;font-weight:800;letter-spacing:.14em;text-transform:uppercase}header h1{max-width:850px;margin:12px 0;font-size:clamp(2rem,5vw,4rem);line-height:1.12}header p{max-width:760px;margin:0;color:#bdcbc4}.diagram{padding:30px clamp(18px,5vw,60px);background:var(--soft)}.diagram img{display:block;width:100%;height:auto;border:1px solid var(--line);background:#fff}.layout{display:grid;grid-template-columns:245px minmax(0,1fr);gap:42px;padding:42px clamp(20px,5vw,60px) 70px}aside{align-self:start;position:sticky;top:20px}aside strong{display:block;margin-bottom:10px;color:var(--brand);font-size:.78rem;text-transform:uppercase}aside a{display:block;border-left:2px solid var(--line);padding:6px 12px;color:var(--muted);font-size:.86rem;text-decoration:none}aside a:hover{border-color:var(--brand);color:var(--brand)}main{min-width:0}section{scroll-margin-top:20px;margin-bottom:52px}h2{margin:0 0 15px;padding-bottom:10px;border-bottom:1px solid var(--line);font-size:1.65rem}h3{margin:26px 0 8px;font-size:1.08rem}.lead{font-size:1.05rem;color:var(--muted)}code{font-family:Consolas,"Courier New",monospace}pre{overflow:auto;margin:14px 0;border-left:4px solid var(--brand);border-radius:5px;background:var(--code);padding:18px;color:#dce9e2;font-size:.85rem;line-height:1.6}.flow{white-space:pre-wrap;border:1px solid var(--line);background:var(--soft);padding:18px;font:600 .9rem/1.7 Consolas,monospace}.note{margin:18px 0;border:1px solid #ffd1c9;background:#fff5f2;padding:15px 18px}.ok{border-color:#cde8d8;background:#f1faf5}.map{width:100%;border-collapse:collapse;margin-top:15px}.map th,.map td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}.map th{background:var(--soft)}ul,ol{padding-left:22px}.file{color:var(--brand);font-family:Consolas,monospace;font-size:.9rem}footer{padding:25px 60px;background:#17211d;color:#aebcb5;text-align:center}@media(max-width:820px){.layout{grid-template-columns:1fr}aside{position:static;padding-bottom:20px;border-bottom:1px solid var(--line)}aside nav{display:grid;grid-template-columns:repeat(2,1fr)}.page{width:100%;margin:0}.diagram{padding:15px}}@media print{body{background:#fff}.page{width:100%;margin:0;box-shadow:none}aside{display:none}.layout{display:block}section{break-inside:avoid}header{print-color-adjust:exact}.diagram{print-color-adjust:exact}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <small>NOVACART Learning Document</small>
+    <h1>Laravel API থেকে Nuxt 4-এ Dynamic Section, Category ও Product</h1>
+    <p>কোন file কেন তৈরি হয়েছে, database থেকে frontend পর্যন্ত data কীভাবে linked, এবং একই কাজ অন্য project-এ নিজে করার সম্পূর্ণ বাংলা নির্দেশিকা।</p>
+  </header>
+
+  <div class="diagram"><img src="docs/section-category-data-flow.svg" alt="Section category API data-flow diagram"></div>
+
+  <div class="layout">
+    <aside><strong>বিষয়সূচি</strong><nav>
+      <a href="#overview">১. মূল ধারণা</a><a href="#database">২. Database link</a><a href="#image">৩. Image upload</a>
+      <a href="#model">৪. Model relationship</a><a href="#api">৫. Laravel API</a><a href="#nuxt">৬. Nuxt connection</a>
+      <a href="#composable">৭. Shared composable</a><a href="#sidebar">৮. Hero sidebar</a><a href="#nested">৯. Nested menu</a>
+      <a href="#tabs">১০. Section tabs</a><a href="#header">১১. Header select</a><a href="#mobile">১২. Mobile menu</a>
+      <a href="#links">১৩. Dynamic links</a><a href="#listing">১৪. Listing/details</a><a href="#cache">১৫. Cache</a>
+      <a href="#files">১৬. File map</a><a href="#errors">১৭. Common errors</a><a href="#checklist">১৮. Checklist</a>
+    </nav></aside>
+
+    <main>
+      <section id="overview"><h2>১. মূল ধারণা</h2><p class="lead">Admin panel থেকে Section ও Category save হয়, Laravel API সেগুলো JSON বানায়, Nuxt সেই JSON এনে বিভিন্ন design-এর মধ্যে দেখায়।</p><div class="flow">Admin Form
+   ↓
+MySQL Database
+   ↓
+Laravel Model Relationship
+   ↓
+FrontController → GET /api/menu
+   ↓
+Nuxt useCatalogMenu()
+   ↓
+Header / Hero Sidebar / Mobile Menu / Category Grid</div></section>
+
+      <section id="database"><h2>২. Database-এ Section ও Category কীভাবে linked?</h2><pre><code>sections
+├── id
+├── name
+├── image
+└── status
+
+categories
+├── id
+├── section_id  ─────► sections.id
+├── parent_id   ─────► categories.id
+├── category_name
+├── image
+└── url</code></pre><p><code>section_id</code> বলে Category কোন Section-এর। <code>parent_id = 0</code> হলে root Category; অন্য Category id হলে Subcategory।</p><div class="note"><strong>উদাহরণ:</strong> Electronics-এর id 1 এবং Laptops-এর section_id 1—তাই Laptops Electronics-এর অধীনে।</div></section>
+
+      <section id="image"><h2>৩. Section image upload, update ও show</h2><h3>Migration</h3><pre><code>Schema::table('sections', function (Blueprint $table) {
+    $table->string('image')->nullable()->after('name');
+});</code></pre><h3>Controller validation</h3><pre><code>'image' => [
+    'nullable', 'image',
+    'mimes:jpeg,jpg,png,gif,webp',
+    'max:8192'
+],</code></pre><h3>Upload</h3><pre><code>if ($request->hasFile('image')) {
+    $data['image'] = $this->uploadImage(
+        $request->file('image')
+    );
+}</code></pre><p>Image optimized WebP হয়ে <code>public/admin/sectionimage</code>-এ save হয়। Update-এ নতুন image দিলে পুরোনো image delete হয়।</p></section>
+
+      <section id="model"><h2>৪. Section Model-এর কাজ</h2><pre><code>protected $fillable = ['name', 'image', 'status'];
+protected $appends = ['image_url'];</code></pre><p><code>$fillable</code> database save অনুমোদন করে। <code>$appends</code> API response-এ computed <code>image_url</code> যোগ করে।</p><pre><code>public function getImageUrlAttribute(): ?string
+{
+    return $this->image
+        ? asset('admin/sectionimage/'.basename($this->image))
+        : null;
+}</code></pre><div class="note ok">Frontend-এ <code>section.image_url</code> ব্যবহার করবেন; <code>section.image</code> শুধু filename।</div><h3>Relationship</h3><pre><code>public function categories(): HasMany
+{
+    return $this->hasMany(Category::class)
+        ->where('parent_id', 0)
+        ->where('status', true)
+        ->with(['subcategories', 'products.brand']);
+}</code></pre></section>
+
+      <section id="api"><h2>৫. Laravel API কীভাবে তৈরি?</h2><pre><code>Route::get('/menu', [FrontController::class, 'menu']);</code></pre><pre><code>public function menu(): JsonResponse
+{
+    $sections = Cache::remember(
+        'api.sections-with-categories.v4',
+        now()->addHours(6),
+        fn () => Section::sections()
+    );
+
+    return response()->json([
+        'status' => true,
+        'categories' => $sections,
+    ]);
+}</code></pre><h3>Response shape</h3><pre><code>{
+  "status": true,
+  "categories": [
+    {
+      "id": 1,
+      "name": "Electronics",
+      "image_url": "http://.../electronics.webp",
+      "categories": [
+        {
+          "category_name": "Laptops",
+          "url": "laptops",
+          "subcategories": []
+        }
+      ]
+    }
+  ]
+}</code></pre><p><code>data.categories</code> হচ্ছে Section array; প্রতিটি Section-এর <code>section.categories</code> হচ্ছে Category array।</p></section>
+
+      <section id="nuxt"><h2>৬. Nuxt কীভাবে Laravel-এর সঙ্গে connected?</h2><p class="file">frontend/nuxt.config.ts</p><pre><code>runtimeConfig: {
+  public: {
+    apiBase: 'http://127.0.0.1:8000/api'
+  }
+}</code></pre><p>এর সঙ্গে <code>/menu</code> যোগ হয়ে full URL হয়:</p><div class="flow">http://127.0.0.1:8000/api + /menu
+= http://127.0.0.1:8000/api/menu</div><div class="note">nuxt.config পরিবর্তনের পরে <code>npm run dev</code> restart করতে হবে।</div></section>
+
+      <section id="composable"><h2>৭. Shared composable কেন?</h2><p>Header, Home এবং Mobile menu—সব জায়গায় একই API দরকার। Fetch code copy না করে এক জায়গায় রাখা হয়েছে।</p><p class="file">frontend/app/composables/useCatalogMenu.ts</p><pre><code>export const useCatalogMenu = () => {
+  const config = useRuntimeConfig()
+
+  return useFetch('/menu', {
+    baseURL: config.public.apiBase,
+    key: 'catalog-menu'
+  })
+}</code></pre><p>ব্যবহার:</p><pre><code>const { data, pending, error } = await useCatalogMenu()
+
+const sections = computed(() =>
+  data.value?.categories ?? []
+)</code></pre><p><code>?? []</code> data আসার আগেও empty array দেয়—তাই template crash করে না।</p></section>
+
+      <section id="sidebar"><h2>৮. Hero sidebar dynamic করা</h2><pre><code>&lt;div
+  v-for="section in sections"
+  :key="section.id"
+  class="desktop-category-item"
+&gt;
+  &lt;img
+    v-if="section.image_url"
+    :src="section.image_url"
+    :alt="section.name"
+  &gt;
+  {{ section.name }}
+&lt;/div&gt;</code></pre><table class="map"><tr><th>Vue code</th><th>কাজ</th></tr><tr><td><code>v-for</code></td><td>Array-এর সব Section দেখায়</td></tr><tr><td><code>:key</code></td><td>প্রতিটি item-এর unique identity</td></tr><tr><td><code>v-if</code></td><td>Image থাকলেই image দেখায়</td></tr><tr><td><code>:src</code></td><td>API value HTML attribute-এ bind করে</td></tr></table><pre><code>.sidebar-section-image {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}</code></pre><p><code>sectionIcons</code> API connection নয়; image না থাকলে fallback icon দেখানোর optional ব্যবস্থা।</p></section>
+
+      <section id="nested"><h2>৯. Section → Category → Subcategory nested menu</h2><div class="flow">Section loop
+└── Category loop
+    └── Subcategory loop</div><pre><code>&lt;div v-for="section in sections" :key="section.id"&gt;
+  &lt;div
+    v-for="category in section.categories"
+    :key="category.id"
+  &gt;
+    &lt;NuxtLink
+      v-for="sub in category.subcategories"
+      :key="sub.id"
+      :to="{ path: '/shop', query: { category: sub.url } }"
+    &gt;
+      {{ sub.category_name }}
+    &lt;/NuxtLink&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre></section>
+
+      <section id="tabs"><h2>১০. Section tab click করলে Category বদলায় কীভাবে?</h2><pre><code>const activeSectionId = ref(sections.value[0]?.id ?? null)
+
+const activeSection = computed(() =>
+  sections.value.find(
+    section => section.id === activeSectionId.value
+  ) ?? sections.value[0] ?? null
+)</code></pre><pre><code>&lt;button
+  v-for="section in sections"
+  @click="activeSectionId = section.id"
+&gt;
+  {{ section.name }}
+&lt;/button&gt;
+
+&lt;div v-for="category in activeSection.categories"&gt;
+  {{ category.category_name }}
+&lt;/div&gt;</code></pre></section>
+
+      <section id="header"><h2>১১. Header select dynamic করা</h2><pre><code>&lt;select&gt;
+  &lt;option value=""&gt;All categories&lt;/option&gt;
+  &lt;optgroup
+    v-for="section in sections"
+    :label="section.name"
+  &gt;
+    &lt;option
+      v-for="category in section.categories"
+      :value="category.url"
+    &gt;
+      {{ category.category_name }}
+    &lt;/option&gt;
+  &lt;/optgroup&gt;
+&lt;/select&gt;</code></pre><p><code>optgroup = Section</code> এবং <code>option = Category</code>।</p></section>
+
+      <section id="mobile"><h2>১২. Mobile collapse কীভাবে linked?</h2><pre><code>const mobileSectionId = section =>
+  `mobile-section-${section.id}`</code></pre><pre><code>&lt;button
+  :data-bs-target="`#${mobileSectionId(section)}`"
+&gt;
+  {{ section.name }}
+&lt;/button&gt;
+
+&lt;div :id="mobileSectionId(section)" class="collapse"&gt;
+  ...categories
+&lt;/div&gt;</code></pre><p>Section 3 হলে button target এবং panel id দুটিই <code>mobile-section-3</code> হয়। তাই সঠিক button সঠিক panel খোলে।</p></section>
+
+      <section id="links"><h2>১৩. Category click link</h2><pre><code>&lt;NuxtLink
+  :to="{
+    path: '/shop',
+    query: { category: category.url }
+  }"
+&gt;
+  {{ category.category_name }}
+&lt;/NuxtLink&gt;</code></pre><p><code>category.url = laptops</code> হলে browser যায়:</p><div class="flow">/shop?category=laptops</div></section>
+
+      <section id="listing"><h2>১৪. Category listing ও product details</h2><div class="flow">GET /api/menu
+   ↓ Category click
+/shop?category=laptops
+   ↓
+GET /api/listing/laptops
+   ↓ Product click
+/product/15
+   ↓
+GET /api/detail/15</div><p>বর্তমানে menu link query তৈরি করে। Shop page-এ query পড়ে <code>/listing/{url}</code> fetch করলে products dynamic হবে।</p></section>
+
+      <section id="cache"><h2>১৫. Cache কেন clear করতে হয়?</h2><p>Menu API ৬ ঘণ্টা cache হয়। Admin update-এর পরে cache clear না হলে পুরোনো data দেখা যেতে পারে।</p><pre><code>Cache::forget('api.sections-with-categories.v4');</code></pre><pre><code>php artisan optimize:clear</code></pre><p>Browser hard refresh: <code>Ctrl + F5</code></p></section>
+
+      <section id="files"><h2>১৬. কোন file কী কাজ করে?</h2><table class="map"><tr><th>File</th><th>দায়িত্ব</th></tr><tr><td>SectionController.php</td><td>Image validate/upload/update/delete</td></tr><tr><td>Section.php</td><td>Relationship ও image_url</td></tr><tr><td>FrontController.php</td><td>API JSON response</td></tr><tr><td>routes/api.php</td><td>Menu/listing/detail endpoints</td></tr><tr><td>nuxt.config.ts</td><td>API base URL</td></tr><tr><td>useCatalogMenu.ts</td><td>Reusable fetch logic</td></tr><tr><td>index.vue</td><td>Hero, flyout, tabs, category grid</td></tr><tr><td>HomeHeader.vue</td><td>Header select</td></tr><tr><td>AppFooter.vue</td><td>Mobile menu/offcanvas</td></tr></table></section>
+
+      <section id="errors"><h2>১৭. Common errors</h2><h3>404 Not Found</h3><p>Laravel-এ `/categories` route না থাকলে <code>useFetch('/categories')</code> কাজ করবে না। Existing route অনুযায়ী <code>useFetch('/menu')</code> দিতে হবে।</p><h3>API Error: undefined</h3><p>এটি error নয়; <code>error.value</code> empty মানে request সফল।</p><h3>Image দেখা যায় না</h3><pre><code>// ভুল
+section.image
+
+// সঠিক
+section.image_url</code></pre><h3>Reload দিলে কাজ করে</h3><p>Plain DOM listener-এর বদলে Vue <code>ref</code>, <code>computed</code> ও <code>@click</code> ব্যবহার করুন।</p></section>
+
+      <section id="checklist"><h2>১৮. অন্য project-এ করার checklist</h2><ol><li>Section ও Category tables বানান।</li><li><code>categories.section_id</code> link করুন।</li><li>Model relationships লিখুন।</li><li>Section image-এর full <code>image_url</code> দিন।</li><li><code>/api/menu</code> endpoint বানান।</li><li>Nuxt API base URL configure করুন।</li><li>Shared composable বানান।</li><li>Section ও nested Category-তে <code>v-for</code> দিন।</li><li>Category URL দিয়ে dynamic NuxtLink বানান।</li><li>Loading/error/empty state রাখুন।</li><li>Images fixed size ও object-fit দিন।</li><li>Mobile collapse id unique করুন।</li><li>Cache invalidation করুন।</li><li>Desktop/mobile এবং production build পরীক্ষা করুন।</li></ol><div class="note ok"><strong>Core rule:</strong> API একবার shared composable দিয়ে fetch করুন; একই JSON আলাদা Vue template/design-এ render করুন।</div></section>
+    </main>
+  </div>
+  <footer>NOVACART · Laravel + Nuxt 4 Dynamic Catalog Documentation</footer>
+</div>
+</body>
+</html>

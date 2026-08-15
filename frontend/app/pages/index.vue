@@ -5,13 +5,16 @@ definePageMeta({
 
 const activeDealFilter = ref('all')
 const activeTrendingFilter = ref('all')
-//base url setup
-const config = useRuntimeConfig()
-const { data, pending, error } = await useFetch('/menu', {
-  baseURL: config.public.apiBase
-})
-// console.log('API Response:', data.value)
-// console.log('API Error:', error.value)
+const { data, pending, error } = await useCatalogMenu()
+
+const sections = computed(() => data.value?.categories ?? [])
+const activeSectionId = ref(sections.value[0]?.id ?? null)
+const activeSection = computed(() =>
+  sections.value.find(section => section.id === activeSectionId.value) ?? sections.value[0] ?? null
+)
+
+const sectionIcons = ['bi-phone', 'bi-bag', 'bi-house-heart', 'bi-heart-pulse', 'bi-controller', 'bi-bicycle', 'bi-balloon', 'bi-car-front']
+const sectionIcon = index => sectionIcons[index % sectionIcons.length]
 </script>
 
 
@@ -21,7 +24,31 @@ const { data, pending, error } = await useFetch('/menu', {
             <div class="row g-0 hero-shell">
                 <aside class="col-lg-3 category-sidebar">
                     <div class="category-sidebar-title"><i class="bi bi-list me-2"></i>Browse Categories</div>
-                    <nav aria-label="Product categories">
+                    <nav v-if="sections.length" aria-label="Product categories">
+                        <div v-for="(section, sectionIndex) in sections" :key="section.id" class="desktop-category-item">
+                            <NuxtLink :to="{ path: '/shop', query: { section: section.id } }"><span>
+                                    <img v-if="section.image_url" :src="section.image_url" :alt="section.name"
+                                        class="sidebar-section-image">
+                                    <i v-else class="bi" :class="sectionIcon(sectionIndex)"></i>{{ section.name }}</span><i
+                                    class="bi bi-chevron-right"></i></NuxtLink>
+                            <div v-if="section.categories?.length" class="category-flyout">
+                                <div v-for="category in section.categories" :key="category.id">
+                                    <h3><NuxtLink :to="{ path: '/shop', query: { category: category.url } }">{{ category.category_name }}</NuxtLink></h3>
+                                    <NuxtLink v-for="subcategory in category.subcategories" :key="subcategory.id"
+                                        :to="{ path: '/shop', query: { category: subcategory.url } }">{{ subcategory.category_name }}</NuxtLink>
+                                    <NuxtLink v-if="!category.subcategories?.length"
+                                        :to="{ path: '/shop', query: { category: category.url } }">View products</NuxtLink>
+                                </div>
+                                <div class="flyout-feature">
+                                    <img v-if="section.image_url" :src="section.image_url" :alt="section.name" class="flyout-section-image">
+                                    <i v-else class="bi bi-grid"></i><small>Featured section</small>
+                                    <strong>Explore {{ section.name }}</strong>
+                                    <NuxtLink :to="{ path: '/shop', query: { section: section.id } }">Explore now <i class="bi bi-arrow-right"></i></NuxtLink>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                    <nav v-else aria-label="Product categories">
                         <div class="desktop-category-item"><NuxtLink to="/shop"><span><i class="bi bi-phone"></i>
                                     Electronics</span><i class="bi bi-chevron-right"></i></NuxtLink>
                             <div class="category-flyout">
@@ -227,7 +254,7 @@ const { data, pending, error } = await useFetch('/menu', {
         <section class="category-section container py-4" id="category-slider">
             <div class="d-flex justify-content-between align-items-end gap-3 mb-4">
                 <div>
-                    <h2 class="section-title mb-0">Categories</h2>
+                    <h2 class="section-title mb-0">Shop by Category</h2>
                 </div>
                 <div class="d-flex align-items-center gap-2"><button class="category-arrow" type="button"
                         data-category-prev="" aria-label="Previous categories" disabled><i
@@ -236,55 +263,32 @@ const { data, pending, error } = await useFetch('/menu', {
                             class="bi bi-arrow-right"></i></button><NuxtLink to="/shop"
                         class="category-view-all ms-2">View all</NuxtLink></div>
             </div>
-            <div class="category-slider" data-category-slider=""><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual coral category-photo"
-                        style="--category-column: 0; --category-row: 0;"></span><strong>Computers</strong><small>86
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual violet category-photo"
-                        style="--category-column: 1; --category-row: 0;"></span><strong>Smartphones</strong><small>128
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual blue category-photo"
-                        style="--category-column: 2; --category-row: 0;"></span><strong>Audio</strong><small>74
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual amber category-photo"
-                        style="--category-column: 3; --category-row: 0;"></span><strong>Wearables</strong><small>42
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual green category-photo"
-                        style="--category-column: 0; --category-row: 1;"></span><strong>Televisions</strong><small>39
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual rose category-photo"
-                        style="--category-column: 1; --category-row: 1;"></span><strong>Fashion</strong><small>244
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual sky category-photo"
-                        style="--category-column: 2; --category-row: 1;"></span><strong>Home &
-                        Living</strong><small>96 products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual lime category-photo"
-                        style="--category-column: 3; --category-row: 1;"></span><strong>Kitchen</strong><small>61
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual peach category-photo"
-                        style="--category-column: 0; --category-row: 2;"></span><strong>Gaming</strong><small>53
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual indigo category-photo"
-                        style="--category-column: 1; --category-row: 2;"></span><strong>Cameras</strong><small>35
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual mint category-photo"
-                        style="--category-column: 2; --category-row: 2;"></span><strong>Sports</strong><small>83
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual sand category-photo"
-                        style="--category-column: 3; --category-row: 2;"></span><strong>Gift Ideas</strong><small>107
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual office category-photo"
-                        style="--category-column: 0; --category-row: 3;"></span><strong>Office
-                        Supplies</strong><small>48 products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual baby category-photo"
-                        style="--category-column: 1; --category-row: 3;"></span><strong>Baby &
-                        Kids</strong><small>72 products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual auto category-photo"
-                        style="--category-column: 2; --category-row: 3;"></span><strong>Automotive</strong><small>55
-                        products</small></NuxtLink><NuxtLink to="/shop" class="category-slide"><span
-                        class="category-visual books category-photo"
-                        style="--category-column: 3; --category-row: 3;"></span><strong>Books &
-                        Media</strong><small>91 products</small></NuxtLink></div>
+            <div v-if="pending" class="category-api-message">Loading categories...</div>
+            <div v-else-if="error" class="category-api-message category-api-error">Categories could not be loaded.</div>
+            <template v-else>
+                <div class="section-filter-tabs" role="tablist" aria-label="Product sections">
+                    <button v-for="section in sections" :key="section.id" type="button" role="tab"
+                        :class="{ active: activeSection?.id === section.id }"
+                        :aria-selected="activeSection?.id === section.id"
+                        @click="activeSectionId = section.id">
+                        <img v-if="section.image_url" :src="section.image_url" alt="">
+                        <span>{{ section.name }}</span>
+                    </button>
+                </div>
+
+                <div v-if="activeSection?.categories?.length" class="category-slider">
+                    <NuxtLink v-for="category in activeSection.categories" :key="category.id"
+                        :to="{ path: '/shop', query: { category: category.url } }" class="category-slide">
+                        <img v-if="category.image_url || activeSection.image_url"
+                            :src="category.image_url || activeSection.image_url"
+                            :alt="category.category_name" class="category-visual category-api-image" loading="lazy">
+                        <span v-else class="category-visual category-api-placeholder"><i class="bi bi-grid"></i></span>
+                        <strong>{{ category.category_name }}</strong>
+                        <small>{{ category.products?.length ?? 0 }} products</small>
+                    </NuxtLink>
+                </div>
+                <div v-else class="category-api-message">No categories are available in this section yet.</div>
+            </template>
         </section>
         <section class="hot-deals py-5" id="hot-deals">
             <div class="container">
@@ -498,3 +502,9 @@ const { data, pending, error } = await useFetch('/menu', {
         </section>
     </main>
 </template>
+
+<style scoped>
+.section-filter-tabs{display:flex;gap:8px;overflow-x:auto;margin:0 0 14px;padding:2px 0 8px;scrollbar-width:thin}.section-filter-tabs button{display:flex;flex:0 0 auto;align-items:center;gap:8px;border:1px solid #e1e4e2;background:#fff;padding:8px 14px;color:var(--ink);font-size:.78rem}.section-filter-tabs button.active{border-color:var(--brand);background:var(--brand);color:#fff}.section-filter-tabs img{width:25px;height:25px;border-radius:50%;object-fit:cover}.category-api-image{width:112px!important;height:105px!important;object-fit:contain}.category-api-placeholder{display:grid!important;width:112px!important;height:105px!important;place-items:center;background:#f5f7f5!important;color:var(--brand)}.category-api-message{display:grid;min-height:172px;border:1px solid #e1e4e2;place-items:center;background:#fff;color:#78817d}.category-api-error{color:#b84d42}@media(max-width:575.98px){.section-filter-tabs button{padding:7px 11px}.category-api-image,.category-api-placeholder{width:112px!important;height:92px!important}}
+.flyout-section-image{width:58px;height:58px;margin-bottom:12px;object-fit:contain}
+.sidebar-section-image{flex:0 0 22px;width:22px;height:22px;margin-right:12px;object-fit:contain}
+</style>
