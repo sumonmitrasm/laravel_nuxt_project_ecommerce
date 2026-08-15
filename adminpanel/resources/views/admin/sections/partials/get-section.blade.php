@@ -30,6 +30,7 @@
                                         <tr>
                                             <th>ID</th>
                                             <th>Name</th>
+                                            <th>Image</th>
                                             <th>Status</th>
                                             <th>Action</th>
                                         </tr>
@@ -39,6 +40,15 @@
                                             <tr>
                                                 <td>{{ $section['id'] ?? '-' }}</td>
                                                 <td>{{ $section['name'] ?? '-' }}</td>
+                                                <td>
+                                                    @if ($section['image'] ?? false)
+                                                        <img src="{{ asset('admin/sectionimage/' . basename($section['image'])) }}"
+                                                            alt="{{ $section['name'] ?? 'Section' }}" class="rounded border"
+                                                            style="width: 45px; height: 45px; object-fit: cover;">
+                                                    @else
+                                                        <span class="text-muted">No image</span>
+                                                    @endif
+                                                </td>
                                                 <td>@if ($canEditSections)<button type="button"
                                                         class="btn btn-sm {{ ($section['status'] ?? false) ? 'btn-success' : 'btn-secondary' }}"
                                                         data-crud-status
@@ -69,7 +79,7 @@
 <div class="modal fade" id="section-form-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form data-crud-form>
+            <form data-crud-form enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title" data-crud-title>Add Section</h5><button type="button" class="btn-close"
@@ -79,6 +89,12 @@
                     <div class="alert alert-danger d-none js-crud-errors"></div>
                     <div class="mb-3"><label class="form-label">Section Name</label><input type="text"
                             name="name" class="form-control" required></div>
+                    <div class="mb-3">
+                        <label class="form-label">Section Image</label>
+                        <input type="file" name="image" class="form-control" accept="image/*" data-image-input>
+                        <img data-image-preview-for="image" class="d-none mt-2 rounded border"
+                            alt="Selected section image" style="width: 90px; height: 90px; object-fit: cover;">
+                    </div>
                     <div><label class="form-label">Status</label><select name="status" class="form-select">
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>

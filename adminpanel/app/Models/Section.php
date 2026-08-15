@@ -10,7 +10,9 @@ class Section extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'status'];
+    protected $fillable = ['name', 'image', 'status'];
+
+    protected $appends = ['image_url'];
 
     protected function casts(): array
     {
@@ -33,7 +35,12 @@ class Section extends Model
         return self::with('categories')
             ->where('status', true)
             ->orderBy('name')
-            ->get(['id', 'name'])
+            ->get(['id', 'name', 'image'])
             ->toArray();
+    }
+
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->image ? asset('admin/sectionimage/'.basename($this->image)) : null;
     }
 }
