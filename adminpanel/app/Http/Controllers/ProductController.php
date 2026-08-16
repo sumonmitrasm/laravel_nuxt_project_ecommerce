@@ -6,6 +6,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Color;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Section;
 use App\Support\ImageOptimizer;
 use Illuminate\Http\Request;
@@ -60,7 +61,8 @@ class ProductController extends Controller
         $admin = Auth::guard('admin')->user();
         $data['admin_id'] = $admin?->id;
         $data['admin_type'] = $admin?->type;
-        Product::create($data);
+        $product = Product::create($data);
+        $this->storeProductImages($request, $product);
         $this->clearMenuCache();
         return response()->json(['message' => 'Product created successfully.'], 201);
     }
@@ -70,12 +72,20 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
+        $product->load('images:id,product_id,image,status');
+
         return response()->json([
             'record' => $product,
             'image_urls' => [
                 'product_image' => $this->imageUrl($product->product_image),
                 'meta_image' => $this->imageUrl($product->meta_image),
             ],
+            'product_images' => $product->images->map(fn (ProductImage $image) => [
+                'id' => $image->id,
+                'url' => asset('admin/productgallery/'.basename($image->image)),
+                'status' => $image->status,
+                'delete_url' => route('admin-product.image.delete', $image),
+            ]),
         ]);
     }
 
@@ -93,6 +103,7 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $product->update($this->validatedData($request, $product));
+        $this->storeProductImages($request, $product);
         $this->clearMenuCache();
 
         return response()->json(['message' => 'Product updated successfully.']);
@@ -103,8 +114,12 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
+        $product->load('images:id,product_id,image');
         $this->deleteImage($product->product_image);
         $this->deleteImage($product->meta_image);
+        foreach ($product->images as $image) {
+            $this->images->delete($image->image, 'admin/productgallery');
+        }
         $product->delete();
         $this->clearMenuCache();
 
@@ -117,6 +132,14 @@ class ProductController extends Controller
         $this->clearMenuCache();
 
         return response()->json(['message' => 'Product status updated successfully.']);
+    }
+
+    public function destroyImage(ProductImage $productImage)
+    {
+        $this->images->delete($productImage->image, 'admin/productgallery');
+        $productImage->delete();
+
+        return response()->json(['message' => 'Product image deleted successfully.']);
     }
 
     private function validatedData(Request $request, ?Product $product = null): array
@@ -132,6 +155,8 @@ class ProductController extends Controller
             'product_discount' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'product_weight' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'product_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:8192'],
+            'product_images' => ['nullable', 'array', 'max:10'],
+            'product_images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:8192'],
             'product_video' => ['nullable', 'url', 'max:255'],
             'description' => ['nullable', 'string'],
             'meta_title' => ['nullable', 'string', 'max:255'],
@@ -161,8 +186,26 @@ class ProductController extends Controller
         }
 
         $data['product_discount'] ??= 0;
+        unset($data['product_images']);
 
         return $data;
+    }
+
+    private function storeProductImages(Request $request, Product $product): void
+    {
+        foreach ($request->file('product_images', []) as $file) {
+            $product->images()->create([
+                'image' => $this->images->store(
+                    $file,
+                    'admin/productgallery',
+                    'gallery',
+                    1600,
+                    1600,
+                    84,
+                ),
+                'status' => true,
+            ]);
+        }
     }
 
     private function storeImage($file, string $prefix): string

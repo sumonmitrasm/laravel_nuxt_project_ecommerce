@@ -97,6 +97,7 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::get('product/{product}', [ProductController::class, 'show'])->name('admin-product.show');
         Route::put('product/{product}', [ProductController::class, 'update'])->name('admin-product.update');
         Route::patch('product/{product}/status', [ProductController::class, 'updateStatus'])->name('admin-product.status');
+        Route::delete('product-images/{productImage}', [ProductController::class, 'destroyImage'])->name('admin-product.image.delete');
         Route::delete('product/{product}', [ProductController::class, 'destroy'])->name('admin-product.delete');
         //>>>>>>>>>>>>>>>>>>>>>>>>Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

@@ -466,7 +466,12 @@
              */
             $(document).on('click', '[data-crud-edit]', function () {
                 var $button = $(this), $modal = crudModal($button), $form = $modal.find('[data-crud-form]');
-                $.get($button.data('url')).done(function (response) {
+                $.ajax({
+                    url: $button.data('url'),
+                    method: 'GET',
+                    cache: false,
+                    headers: { Accept: 'application/json' }
+                }).done(function (response) {
                     var record = response.record || response.user || response;
                     $form[0].reset();
                     $form.data({ url: $button.data('update-url'), method: 'PUT' });
@@ -491,6 +496,10 @@
                     $.each(response.image_urls || {}, function (field, url) {
                         setImagePreview($form, url || '', $form.find('[name="' + field + '"]'));
                     });
+                    if (window.productGallery) {
+                        window.productGallery.clear();
+                        window.productGallery.renderExisting(response.product_images || []);
+                    }
                     $form.find('[data-section-source]').trigger('change');
                     $form.find('.js-crud-errors').empty().addClass('d-none');
                     $modal.find('[data-crud-title]').text('Edit Record');

@@ -337,7 +337,8 @@
                                     <option value="">No Color</option>
                                     @foreach ($colors as $color)
                                         <option value="{{ $color->color_code }}">{{ $color->name }}
-                                            ({{ $color->color_code }})</option>
+                                            ({{ $color->color_code }})
+                                        </option>
                                     @endforeach
                                 </select></div>
                             <div class="col-md-4 mb-3"><label class="form-label">Price *</label><input type="number"
@@ -370,6 +371,47 @@
                             </div>
                         </div>
                     </div>
+                    <!------- Product Multiple Images start-------->
+                    <div class="product-form-section mb-0">
+                        <h6 class="product-section-title">
+                            <i class="fe fe-image"></i>
+                            Product Images
+                        </h6>
+
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="product-images" class="form-label">
+                                    Multiple Images
+                                </label>
+
+                                <div id="product-image-drop-zone"
+                                    class="border rounded p-4 text-center position-relative">
+
+                                    <input id="product-images" type="file" name="product_images[]"
+                                        accept="image/jpeg,image/png,image/webp" multiple
+                                        class="position-absolute top-0 start-0 w-100 h-100 opacity-0"
+                                        style="cursor: pointer">
+
+                                    <i class="fe fe-upload-cloud fs-1 text-primary"></i>
+
+                                    <p class="mb-1 mt-2">
+                                        Drag and drop product images here
+                                    </p>
+
+                                    <small class="text-muted">
+                                        Or click to browse — JPG, PNG, WEBP
+                                    </small>
+                                </div>
+
+                                <div id="saved-product-image-preview" class="row g-2 mt-2"></div>
+
+                                <div id="product-image-preview" class="row g-2 mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <br>
+                    <!------- Product Multiple Images end-------->
+                    <!------- seo part Start -------->
                     <div class="product-form-section mb-0">
                         <h6 class="product-section-title"><i class="fe fe-search"></i> SEO Information</h6>
                         <div class="row">
@@ -400,6 +442,7 @@
                             </div>
                         </div>
                     </div>
+                    <!------- seo part End -------->
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-secondary"
                         data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"
@@ -408,3 +451,167 @@
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function galleryElements() {
+            return {
+                input: document.getElementById('product-images'),
+                preview: document.getElementById('product-image-preview'),
+                savedPreview: document.getElementById('saved-product-image-preview')
+            };
+        }
+
+        function escapeHtml(value) {
+            const element = document.createElement('div');
+            element.textContent = value;
+            return element.innerHTML;
+        }
+
+        function removeFile(removeIndex) {
+            const {
+                input
+            } = galleryElements();
+            if (!input) return;
+            const transfer = new DataTransfer();
+
+            Array.from(input.files).forEach(function(file, index) {
+                if (index !== removeIndex) {
+                    transfer.items.add(file);
+                }
+            });
+
+            input.files = transfer.files;
+            renderPreviews();
+        }
+
+        function renderPreviews() {
+            const {
+                input,
+                preview
+            } = galleryElements();
+            if (!input || !preview) return;
+            preview.innerHTML = '';
+
+            Array.from(input.files).forEach(function(file, index) {
+                if (!file.type.startsWith('image/')) {
+                    return;
+                }
+
+                const reader = new FileReader();
+
+                reader.onload = function(event) {
+                    const column = document.createElement('div');
+                    const safeName = escapeHtml(file.name);
+                    column.className = 'col-6 col-md-3';
+
+                    column.innerHTML = `
+                    <div class="border rounded p-2 h-100 position-relative">
+                        <img
+                            src="${event.target.result}"
+                            alt=""
+                            class="w-100 rounded"
+                            style="height: 130px; object-fit: contain">
+
+                        <small class="d-block text-truncate mt-2">
+                            ${safeName}
+                        </small>
+                        <button type="button"
+                            class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 js-remove-product-image"
+                            aria-label="Remove ${safeName}"
+                            title="Remove image">
+                            <i class="fe fe-x"></i>
+                        </button>
+                    </div>
+                `;
+
+                    column.querySelector('.js-remove-product-image').addEventListener('click',
+                        function() {
+                            removeFile(index);
+                        });
+
+                    preview.appendChild(column);
+                };
+
+                reader.readAsDataURL(file);
+            });
+        }
+
+        document.addEventListener('change', function(event) {
+            if (event.target && event.target.id === 'product-images') renderPreviews();
+        });
+
+        window.productGallery = {
+            clear: function() {
+                const {
+                    input,
+                    preview,
+                    savedPreview
+                } = galleryElements();
+                if (!input || !preview || !savedPreview) return;
+                input.value = '';
+                preview.innerHTML = '';
+                savedPreview.innerHTML = '';
+            },
+
+            renderExisting: function(images) {
+                const {
+                    savedPreview
+                } = galleryElements();
+                if (!savedPreview) return;
+                savedPreview.innerHTML = '';
+
+                (images || []).forEach(function(image) {
+                    const column = document.createElement('div');
+                    column.className = 'col-6 col-md-3';
+                    column.innerHTML = `
+                    <div class="border rounded p-2 h-100 position-relative">
+                        <img src="${image.url}" alt="Product image" class="w-100 rounded"
+                            style="height: 130px; object-fit: contain">
+                        <small class="d-block text-muted mt-2">Saved image</small>
+                        <button type="button"
+                            class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 js-delete-saved-product-image"
+                            aria-label="Delete saved image" title="Delete image">
+                            <i class="fe fe-trash-2"></i>
+                        </button>
+                    </div>
+                `;
+
+                    column.querySelector('.js-delete-saved-product-image').addEventListener(
+                        'click',
+                        function() {
+                            const button = this;
+                            button.disabled = true;
+
+                            $.ajax({
+                                url: image.delete_url,
+                                method: 'POST',
+                                data: {
+                                    _token: document.querySelector(
+                                            '[data-crud-form] input[name="_token"]')
+                                        .value,
+                                    _method: 'DELETE'
+                                },
+                                headers: {
+                                    Accept: 'application/json'
+                                }
+                            }).done(function() {
+                                column.remove();
+                            }).fail(function(xhr) {
+                                button.disabled = false;
+                                alert((xhr.responseJSON && xhr.responseJSON
+                                    .message) || 'Image could not be deleted.');
+                            });
+                        });
+
+                    savedPreview.appendChild(column);
+                });
+            }
+        };
+
+        document.addEventListener('click', function(event) {
+            if (event.target.closest('[data-crud-create]')) {
+                window.productGallery.clear();
+            }
+        });
+    });
+</script>
