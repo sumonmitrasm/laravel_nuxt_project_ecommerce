@@ -12,29 +12,35 @@ const categoryUrl = computed(() => {
     return value?.toString() ?? ''
 })
 
+const currentPage = computed(() => {
+    const value = Array.isArray(route.query.page) ? route.query.page[0] : route.query.page
+    const page = Number.parseInt(value?.toString() ?? '1', 10)
+
+    return Number.isInteger(page) && page > 0 ? page : 1
+})
+
 const {
     data,
     status,
     error,
     refresh
 } = await useAsyncData(
-    'category-products',
+    'shop-products',
 
     async () => {
-        if (!categoryUrl.value) {
-            return null
-        }
-
         return await $fetch(
-            `/listing/${encodeURIComponent(categoryUrl.value)}`,
+            categoryUrl.value
+                ? `/listing/${encodeURIComponent(categoryUrl.value)}`
+                : '/products',
             {
-                baseURL: config.public.apiBase
+                baseURL: config.public.apiBase,
+                query: { page: currentPage.value }
             }
         )
     },
 
     {
-        watch: [categoryUrl]
+        watch: [categoryUrl, currentPage]
     }
 )
 
@@ -49,6 +55,54 @@ const category = computed(() =>
 const breadcrumbs = computed(() =>
     data.value?.breadcrumbs ?? []
 )
+
+const pagination = computed(() => data.value?.pagination ?? {
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    from: null,
+    to: null
+})
+
+const visiblePages = computed(() => {
+    const last = pagination.value.last_page
+    const current = pagination.value.current_page
+    const start = Math.max(1, Math.min(current - 2, last - 4))
+    const end = Math.min(last, start + 4)
+
+    return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index)
+})
+
+const pageLink = page => ({
+    path: '/shop',
+    query: {
+        ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
+        ...(page > 1 ? { page } : {})
+    }
+})
+
+const formatPrice = value => new Intl.NumberFormat('en-BD', {
+    maximumFractionDigits: 2
+}).format(Number(value) || 0)
+
+const productBadge = product => {
+    const createdAt = new Date(product.created_at).getTime()
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000
+
+    if (Number.isFinite(createdAt) && Date.now() - createdAt <= thirtyDays) {
+        return { text: 'New', className: 'new' }
+    }
+
+    if (String(product.is_featured).toLowerCase() === 'yes') {
+        return { text: 'Top', className: 'top' }
+    }
+
+    if (Number(product.effective_discount) > 0) {
+        return { text: 'Sale', className: 'sale' }
+    }
+
+    return null
+}
 
 // watch(products, (newProducts) => {
 //   console.log("Updated products:", newProducts)
@@ -105,6 +159,19 @@ const breadcrumbs = computed(() =>
                         </div>
                     </div>
                     <div class="shop-filter-group">
+                        <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#filterBrand"
+                            aria-expanded="true">
+                            Brand <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <div class="collapse show" id="filterBrand">
+                            <label><input type="checkbox" /> HP <span>8</span></label>
+                            <label><input type="checkbox" /> Dell <span>6</span></label>
+                            <label><input type="checkbox" /> Lenovo <span>5</span></label>
+                            <label><input type="checkbox" /> Asus <span>4</span></label>
+                            <label><input type="checkbox" /> Apple <span>6</span></label>
+                        </div>
+                    </div>
+                    <div class="shop-filter-group">
                         <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#filterPrice"
                             aria-expanded="true">
                             Price <i class="bi bi-chevron-down"></i>
@@ -142,7 +209,8 @@ const breadcrumbs = computed(() =>
                             data-bs-target="#mobileShopFilters">
                             <i class="bi bi-sliders"></i> Filters
                         </button>
-                        <div>Showing <strong>1–8</strong> of <strong>56</strong> products</div>
+                        <div>Showing <strong>{{ pagination.from ?? 0 }}–{{ pagination.to ?? 0 }}</strong> of
+                            <strong>{{ pagination.total }}</strong> products</div>
                         <div class="shop-sort">
                             <label for="sortProducts">Sort by:</label><select id="sortProducts">
                                 <option>Most Popular</option>
@@ -154,141 +222,45 @@ const breadcrumbs = computed(() =>
                                     class="bi bi-list"></i></button>
                         </div>
                     </div>
-                    <div class="shop-products">
-                        <article class="shop-product">
+                    <div v-if="status === 'pending'">Loading products...</div>
+                    <div v-else-if="error">Products could not be loaded.</div>
+                    <div v-else-if="!products.length">No products found.</div>
+                    <div v-else class="shop-products">
+                        <article v-for="product in products" :key="product.id" class="shop-product">
                             <div class="shop-product-media">
-                                <span class="shop-product-photo" style="--x: 0; --y: 0"></span><em
-                                    class="product-label new">New</em><button class="shop-heart" type="button"><i
+                                <span class="shop-product-photo" :style="{
+                                    backgroundImage: product.image_url ? `url(${product.image_url})` : 'none',
+                                    backgroundSize: 'contain',
+                                    backgroundPosition: 'center',
+                                    backgroundColor: '#faf7f4'
+                                }"></span><em v-if="productBadge(product)" class="product-label"
+                                    :class="productBadge(product).className">{{ productBadge(product).text }}</em><button class="shop-heart" type="button"><i
                                         class="bi bi-heart"></i></button><span class="shop-cart"><i
                                         class="bi bi-cart3"></i> Add to cart</span>
                             </div>
                             <div class="shop-product-info">
-                                <small>Computers</small>
+                                <small>{{ product.category?.category_name ?? category?.category_name }}</small>
                                 <h2>
-                                    <NuxtLink to="/product">NovaBook Air Laptop</NuxtLink>
+                                    <NuxtLink :to="{ path: '/product', query: { id: product.id } }">{{ product.product_name }}</NuxtLink>
                                 </h2>
-                                <div class="shop-price">৳74,909</div>
-                                <div class="shop-rating">★★★★★ <span>(8 Reviews)</span></div>
-                            </div>
-                        </article>
-                        <article class="shop-product">
-                            <div class="shop-product-media">
-                                <span class="shop-product-photo" style="--x: 1; --y: 0"></span><em
-                                    class="product-label top">Top</em><button class="shop-heart" type="button"><i
-                                        class="bi bi-heart"></i></button><span class="shop-cart"><i
-                                        class="bi bi-cart3"></i> Add to cart</span>
-                            </div>
-                            <div class="shop-product-info">
-                                <small>Smartphones</small>
-                                <h2>
-                                    <NuxtLink to="/product">Nova X Pro Smartphone</NuxtLink>
-                                </h2>
-                                <div class="shop-price">৳54,500</div>
-                                <div class="shop-rating">★★★★★ <span>(12 Reviews)</span></div>
-                            </div>
-                        </article>
-                        <article class="shop-product">
-                            <div class="shop-product-media">
-                                <span class="shop-product-photo" style="--x: 2; --y: 0"></span><em
-                                    class="product-label sale">Sale</em><button class="shop-heart" type="button"><i
-                                        class="bi bi-heart"></i></button><span class="shop-cart"><i
-                                        class="bi bi-cart3"></i> Add to cart</span>
-                            </div>
-                            <div class="shop-product-info">
-                                <small>Audio</small>
-                                <h2>
-                                    <NuxtLink to="/product">Pulse Wireless Headphones</NuxtLink>
-                                </h2>
-                                <div class="shop-price">৳8,490 <del>৳9,900</del></div>
-                                <div class="shop-rating">★★★★☆ <span>(6 Reviews)</span></div>
-                            </div>
-                        </article>
-                        <article class="shop-product">
-                            <div class="shop-product-media">
-                                <span class="shop-product-photo" style="--x: 3; --y: 0"></span><button
-                                    class="shop-heart" type="button"><i class="bi bi-heart"></i></button><span
-                                    class="shop-cart"><i class="bi bi-cart3"></i> Add to cart</span>
-                            </div>
-                            <div class="shop-product-info">
-                                <small>Wearables</small>
-                                <h2>
-                                    <NuxtLink to="/product">Orbit Smart Watch S2</NuxtLink>
-                                </h2>
-                                <div class="shop-price">৳6,990</div>
-                                <div class="shop-rating">★★★★★ <span>(9 Reviews)</span></div>
-                            </div>
-                        </article>
-                        <article class="shop-product">
-                            <div class="shop-product-media">
-                                <span class="shop-product-photo" style="--x: 0; --y: 1"></span><em
-                                    class="product-label sale">Sale</em><button class="shop-heart" type="button"><i
-                                        class="bi bi-heart"></i></button><span class="shop-cart"><i
-                                        class="bi bi-cart3"></i> Add to cart</span>
-                            </div>
-                            <div class="shop-product-info">
-                                <small>TV &amp; Audio</small>
-                                <h2>
-                                    <NuxtLink to="/product">Vision Class 4K Smart TV</NuxtLink>
-                                </h2>
-                                <div class="shop-price">৳69,999 <del>৳79,999</del></div>
-                                <div class="shop-rating">★★★★☆ <span>(10 Reviews)</span></div>
-                            </div>
-                        </article>
-                        <article class="shop-product">
-                            <div class="shop-product-media">
-                                <span class="shop-product-photo" style="--x: 1; --y: 1"></span><em
-                                    class="product-label new">New</em><button class="shop-heart" type="button"><i
-                                        class="bi bi-heart"></i></button><span class="shop-cart"><i
-                                        class="bi bi-cart3"></i> Add to cart</span>
-                            </div>
-                            <div class="shop-product-info">
-                                <small>Fashion</small>
-                                <h2>
-                                    <NuxtLink to="/product">Everyday Leather Tote</NuxtLink>
-                                </h2>
-                                <div class="shop-price">৳4,850</div>
-                                <div class="shop-rating">★★★★★ <span>(5 Reviews)</span></div>
-                            </div>
-                        </article>
-                        <article class="shop-product">
-                            <div class="shop-product-media">
-                                <span class="shop-product-photo" style="--x: 2; --y: 2"></span><button
-                                    class="shop-heart" type="button"><i class="bi bi-heart"></i></button><span
-                                    class="shop-cart"><i class="bi bi-cart3"></i> Add to cart</span>
-                            </div>
-                            <div class="shop-product-info">
-                                <small>Sports</small>
-                                <h2>
-                                    <NuxtLink to="/product">Aero Cycling Helmet</NuxtLink>
-                                </h2>
-                                <div class="shop-price">৳3,750</div>
-                                <div class="shop-rating">★★★★☆ <span>(4 Reviews)</span></div>
-                            </div>
-                        </article>
-                        <article class="shop-product">
-                            <div class="shop-product-media">
-                                <span class="shop-product-photo" style="--x: 1; --y: 2"></span><em
-                                    class="product-label top">Top</em><button class="shop-heart" type="button"><i
-                                        class="bi bi-heart"></i></button><span class="shop-cart"><i
-                                        class="bi bi-cart3"></i> Add to cart</span>
-                            </div>
-                            <div class="shop-product-info">
-                                <small>Cameras</small>
-                                <h2>
-                                    <NuxtLink to="/product">Pocket Mirrorless Camera</NuxtLink>
-                                </h2>
-                                <div class="shop-price">৳42,800</div>
-                                <div class="shop-rating">★★★★★ <span>(7 Reviews)</span></div>
+                                <div class="shop-price">৳{{ formatPrice(product.final_price) }}
+                                    <del v-if="Number(product.effective_discount) > 0">৳{{ formatPrice(product.product_price) }}</del>
+                                </div>
+                                <div class="shop-rating">★★★★★ <span>{{ product.brand?.name ?? '' }}</span></div>
                             </div>
                         </article>
                     </div>
-                    <nav class="shop-pagination" aria-label="Product pages">
-                        <span class="disabled" aria-disabled="true"><i class="bi bi-chevron-left"></i></span>
-                        <NuxtLink class="active" to="/shop?page=1">1</NuxtLink>
-                        <NuxtLink to="/shop?page=2">2</NuxtLink>
-                        <NuxtLink to="/shop?page=3">3</NuxtLink>
-                        <NuxtLink to="/shop?page=2" aria-label="Next page"><i class="bi bi-chevron-right"></i>
-                        </NuxtLink>
+                    <nav v-if="pagination.last_page > 1" class="shop-pagination" aria-label="Product pages">
+                        <span v-if="pagination.current_page === 1" class="disabled" aria-disabled="true"><i
+                                class="bi bi-chevron-left"></i></span>
+                        <NuxtLink v-else :to="pageLink(pagination.current_page - 1)" aria-label="Previous page"><i
+                                class="bi bi-chevron-left"></i></NuxtLink>
+                        <NuxtLink v-for="page in visiblePages" :key="page" :class="{ active: page === pagination.current_page }"
+                            :to="pageLink(page)">{{ page }}</NuxtLink>
+                        <span v-if="pagination.current_page === pagination.last_page" class="disabled"
+                            aria-disabled="true"><i class="bi bi-chevron-right"></i></span>
+                        <NuxtLink v-else :to="pageLink(pagination.current_page + 1)" aria-label="Next page"><i
+                                class="bi bi-chevron-right"></i></NuxtLink>
                     </nav>
                 </div>
             </div>
@@ -324,6 +296,19 @@ const breadcrumbs = computed(() =>
                         Computers <span>6</span></label><label><input type="checkbox" /> Audio
                         <span>5</span></label><label><input type="checkbox" /> Cameras
                         <span>4</span></label><label><input type="checkbox" /> Wearables <span>6</span></label>
+                </div>
+            </div>
+            <div class="shop-filter-group">
+                <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#mobileFilterPanel5"
+                    aria-expanded="true">
+                    Brand <i class="bi bi-chevron-down"></i>
+                </button>
+                <div class="collapse show" id="mobileFilterPanel5">
+                    <label><input type="checkbox" /> HP <span>8</span></label>
+                    <label><input type="checkbox" /> Dell <span>6</span></label>
+                    <label><input type="checkbox" /> Lenovo <span>5</span></label>
+                    <label><input type="checkbox" /> Asus <span>4</span></label>
+                    <label><input type="checkbox" /> Apple <span>6</span></label>
                 </div>
             </div>
             <div class="shop-filter-group">
