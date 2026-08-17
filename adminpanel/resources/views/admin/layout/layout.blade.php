@@ -159,7 +159,7 @@
                 $.ajax({
                     url: url
                 }).done(function (html) {
-                    var $response = $('<div>').append($.parseHTML(html));
+                    var $response = $('<div>').append($.parseHTML(html, document, true));
                     var $newContent = $response.find('#ajax-page-content').first();
 
                     if (!$newContent.length) {
@@ -167,7 +167,14 @@
                         return;
                     }
 
+                    var pageScripts = $newContent.find('script').map(function () {
+                        return this.textContent || this.innerText || '';
+                    }).get();
+                    $newContent.find('script').remove();
                     $content.html($newContent.html()).css('opacity', '1');
+                    pageScripts.forEach(function (script) {
+                        if (script.trim()) $.globalEval(script);
+                    });
                     window.initServerSearch();
                     $('.side-menu .slide-item').removeClass('active');
                     $('.side-menu a[href="' + url + '"]').addClass('active');
@@ -182,6 +189,32 @@
                     $content.css('opacity', '1');
                 });
             };
+
+            // Product attribute/value forms submit without a full browser reload.
+            $(document).on('submit', '[data-product-attribute-form]', function (event) {
+                event.preventDefault();
+                var $form = $(this);
+                var $buttons = $form.find('button[type="submit"], button:not([type])').prop('disabled', true);
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    method: 'POST',
+                    data: new FormData(this),
+                    processData: false,
+                    contentType: false,
+                    headers: { Accept: 'application/json' }
+                }).done(function (response) {
+                    window.loadAjaxPage(window.location.href, false);
+                    if (typeof crudToast === 'function') crudToast('success', response.message || 'Saved successfully.');
+                }).fail(function (xhr) {
+                    var message = xhr.responseJSON && (xhr.responseJSON.message || Object.values(xhr.responseJSON.errors || {})[0]);
+                    if (Array.isArray(message)) message = message[0];
+                    if (typeof crudToast === 'function') crudToast('error', message || 'Request failed.');
+                    else alert(message || 'Request failed.');
+                }).always(function () {
+                    $buttons.prop('disabled', false);
+                });
+            });
 
             // Open internal sidebar links through the AJAX page loader.
             // Normal browser behaviour is preserved for special/external links and Ctrl/Command-click.
@@ -452,6 +485,7 @@
                 $form.find('[name="email"]').prop('readonly', false);
                 $form.find('[data-prevent-self-parent] option').prop('disabled', false);
                 $form.find('[data-image-preview], [data-image-preview-for]').attr('src', '').addClass('d-none');
+                $form.find('[data-category-attribute-enabled]').trigger('change');
                 $form.find('[data-section-source]').trigger('change');
                 $modal.find('[data-crud-title]').text($button.data('create-title') || 'Add Record');
                 $modal.find('[data-password-help]').text('(minimum 6 characters)');
@@ -500,12 +534,34 @@
                         window.productGallery.clear();
                         window.productGallery.renderExisting(response.product_images || []);
                     }
+                    if (window.productVariants) {
+                        window.productVariants.renderExisting(response.product_variants || []);
+                    }
+                    $form.find('[data-category-attribute-enabled], [data-category-attribute-filterable], [data-category-attribute-required]').prop('checked', false);
+                    $.each(response.category_attributes || [], function (_, attribute) {
+                        var $row = $form.find('[data-category-attribute-row="' + attribute.id + '"]');
+                        $row.find('[data-category-attribute-enabled]').prop('checked', true);
+                        $row.find('[data-category-attribute-filterable]').prop('checked', !!attribute.is_filterable);
+                        $row.find('[data-category-attribute-required]').prop('checked', !!attribute.is_required);
+                        $row.find('[data-category-attribute-position]').val(attribute.position);
+                    });
+                    $form.find('[data-category-attribute-enabled]').trigger('change');
                     $form.find('[data-section-source]').trigger('change');
                     $form.find('.js-crud-errors').empty().addClass('d-none');
                     $modal.find('[data-crud-title]').text('Edit Record');
                     $modal.find('[data-password-help]').text('(leave blank to keep the current password)');
                     bootstrap.Modal.getOrCreateInstance($modal[0]).show();
                 }).fail(function () { crudToast('error', 'Record load'); });
+            });
+
+            // Filter/required settings only make sense when the attribute is enabled.
+            $(document).on('change', '[data-category-attribute-enabled]', function () {
+                var $row = $(this).closest('[data-category-attribute-row]');
+                var enabled = this.checked;
+                var $dependent = $row.find('[data-category-attribute-filterable], [data-category-attribute-required]');
+                if (!enabled) $dependent.prop('checked', false);
+                $dependent.prop('disabled', !enabled);
+                $row.find('[data-category-attribute-position]').prop('disabled', !enabled);
             });
 
             /*

@@ -23,8 +23,8 @@
                             $canManageSettings = $admin?->hasModuleAccess('setting', 'view');
                             $canManageTags = $admin?->hasModuleAccess('tag', 'view');
                             $canManageBrands = $admin?->hasModuleAccess('brand', 'view');
-                            $canManageColors = $admin?->hasModuleAccess('color', 'view');
                             $canManageProducts = $admin?->hasModuleAccess('product', 'view');
+                            $canManageAttributes = $admin?->hasModuleAccess('attribute', 'view');
                         @endphp
                         <img src="{{ $admin && $admin->image
                             ? asset('admin/adminimage/' . $admin->image)
@@ -79,8 +79,8 @@
                         </ul>
                     </li>
                 @endif
-                @if ($canManageProducts)
-                <li class="slide {{ request()->routeIs('products') ? 'is-expanded' : '' }}">
+                @if ($canManageProducts || $canManageAttributes)
+                <li class="slide {{ request()->routeIs('products') || request()->routeIs('product-attributes*') ? 'is-expanded' : '' }}">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -93,13 +93,14 @@
                         <li class="side-menu-label1">
                             <a href="javascript:void(0)">Products</a>
                         </li>
-                         <li><a href="{{ route('products') }}" class="slide-item {{ request()->routeIs('products') ? 'active' : '' }}">Products</a></li>
+                         @if ($canManageProducts)<li><a href="{{ route('products') }}" class="slide-item {{ request()->routeIs('products') ? 'active' : '' }}">Products</a></li>@endif
+                         @if ($canManageAttributes)<li><a href="{{ route('product-attributes') }}" class="slide-item {{ request()->routeIs('product-attributes*') ? 'active' : '' }}">Attributes</a></li>@endif
                     </ul>
                 </li>
                 @endif
 
-                @if ($canManageSettings || $canManageTags || $canManageBrands || $canManageColors)
-                <li class="slide {{ request()->routeIs('settings') || request()->routeIs('tags') || request()->routeIs('brands') || request()->routeIs('colors') ? 'is-expanded' : '' }}">
+                @if ($canManageSettings || $canManageTags || $canManageBrands)
+                <li class="slide {{ request()->routeIs('settings') || request()->routeIs('tags') || request()->routeIs('brands') ? 'is-expanded' : '' }}">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg class="side-menu__icon" xmlns="http://www.w3.org/2000/svg" width="24"
                             height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -120,7 +121,6 @@
                         <li class="side-menu-label1">
                             <a href="javascript:void(0)">Utilities</a>
                         </li>
-                         @if ($canManageColors)<li><a href="{{ route('colors') }}" class="slide-item {{ request()->routeIs('colors') ? 'active' : '' }}">Colors</a></li>@endif
                         @if ($canManageTags)<li><a href="{{ route('tags') }}" class="slide-item {{ request()->routeIs('tags') ? 'active' : '' }}">Tags</a></li>@endif
                         @if ($canManageBrands)<li><a href="{{ route('brands') }}" class="slide-item {{ request()->routeIs('brands') ? 'active' : '' }}">Brands</a></li>@endif
                         @if ($canManageSettings)<li><a href="{{ route('settings') }}" class="slide-item {{ request()->routeIs('settings') ? 'active' : '' }}">General Settings</a></li>@endif

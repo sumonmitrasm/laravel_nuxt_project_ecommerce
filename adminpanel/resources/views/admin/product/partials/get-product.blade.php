@@ -196,7 +196,6 @@
                                             <th>Section</th>
                                             <th>Category</th>
                                             <th>Brand</th>
-                                            <th>Color</th>
                                             <th>Price</th>
                                             <th>Discount</th>
                                             <th>Final Price</th>
@@ -222,14 +221,6 @@
                                                 <td>{{ $product['section_name'] ?? '-' }}</td>
                                                 <td>{{ $product['category_name'] ?? '-' }}</td>
                                                 <td>{{ $product['brand_name'] ?? '-' }}</td>
-                                                <td>
-                                                    @if ($product['product_color'])
-                                                        <span class="d-inline-block border rounded me-1 align-middle"
-                                                            style="width:20px;height:20px;background:{{ $product['product_color'] }}"></span>{{ $product['product_color'] }}
-                                                    @else
-                                                        -
-                                                    @endif
-                                                </td>
                                                 <td>{{ number_format((float) $product['product_price'], 2) }}</td>
                                                 <td>{{ number_format((float) $product['effective_discount'], 2) }}%
                                                     <small
@@ -330,17 +321,8 @@
                             </div>
                             <div class="col-md-6 mb-3"><label class="form-label">Product Name *</label><input
                                     name="product_name" class="form-control" maxlength="255" required></div>
-                            <div class="col-md-3 mb-3"><label class="form-label">Product Code *</label><input
+                            <div class="col-md-6 mb-3"><label class="form-label">Product Code *</label><input
                                     name="product_code" class="form-control" maxlength="100" required></div>
-                            <div class="col-md-3 mb-3"><label class="form-label">Color</label><select
-                                    name="product_color" class="form-select">
-                                    <option value="">No Color</option>
-                                    @foreach ($colors as $color)
-                                        <option value="{{ $color->color_code }}">{{ $color->name }}
-                                            ({{ $color->color_code }})
-                                        </option>
-                                    @endforeach
-                                </select></div>
                             <div class="col-md-4 mb-3"><label class="form-label">Price *</label><input type="number"
                                     name="product_price" class="form-control" step="0.01" min="0"
                                     required></div>
@@ -371,6 +353,21 @@
                             </div>
                         </div>
                     </div>
+                    <!------- Product Attributes start-------->
+                    <div class="product-form-section mb-0">
+                        <h6 class="product-section-title">
+                            <i class="fe fe-layers"></i>
+                            Product Variants
+                        </h6>
+                        <p class="text-muted mb-3">Create one row for every sellable option combination. Empty price uses the product price.</p>
+                        <div id="product-variant-rows" class="d-flex flex-column gap-2"></div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-3"
+                            id="add-product-variant">
+                            <i class="fe fe-plus me-1"></i>Add Variant
+                        </button>
+                    </div>
+                    <br>
+                    <!------- Product Attributes end-------->
                     <!------- Product Multiple Images start-------->
                     <div class="product-form-section mb-0">
                         <h6 class="product-section-title">
@@ -452,7 +449,10 @@
     </div>
 </div>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    (function () {
+        if (window.productPageEventController) window.productPageEventController.abort();
+        window.productPageEventController = new AbortController();
+        const productPageEventSignal = window.productPageEventController.signal;
         function galleryElements() {
             return {
                 input: document.getElementById('product-images'),
@@ -538,9 +538,9 @@
 
         document.addEventListener('change', function(event) {
             if (event.target && event.target.id === 'product-images') renderPreviews();
-        });
+        }, { signal: productPageEventSignal });
 
-        window.productGallery = {
+    window.productGallery = {
             clear: function() {
                 const {
                     input,
@@ -605,13 +605,105 @@
 
                     savedPreview.appendChild(column);
                 });
-            }
-        };
+        }
+    };
+
+    const variantAttributeGroups = {{ Illuminate\Support\Js::from($variantAttributes) }};
+    const categoryAttributeMap = {{ Illuminate\Support\Js::from($categoryAttributeMap) }};
+    let variantRowIndex = 0;
+
+    function applicableVariantAttributeGroups() {
+        const category = document.querySelector('[data-crud-form] [name="category_id"]');
+        const mapping = categoryAttributeMap[String(category ? category.value : '')] || {};
+        return variantAttributeGroups
+            .filter(attribute => Object.prototype.hasOwnProperty.call(mapping, String(attribute.id)))
+            .sort((left, right) => (mapping[left.id]?.position || 0) - (mapping[right.id]?.position || 0));
+    }
+
+    function addVariantRow(variant) {
+        const container = document.getElementById('product-variant-rows');
+        if (!container) return;
+
+        const row = variant || {};
+        const selectedValues = row.values || {};
+        const index = variantRowIndex++;
+        const applicableGroups = applicableVariantAttributeGroups();
+        const mapping = categoryAttributeMap[String(document.querySelector('[data-crud-form] [name="category_id"]')?.value || '')] || {};
+        const optionSelectors = applicableGroups.map(function (attribute) {
+            const options = (attribute.values || []).map(function (value) {
+                const selected = String(selectedValues[attribute.id] || '') === String(value.id) ? ' selected' : '';
+                const swatch = value.color_code ? ` (${escapeHtml(value.color_code)})` : '';
+                return `<option value="${value.id}"${selected}>${escapeHtml(value.value)}${swatch}</option>`;
+            }).join('');
+            return `<div class="col-6 col-md-2">
+                <label class="form-label small">${escapeHtml(attribute.name)}${mapping[attribute.id]?.is_required ? ' *' : ''}</label>
+                <select name="variants[${index}][values][${attribute.id}]" class="form-select"${mapping[attribute.id]?.is_required ? ' required' : ''}>
+                    <option value="">Select</option>${options}
+                </select>
+            </div>`;
+        }).join('');
+        const element = document.createElement('div');
+        element.className = 'row g-2 align-items-end border rounded p-2 js-product-variant-row';
+        element.innerHTML = `
+            ${optionSelectors}
+            <div class="col-6 col-md-2">
+                <label class="form-label small">Price</label>
+                <input type="number" name="variants[${index}][price]" class="form-control"
+                    step="0.01" min="0" placeholder="Optional" value="${escapeHtml(row.price || '')}">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small">Stock</label>
+                <input type="number" name="variants[${index}][stock]" class="form-control"
+                    min="0" placeholder="0" value="${escapeHtml(row.stock ?? '')}">
+            </div>
+            <div class="col-8 col-md-2">
+                <label class="form-label small">SKU</label>
+                <input type="text" name="variants[${index}][sku]" class="form-control"
+                    maxlength="255" placeholder="Variant SKU" value="${escapeHtml(row.sku || '')}">
+                <input type="hidden" name="variants[${index}][status]" value="${row.status === false ? 0 : 1}">
+            </div>
+            <div class="col-4 col-md-2">
+                <button type="button" class="btn btn-outline-danger w-100 js-remove-product-variant"
+                    title="Remove variant"><i class="fe fe-trash-2"></i></button>
+            </div>`;
+
+        container.appendChild(element);
+    }
+
+    window.productVariants = {
+        clear: function () {
+            const container = document.getElementById('product-variant-rows');
+            if (!container) return;
+            container.innerHTML = '';
+            variantRowIndex = 0;
+            addVariantRow();
+        },
+        renderExisting: function (variants) {
+            const container = document.getElementById('product-variant-rows');
+            if (!container) return;
+            container.innerHTML = '';
+            variantRowIndex = 0;
+            (variants && variants.length ? variants : [{}]).forEach(addVariantRow);
+        }
+    };
+
+    document.addEventListener('click', function (event) {
+        if (event.target.closest('#add-product-variant')) addVariantRow();
+        const removeButton = event.target.closest('.js-remove-product-variant');
+        if (removeButton) removeButton.closest('.js-product-variant-row').remove();
+    }, { signal: productPageEventSignal });
+
+    document.addEventListener('change', function (event) {
+        if (event.target && event.target.matches('[data-crud-form] [name="category_id"]') && event.isTrusted) {
+            window.productVariants.clear();
+        }
+    }, { signal: productPageEventSignal });
 
         document.addEventListener('click', function(event) {
-            if (event.target.closest('[data-crud-create]')) {
-                window.productGallery.clear();
-            }
-        });
-    });
+        if (event.target.closest('[data-crud-create]')) {
+            window.productGallery.clear();
+            window.productVariants.clear();
+        }
+    }, { signal: productPageEventSignal });
+})();
 </script>

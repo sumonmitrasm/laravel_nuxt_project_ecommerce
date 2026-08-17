@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="bn">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Laravel Product Attribute, Variant & Category Filter Architecture</title>
+    <style>
+        :root { --ink:#17211d; --muted:#61706a; --brand:#ff5948; --green:#167c5a; --blue:#3565d8; --paper:#fff; --soft:#f4f7f5; --line:#dce4e0; --code:#101a17; }
+        * { box-sizing:border-box }
+        html { scroll-behavior:smooth }
+        body { margin:0; color:var(--ink); background:var(--soft); font:16px/1.7 "Segoe UI", Arial, sans-serif }
+        .page { max-width:1180px; margin:auto; background:var(--paper); min-height:100vh; box-shadow:0 0 45px rgba(13,35,26,.08) }
+        header { padding:64px 7%; color:#fff; background:linear-gradient(135deg,#10231c,#1f4c3b) }
+        header h1 { max-width:850px; margin:0 0 16px; font-size:clamp(34px,5vw,62px); line-height:1.08 }
+        header p { max-width:800px; color:#d6e6df; font-size:19px }
+        main { padding:45px 7% 80px }
+        nav { padding:24px; border:1px solid var(--line); background:#fbfcfb; columns:2; border-radius:12px }
+        nav a { display:block; padding:5px; color:var(--green); text-decoration:none }
+        section { padding-top:38px; margin-top:25px; border-top:1px solid var(--line) }
+        h2 { font-size:30px; line-height:1.25 } h3 { margin-top:32px; font-size:22px } h4 { font-size:18px }
+        code { font-family:Consolas, monospace }
+        pre { overflow:auto; padding:20px; color:#d8eee5; background:var(--code); border-radius:10px; line-height:1.55; tab-size:4 }
+        pre code { white-space:pre }
+        .note,.warning,.success { padding:16px 18px; margin:18px 0; border-left:5px solid var(--blue); background:#eef4ff; border-radius:6px }
+        .warning { border-color:#d98b13; background:#fff7e8 }.success { border-color:var(--green); background:#eaf8f2 }
+        table { width:100%; border-collapse:collapse; margin:18px 0; font-size:15px }
+        th,td { padding:11px 12px; border:1px solid var(--line); text-align:left; vertical-align:top } th { background:#edf3f0 }
+        .flow { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:20px 0 }
+        .flow span { padding:13px 16px; border:1px solid var(--line); border-radius:8px; background:#fff; font-weight:600 }
+        .flow b { color:var(--brand); font-size:24px }
+        .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px }
+        .card { padding:18px; border:1px solid var(--line); border-radius:10px; background:#fff }
+        .card h4 { margin:0 0 7px }.tag { display:inline-block; padding:2px 9px; color:#fff; background:var(--green); border-radius:20px; font-size:12px }
+        .file { color:var(--blue); font-family:Consolas,monospace; overflow-wrap:anywhere }
+        .diagram { padding:25px; overflow:auto; color:#dff3ea; background:#13251e; border-radius:12px; font:15px/1.55 Consolas,monospace; white-space:pre }
+        .check li { margin:7px 0 } footer { padding:25px 7%; color:#d6e6df; background:#10231c }
+        @media(max-width:700px){ nav{columns:1} main{padding-inline:5%} header{padding-inline:5%} }
+        @media print { body{background:#fff}.page{box-shadow:none}pre,.diagram{white-space:pre-wrap} }
+    </style>
+</head>
+<body>
+<div class="page">
+<header>
+    <span class="tag">Reusable Architecture Guide</span>
+    <h1>Product Attribute, Variant ও Category Filter System</h1>
+    <p>Laravel admin panel থেকে Size, Color, RAM, Storage তৈরি, category অনুযায়ী assign, product combination-এর SKU/price/stock সংরক্ষণ এবং Nuxt frontend filter তৈরির A–Z বাংলা documentation।</p>
+</header>
+<main>
+    <nav>
+        <a href="#concept">১. মূল ধারণা</a><a href="#architecture">২. Architecture diagram</a>
+        <a href="#database">৩. Database tables</a><a href="#models">৪. Eloquent models</a>
+        <a href="#attribute-admin">৫. Attribute admin</a><a href="#category-map">৬. Category mapping</a>
+        <a href="#product-variants">৭. Product variants</a><a href="#validation">৮. Validation</a>
+        <a href="#ajax">৯. AJAX lifecycle</a><a href="#api">১০. Product detail API</a>
+        <a href="#frontend-filter">১১. Frontend dynamic filter</a><a href="#workflow">১২. ব্যবহার পদ্ধতি</a>
+        <a href="#files">১৩. পরিবর্তিত files</a><a href="#reuse">১৪. অন্য project-এ প্রয়োগ</a>
+        <a href="#troubleshoot">১৫. Troubleshooting</a><a href="#status">১৬. Current status</a>
+    </nav>
+
+    <section id="concept">
+        <h2>১. মূল ধারণা</h2>
+        <p><strong>Attribute</strong> হলো option-এর নাম—যেমন Size, Color, RAM। <strong>Attribute Value</strong> হলো তার possible value—যেমন L, Black, 16GB। <strong>Variant</strong> হলো বিক্রয়যোগ্য নির্দিষ্ট combination—যেমন Black + XL, যার নিজস্ব SKU, price ও stock থাকে।</p>
+        <table><thead><tr><th>বিষয়</th><th>উদাহরণ</th><th>কোথায় থাকে</th></tr></thead><tbody>
+            <tr><td>Attribute</td><td>Size</td><td><code>attributes</code></td></tr>
+            <tr><td>Attribute value</td><td>XL</td><td><code>attribute_values</code></td></tr>
+            <tr><td>Category mapping</td><td>Clothing → Size</td><td><code>category_attribute</code></td></tr>
+            <tr><td>Variant</td><td>Black + XL; SKU TSH-BLK-XL</td><td><code>product_variants</code></td></tr>
+            <tr><td>Variant/value mapping</td><td>Variant 10 → Black, XL</td><td><code>attribute_value_product_variant</code></td></tr>
+        </tbody></table>
+        <div class="warning"><strong>ভুল pattern:</strong> Size attribute-এর ভেতর 8GB রাখা যাবে না; 8GB হবে RAM attribute-এর value। “6”, “8” বা ব্যক্তির নাম attribute নয়।</div>
+        <div class="success"><strong>Color single source:</strong> পুরোনো <code>colors</code> table এবং <code>products.product_color</code> column remove করা হয়েছে। এখন Color শুধুমাত্র <code>attributes (slug=color)</code> ও <code>attribute_values.color_code</code> থেকে manage হয়। Existing product colors cleanup migration দিয়ে variants-এ migrate হয়েছে।</div>
+    </section>
+
+    <section id="architecture">
+        <h2>২. Architecture diagram</h2>
+        <div class="diagram">categories ────────┐
+                    │ many-to-many
+                    ▼
+             category_attribute ◄──────── attributes
+                    │                         │
+                    │                         │ one-to-many
+                    │                         ▼
+                    │                  attribute_values
+                    │                         │
+products ── one-to-many ── product_variants  │
+                               │              │
+                               └── many-to-many
+                                   attribute_value_product_variant</div>
+        <div class="flow"><span>Category select</span><b>→</b><span>Applicable attributes</span><b>→</b><span>Variant combinations</span><b>→</b><span>SKU/Price/Stock</span><b>→</b><span>API</span><b>→</b><span>Nuxt UI</span></div>
+        <h3>কেন পুরোনো <code>cat_ids</code> নয়?</h3>
+        <p><code>cat_ids="2,5,8"</code> রাখলে foreign key ও index সুবিধা পাওয়া যায় না এবং <code>FIND_IN_SET()</code> লাগে। Pivot table-এ প্রতি relation একটি row হওয়ায় query indexed, normalized এবং delete-safe হয়।</p>
+    </section>
+
+    <section id="database">
+        <h2>৩. Database tables ও migrations</h2>
+        <h3>৩.১ attributes</h3>
+<pre><code>Schema::create('attributes', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');                 // Size, Color, RAM
+    $table->string('slug')->unique();       // size, color, ram
+    $table->enum('type', ['text','color'])->default('text');
+    $table->unsignedInteger('position')->default(0);
+    $table->boolean('status')->default(true);
+    $table->timestamps();
+});</code></pre>
+        <h3>৩.২ attribute_values</h3>
+<pre><code>Schema::create('attribute_values', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('attribute_id')->constrained('attributes')->cascadeOnDelete();
+    $table->string('value');                // XL, Black, 16GB
+    $table->string('color_code', 20)->nullable();
+    $table->unsignedInteger('position')->default(0);
+    $table->boolean('status')->default(true);
+    $table->timestamps();
+    $table->unique(['attribute_id', 'value']);
+});</code></pre>
+        <h3>৩.৩ category_attribute</h3>
+<pre><code>Schema::create('category_attribute', function (Blueprint $table) {
+    $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
+    $table->foreignId('attribute_id')->constrained('attributes')->cascadeOnDelete();
+    $table->boolean('is_filterable')->default(true);
+    $table->boolean('is_required')->default(false);
+    $table->unsignedInteger('position')->default(0);
+    $table->primary(['category_id', 'attribute_id']);
+    $table->index(['category_id', 'is_filterable']);
+});</code></pre>
+        <table><thead><tr><th>Pivot field</th><th>কাজ</th></tr></thead><tbody>
+            <tr><td><code>is_filterable</code></td><td>Nuxt shop sidebar-এ attribute দেখাবে কি না।</td></tr>
+            <tr><td><code>is_required</code></td><td>Admin product variant-এর প্রতিটি row-তে value বাধ্যতামূলক কি না।</td></tr>
+            <tr><td><code>position</code></td><td>Product form/filter-এ display order।</td></tr>
+        </tbody></table>
+        <h3>৩.৪ product_variants</h3>
+<pre><code>Schema::create('product_variants', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
+    $table->string('sku')->unique();
+    $table->decimal('price', 12, 2)->nullable(); // null হলে product price
+    $table->unsignedInteger('stock')->default(0);
+    $table->boolean('status')->default(true);
+    $table->timestamps();
+    $table->index(['product_id', 'status']);
+});</code></pre>
+        <h3>৩.৫ attribute_value_product_variant</h3>
+<pre><code>Schema::create('attribute_value_product_variant', function (Blueprint $table) {
+    $table->foreignId('product_variant_id')->constrained('product_variants')->cascadeOnDelete();
+    $table->foreignId('attribute_value_id')->constrained('attribute_values')->cascadeOnDelete();
+    $table->primary(['product_variant_id','attribute_value_id'], 'variant_attribute_value_primary');
+});</code></pre>
+        <div class="success">সব foreign key-তে cascade থাকার কারণে Product delete হলে variants/pivot, Attribute delete হলে values/pivot এবং Category delete হলে mapping পরিষ্কার হয়। Used Attribute/Value admin controller থেকে delete করার আগে আলাদাভাবে আটকানো হয়েছে।</div>
+    </section>
+
+    <section id="models">
+        <h2>৪. Eloquent models ও relationships</h2>
+        <h3>ProductAttributeDefinition</h3>
+<pre><code>class ProductAttributeDefinition extends Model
+{
+    protected $table = 'attributes';
+    protected $fillable = ['name','slug','type','position','status'];
+    public function values(): HasMany {
+        return $this->hasMany(ProductAttributeValue::class, 'attribute_id');
+    }
+    public function categories(): BelongsToMany {
+        return $this->belongsToMany(Category::class, 'category_attribute', 'attribute_id', 'category_id')
+            ->withPivot(['is_filterable','is_required','position']);
+    }
+}</code></pre>
+        <h3>ProductAttributeValue</h3>
+<pre><code>class ProductAttributeValue extends Model
+{
+    protected $table = 'attribute_values'; // convention mismatch হওয়ায় explicit
+    public function attribute(): BelongsTo {
+        return $this->belongsTo(ProductAttributeDefinition::class, 'attribute_id');
+    }
+    public function variants(): BelongsToMany {
+        return $this->belongsToMany(ProductVariant::class,
+            'attribute_value_product_variant', 'attribute_value_id', 'product_variant_id');
+    }
+}</code></pre>
+        <h3>ProductVariant এবং Product</h3>
+<pre><code>// ProductVariant
+public function product(): BelongsTo { return $this->belongsTo(Product::class); }
+public function values(): BelongsToMany {
+    return $this->belongsToMany(ProductAttributeValue::class,
+        'attribute_value_product_variant', 'product_variant_id', 'attribute_value_id');
+}
+
+// Product
+public function variants(): HasMany {
+    return $this->hasMany(ProductVariant::class);
+}</code></pre>
+        <h3>Category</h3>
+<pre><code>public function attributes(): BelongsToMany
+{
+    return $this->belongsToMany(ProductAttributeDefinition::class,
+        'category_attribute', 'category_id', 'attribute_id')
+        ->withPivot(['is_filterable','is_required','position'])
+        ->orderByPivot('position');
+}</code></pre>
+    </section>
+
+    <section id="attribute-admin">
+        <h2>৫. Attribute management admin</h2>
+        <p>Sidebar route: <strong>Products → Attributes</strong>। Controller Attribute এবং Value create/delete করে। Color type হলে <code>color_code</code> রাখা যায়।</p>
+<pre><code>// Attribute create
+$data = $request->validate([
+    'name' => ['required','string','max:100','unique:attributes,name'],
+    'type' => ['required', Rule::in(['text','color'])],
+]);
+$data['slug'] = Str::slug($data['name']);
+ProductAttributeDefinition::create($data);
+
+// Value create
+$data = $request->validate([
+    'value' => ['required','string','max:100',
+        Rule::unique('attribute_values')->where('attribute_id', $attribute->id)],
+    'color_code' => ['nullable','string','max:20'],
+]);
+$attribute->values()->create($data);</code></pre>
+        <p>Forms-এ <code>data-product-attribute-form</code> আছে। Shared layout delegated AJAX handler দিয়ে submit হয়, তাই full browser reload হয় না। JSON request হলে controller JSON message দেয়; normal request হলে redirect fallback দেয়।</p>
+    </section>
+
+    <section id="category-map">
+        <h2>৬. Category → Attribute mapping</h2>
+        <p>Category create/edit form-এর Product Attributes table-এ Use, Shop Filter, Required ও Order দেওয়া হয়। Save-এর সময় শুধুমাত্র <strong>Use checked</strong> rows sync হয়।</p>
+<pre><code>private function syncAttributes(Request $request, Category $category): void
+{
+    $availableIds = ProductAttributeDefinition::where('status', true)->pluck('id');
+    $sync = collect($request->input('category_attributes', []))
+        ->filter(fn ($row, $id) => !empty($row['enabled']) && $availableIds->contains((int)$id))
+        ->mapWithKeys(fn ($row, $id) => [(int)$id => [
+            'is_filterable' => (bool)($row['is_filterable'] ?? false),
+            'is_required'   => (bool)($row['is_required'] ?? false),
+            'position'      => (int)($row['position'] ?? 0),
+        ]]);
+    $category->attributes()->sync($sync->all());
+}</code></pre>
+        <h3>Inheritance rule</h3>
+        <p>Selected category-তে mapping থাকলে সেটি ব্যবহার হয়। mapping না থাকলে parent category-এর দিকে যাওয়া হয়। প্রথম mapping পাওয়া গেলে সেটিই applicable mapping। ফলে Clothing-এর child category নিজস্ব mapping না দিলে Clothing-এর Size/Color inherit করতে পারে।</p>
+        <div class="note"><strong>UI dependency:</strong> Use off করলে Shop Filter এবং Required off/disabled হয়। আগে reload-এর পর Shop Filter checked দেখানোর display bug এই dependency reset দিয়ে ঠিক করা হয়েছে।</div>
+    </section>
+
+    <section id="product-variants">
+        <h2>৭. Product create/edit variants</h2>
+        <p>ProductController index active Attribute + Values এবং category-wise resolved mapping view-তে পাঠায়। JavaScript selected category অনুযায়ী groups filter করে।</p>
+<pre><code>const variantAttributeGroups = /* Laravel Js::from($variantAttributes) */;
+const categoryAttributeMap   = /* Laravel Js::from($categoryAttributeMap) */;
+
+function applicableVariantAttributeGroups() {
+    const categoryId = document.querySelector('[name="category_id"]')?.value;
+    const mapping = categoryAttributeMap[String(categoryId)] || {};
+    return variantAttributeGroups
+        .filter(a => Object.hasOwn(mapping, String(a.id)))
+        .sort((a,b) => (mapping[a.id]?.position || 0) - (mapping[b.id]?.position || 0));
+}</code></pre>
+        <p>প্রতি Variant row-তে applicable attribute dropdowns + Price + Stock + SKU থাকে। Required mapping হলে select field-এ HTML <code>required</code> এবং server validation দুটোই কাজ করে। Blank variant price হলে মূল product price ব্যবহার করার নিয়ম রাখা হয়েছে। Blank SKU দিলে backend product code + random suffix দিয়ে SKU বানায়।</p>
+        <h3>Save algorithm</h3>
+<pre><code>$product->variants()->delete();
+foreach ($validRows as $row) {
+    $variant = $product->variants()->create([
+        'sku'    => $row['sku'] ?: $product->product_code.'-'.str()->upper(str()->random(6)),
+        'price'  => $row['price'] !== '' ? $row['price'] : null,
+        'stock'  => $row['stock'] !== '' ? $row['stock'] : 0,
+        'status' => (bool)($row['status'] ?? true),
+    ]);
+    $variant->values()->sync(collect($row['values'])->filter()->unique()->values());
+}</code></pre>
+        <p>Update transaction-এর মধ্যে পুরোনো variant rows replace হয়। Unique SKU database index race condition থেকেও duplicate আটকায়।</p>
+    </section>
+
+    <section id="validation">
+        <h2>৮. Server-side validation</h2>
+        <ul class="check">
+            <li>সর্বোচ্চ 100 variant rows।</li>
+            <li>Price numeric এবং non-negative।</li>
+            <li>Stock integer এবং non-negative।</li>
+            <li>Selected value active <code>attribute_values</code> row হতে হবে।</li>
+            <li>Value যে Attribute dropdown থেকে এসেছে, database-এ সেই attribute-এরই value হতে হবে।</li>
+            <li>Selected Category-তে Attribute applicable হতে হবে।</li>
+            <li>Required Attribute প্রতিটি non-empty variant-এ থাকতে হবে।</li>
+            <li>এক Product-এর duplicate option combination নিষিদ্ধ।</li>
+            <li>Request-এর ভেতর এবং অন্য Product-এর সঙ্গে duplicate SKU নিষিদ্ধ।</li>
+        </ul>
+<pre><code>// Concept: Size=XL + Color=Black combination দুইবার দেওয়া যাবে না
+$combination = $selectedValueIds->sort()->implode('-');
+if (isset($combinations[$combination])) {
+    $errors["variants.$index.values"] = 'This option combination is duplicated.';
+}</code></pre>
+    </section>
+
+    <section id="ajax">
+        <h2>৯. AJAX navigation ও reload-independent JavaScript</h2>
+        <p>Admin layout-এর <code>loadAjaxPage()</code> complete response থেকে শুধু <code>#ajax-page-content</code> replace করে। প্রথম implementation-এ <code>$.parseHTML()</code> scripts বাদ দেওয়ায় Add Variant/Image handlers reload ছাড়া চলত না। সমাধান:</p>
+<pre><code>var $response = $('&lt;div&gt;').append($.parseHTML(html, document, true));
+var $newContent = $response.find('#ajax-page-content').first();
+var scripts = $newContent.find('script').map(function () {
+    return this.textContent || this.innerText || '';
+}).get();
+$newContent.find('script').remove();
+$content.html($newContent.html());
+scripts.forEach(script => { if (script.trim()) $.globalEval(script); });</code></pre>
+        <p>Product initializer IIFE হিসেবে সঙ্গে সঙ্গে চলে। বারবার AJAX navigation-এ duplicate event handler আটকাতে পুরোনো <code>AbortController</code> abort করা হয়:</p>
+<pre><code>if (window.productPageEventController) window.productPageEventController.abort();
+window.productPageEventController = new AbortController();
+const signal = window.productPageEventController.signal;
+document.addEventListener('click', handler, { signal });</code></pre>
+        <p>Gallery methods প্রতিবার current DOM element query করে; removed পুরোনো modal-এর reference ধরে রাখে না। Edit JSON GET request-এ <code>cache:false</code> দেওয়া আছে।</p>
+    </section>
+
+    <section id="api">
+        <h2>১০. Product detail API</h2>
+        <p><code>FrontController::details()</code> active variants, values এবং value-এর Attribute eager load করে। N+1 query এড়ানো হয়।</p>
+<pre><code>$product = Product::with([
+    'section:id,name',
+    'category:id,category_name,url,category_discount',
+    'brand:id,name',
+    'variants' => fn ($q) => $q->where('status', true)
+        ->select('id','product_id','sku','price','stock','status'),
+    'variants.values:id,attribute_id,value,color_code',
+    'variants.values.attribute:id,name,slug,type',
+])->whereKey($id)->where('status', true)->first();</code></pre>
+        <h3>Expected JSON shape</h3>
+<pre><code>{
+  "product": {
+    "id": 10,
+    "variants": [{
+      "id": 51,
+      "sku": "TSH-BLK-XL",
+      "price": "1250.00",
+      "stock": 8,
+      "values": [
+        { "id": 4, "value": "XL", "attribute": { "slug": "size" } },
+        { "id": 9, "value": "Black", "attribute": { "slug": "color" } }
+      ]
+    }]
+  }
+}</code></pre>
+    </section>
+
+    <section id="frontend-filter">
+        <h2>১১. Nuxt frontend dynamic faceted filter</h2>
+        <div class="warning"><strong>বর্তমান অবস্থা:</strong> Product detail API variant-ready। কিন্তু <code>listing/{url}</code>-এ facet counts ও query-parameter filtering এখনো implement করা হয়নি। নিচের অংশটি পরবর্তী implementation blueprint—complete হয়েছে বলে ধরে নেবেন না।</div>
+        <h3>Recommended request</h3>
+<pre><code>GET /api/listing/men?attributes[1][]=4&amp;attributes[2][]=9&amp;sort=price_asc&amp;page=1</code></pre>
+        <p>একই Attribute-এর multiple values OR হবে (M অথবা L), আলাদা Attributes AND হবে (Size L এবং Color Black)।</p>
+<pre><code>foreach ($selectedAttributes as $attributeId => $valueIds) {
+    $products->whereHas('variants', function ($variant) use ($attributeId, $valueIds) {
+        $variant->where('status', true)
+            ->whereHas('values', fn ($value) => $value
+                ->where('attribute_values.attribute_id', $attributeId)
+                ->whereIn('attribute_values.id', $valueIds));
+    });
+}</code></pre>
+        <h3>Filter response</h3>
+<pre><code>"filters": [{
+  "id": 1,
+  "name": "Size",
+  "slug": "size",
+  "values": [
+    { "id": 3, "value": "L", "count": 12 },
+    { "id": 4, "value": "XL", "count": 7 }
+  ]
+}]</code></pre>
+        <p>Filters কেবল selected category-এর <code>is_filterable=true</code> attributes থেকে আসবে। Value count category-এর active products এবং active variants থেকে <code>COUNT(DISTINCT products.id)</code> দিয়ে গণনা করা উচিত। Query string ব্যবহার করলে link share, browser back এবং SSR ঠিক থাকে।</p>
+    </section>
+
+    <section id="workflow">
+        <h2>১২. Admin ব্যবহার পদ্ধতি</h2>
+        <h3>Clothing example</h3>
+        <ol>
+            <li>Products → Attributes: Size তৈরি; values S, M, L, XL।</li>
+            <li>Color তৈরি; values Black, Red।</li>
+            <li>Pages → Category → Men Edit।</li>
+            <li>Size ও Color-এর Use check; প্রয়োজনমতো Shop Filter/Required check; order 1/2।</li>
+            <li>Products → Add Product → Men select।</li>
+            <li>Add Variant: L + Black, SKU/stock দিন। আরেক row: XL + Black।</li>
+        </ol>
+        <h3>Laptop example</h3>
+        <ol>
+            <li>RAM → 8GB, 16GB; Storage → 256GB, 512GB; Color values তৈরি।</li>
+            <li>Laptops Category-তে RAM, Storage, Color assign। Size assign নয়।</li>
+            <li>Product form-এ শুধু RAM/Storage/Color দেখা যাবে।</li>
+        </ol>
+    </section>
+
+    <section id="files">
+        <h2>১৩. গুরুত্বপূর্ণ files</h2>
+        <table><thead><tr><th>File</th><th>দায়িত্ব</th></tr></thead><tbody>
+            <tr><td class="file">database/migrations/2026_08_16_130000_create_catalog_variant_tables.php</td><td>Attributes, values, variants এবং variant-value pivot; default Size/Color seed।</td></tr>
+            <tr><td class="file">database/migrations/2026_08_16_140000_create_category_attribute_table.php</td><td>Category mapping pivot।</td></tr>
+            <tr><td class="file">database/migrations/2026_08_17_010000_migrate_legacy_colors_to_attribute_values.php</td><td>Legacy colors/product_color generic Color values ও variants-এ migrate করে পুরোনো table/column drop করে।</td></tr>
+            <tr><td class="file">app/Models/ProductAttributeDefinition.php</td><td>Attribute model ও values/categories relations।</td></tr>
+            <tr><td class="file">app/Models/ProductAttributeValue.php</td><td>Value model ও variants relation।</td></tr>
+            <tr><td class="file">app/Models/ProductVariant.php</td><td>SKU/price/stock এবং values relation।</td></tr>
+            <tr><td class="file">app/Models/Product.php</td><td><code>variants()</code> relation।</td></tr>
+            <tr><td class="file">app/Models/Category.php</td><td><code>attributes()</code> relation।</td></tr>
+            <tr><td class="file">app/Http/Controllers/ProductAttributeController.php</td><td>Attribute/value admin CRUD।</td></tr>
+            <tr><td class="file">app/Http/Controllers/CategoryController.php</td><td>Category mapping validate/sync/show।</td></tr>
+            <tr><td class="file">app/Http/Controllers/ProductController.php</td><td>Variant data load, category inheritance, validation এবং save।</td></tr>
+            <tr><td class="file">app/Http/Controllers/Api/FrontController.php</td><td>Product detail variant API।</td></tr>
+            <tr><td class="file">resources/views/admin/product-attribute/index.blade.php</td><td>Attribute/value management UI।</td></tr>
+            <tr><td class="file">resources/views/admin/category/partials/get-category.blade.php</td><td>Category mapping table UI।</td></tr>
+            <tr><td class="file">resources/views/admin/product/partials/get-product.blade.php</td><td>Dynamic product variant rows ও multiple image gallery।</td></tr>
+            <tr><td class="file">resources/views/admin/layout/layout.blade.php</td><td>Shared AJAX loader, CRUD modal population ও handlers।</td></tr>
+            <tr><td class="file">resources/views/admin/layout/sidebar.blade.php</td><td>Attributes navigation link।</td></tr>
+            <tr><td class="file">routes/web.php</td><td>Attribute/value admin routes।</td></tr>
+            <tr><td class="file">app/Http/Middleware/AdminPermissionMiddleware.php</td><td>আলাদা Attribute permission module: View page, Add attribute, Edit/add value এবং Delete attribute/value route সুরক্ষিত।</td></tr>
+        </tbody></table>
+        <div class="note"><strong>Legacy cleanup সম্পন্ন:</strong> আগের <code>products_attributes</code> table, <code>ProductsAttribute</code> model/controller এবং পুরোনো migrations সরানো হয়েছে। <code>2026_08_17_000000_drop_legacy_products_attributes_table.php</code> cleanup migration active database থেকে table drop করে। বর্তমান flow শুধুমাত্র <code>product_variants</code> ব্যবহার করে।</div>
+    </section>
+
+    <section id="reuse">
+        <h2>১৪. অন্য project-এ প্রয়োগের সঠিক order</h2>
+        <ol>
+            <li>Products ও Categories tables আগে তৈরি করুন।</li>
+            <li>চারটি generic tables এবং Category pivot migration করুন।</li>
+            <li>Models + explicit pivot table/foreign key relations লিখুন।</li>
+            <li>Attribute/value CRUD বানান।</li>
+            <li>Category form-এ applicable mapping sync করুন।</li>
+            <li>Product form-এ category mapping অনুযায়ী selectors render করুন।</li>
+            <li>Server-side applicable/required/duplicate/SKU validation দিন।</li>
+            <li>Transaction-এর মধ্যে Product + Variants save করুন।</li>
+            <li>Detail API eager-load করুন।</li>
+            <li>Listing API-তে filter whitelist, AND/OR grouping, counts ও pagination করুন।</li>
+            <li>Nuxt-এ URL query-driven filter UI বানান।</li>
+            <li>Indexes, feature tests এবং query-count/performance test করুন।</li>
+        </ol>
+        <h3>Commands</h3>
+<pre><code>php artisan migrate
+php artisan route:list
+php artisan view:clear
+php artisan view:cache
+php artisan test</code></pre>
+        <p>Production deploy-এর আগে backup, maintenance window এবং <code>php artisan migrate --force</code> deployment pipeline থেকে চালানো উচিত।</p>
+    </section>
+
+    <section id="troubleshoot">
+        <h2>১৫. Troubleshooting</h2>
+        <table><thead><tr><th>সমস্যা</th><th>কারণ</th><th>সমাধান</th></tr></thead><tbody>
+            <tr><td>Laptop-এ L/XL দেখা যায়</td><td>Laptop category-তে Size assign করা</td><td>Category Edit → Size Use off; RAM/Storage assign।</td></tr>
+            <tr><td>Product form-এ attribute নেই</td><td>Attribute তৈরি হলেও category mapping হয়নি</td><td>Category Edit → Use check → save।</td></tr>
+            <tr><td>Reload ছাড়া Add Variant চলে না</td><td>AJAX loader inline page scripts বাদ দিচ্ছিল</td><td>keepScripts + explicit globalEval + IIFE initializer।</td></tr>
+            <tr><td>Update-এর পর gallery পুরোনো</td><td>Removed modal-এর stale DOM reference/cache</td><td>Dynamic element lookup ও edit GET <code>cache:false</code>।</td></tr>
+            <tr><td>Shop Filter আবার checked</td><td>Edit UI default checked করছিল</td><td>সব state false reset; response mapping অনুযায়ী check।</td></tr>
+            <tr><td>Table not found product_attribute_values</td><td>Eloquent naming convention mismatch</td><td>Model-এ <code>protected $table='attribute_values'</code>।</td></tr>
+            <tr><td>Duplicate combination</td><td>একই selected value IDs দুই row-তে</td><td>এক row remove বা option পরিবর্তন।</td></tr>
+            <tr><td>Automated tests SQLite error</td><td>Local PHP-তে <code>pdo_sqlite</code> নেই</td><td>Extension enable করুন বা test DB MySQL করুন।</td></tr>
+        </tbody></table>
+    </section>
+
+    <section id="status">
+        <h2>১৬. Current implementation status</h2>
+        <div class="grid">
+            <div class="card"><h4>সম্পন্ন</h4><p>Generic schema, models, attribute/value admin, category mapping/inheritance, product variant create/edit, validation, AJAX lifecycle, detail API।</p></div>
+            <div class="card"><h4>পরবর্তী কাজ</h4><p>Listing API facet/count/filter, Nuxt sidebar rendering, selected variant price/stock UI, cart line-এ variant_id, order item variant snapshot।</p></div>
+            <div class="card"><h4>Legacy cleanup</h4><p>পুরোনো products_attributes table/model/controller remove করা হয়েছে; cleanup migration database-এ সফলভাবে run হয়েছে।</p></div>
+        </div>
+    </section>
+</main>
+<footer>Laravel + Nuxt Ecommerce — Product Attribute & Variant Architecture Handbook</footer>
+</div>
+</body>
+</html>

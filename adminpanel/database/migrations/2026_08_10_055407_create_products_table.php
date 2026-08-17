@@ -23,7 +23,6 @@ return new class extends Migration
             // Product Details
             $table->string('product_name');
             $table->string('product_code')->unique();
-            $table->string('product_color')->nullable();
             // Prices & Weight
             $table->decimal('product_price', 10, 2)->default(0);
             $table->decimal('product_discount', 8, 2)->default(0);

@@ -15,7 +15,7 @@ class Product extends Model
 
     protected $fillable = [
         'section_id', 'category_id', 'brand_id', 'admin_id', 'vendor_id', 'admin_type',
-        'product_name', 'product_code', 'product_color', 'product_price', 'product_discount',
+        'product_name', 'product_code', 'product_price', 'product_discount',
         'product_weight', 'product_image', 'product_video', 'description', 'meta_title',
         'meta_description', 'meta_image', 'url_structure', 'heading_tag', 'schema_markup',
         'meta_data', 'meta_robot', 'meta_keywords', 'canonical_tag', 'is_featured', 'status',
@@ -90,5 +90,10 @@ class Product extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class);
+    }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class);
     }
 }
