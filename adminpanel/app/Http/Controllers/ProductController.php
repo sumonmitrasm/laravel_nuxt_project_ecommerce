@@ -11,7 +11,6 @@ use App\Models\Section;
 use App\Support\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -73,7 +72,6 @@ class ProductController extends Controller
             $this->storeProductImages($request, $product);
             $this->syncProductAttributes($request, $product);
         });
-        $this->clearMenuCache();
         return response()->json(['message' => 'Product created successfully.'], 201);
     }
 
@@ -133,7 +131,6 @@ class ProductController extends Controller
             $this->storeProductImages($request, $product);
             $this->syncProductAttributes($request, $product);
         });
-        $this->clearMenuCache();
 
         return response()->json(['message' => 'Product updated successfully.']);
     }
@@ -150,7 +147,6 @@ class ProductController extends Controller
             $this->images->delete($image->image, 'admin/productgallery');
         }
         $product->delete();
-        $this->clearMenuCache();
 
         return response()->json(['message' => 'Product deleted successfully.']);
     }
@@ -158,7 +154,6 @@ class ProductController extends Controller
     public function updateStatus(Product $product)
     {
         $product->update(['status' => ! $product->status]);
-        $this->clearMenuCache();
 
         return response()->json(['message' => 'Product status updated successfully.']);
     }
@@ -403,11 +398,6 @@ class ProductController extends Controller
             ];
             $this->appendCategoryChildren($category->id, $childrenByParent, $options, $depth + 1, $visited);
         }
-    }
-
-    private function clearMenuCache(): void
-    {
-        Cache::forget('api.sections-with-categories.v4');
     }
 
 }

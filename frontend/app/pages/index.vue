@@ -284,7 +284,7 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
                             :alt="category.category_name" class="category-visual category-api-image" loading="lazy">
                         <span v-else class="category-visual category-api-placeholder"><i class="bi bi-grid"></i></span>
                         <strong>{{ category.category_name }}</strong>
-                        <small>{{ category.products?.length ?? 0 }} products</small>
+                        <small>{{ category.products_count ?? 0 }} products</small>
                     </NuxtLink>
                 </div>
                 <div v-else class="category-api-message">No categories are available in this section yet.</div>

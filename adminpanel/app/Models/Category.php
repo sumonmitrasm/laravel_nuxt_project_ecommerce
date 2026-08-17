@@ -52,7 +52,8 @@ class Category extends Model
     {
         return $this->hasMany(Category::class, 'parent_id')
             ->where('status', 1)
-            ->with(['subcategories', 'products.brand'])
+            ->with('subcategories')
+            ->withCount('products')
             ->orderBy('position')
             ->orderBy('category_name');
     }

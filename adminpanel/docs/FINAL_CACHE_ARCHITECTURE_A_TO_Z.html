@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Final Cache Architecture — A to Z</title>
+  <style>
+    :root{--ink:#172033;--muted:#667085;--line:#dce4f1;--paper:#fff;--bg:#f5f7fb;--blue:#2357c6;--green:#08715e;--orange:#a15c00;--red:#b42318}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 Arial,"Noto Sans Bengali",sans-serif}
+    header{padding:54px 22px;background:linear-gradient(125deg,#102a66,#08715e);color:#fff}header>div,main{max-width:1100px;margin:auto}
+    h1{margin:0 0 8px;font-size:clamp(30px,5vw,46px);line-height:1.2}h2{margin:0 0 14px;font-size:25px}h3{margin:25px 0 9px}p{margin:8px 0 14px}
+    main{padding:26px 18px 70px}section{margin:18px 0;padding:26px;background:var(--paper);border:1px solid var(--line);border-radius:15px;box-shadow:0 5px 18px #22345b0a}
+    nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}nav a{padding:7px 11px;border:1px solid #ffffff55;border-radius:7px;color:#fff;text-decoration:none}
+    code{padding:2px 6px;border-radius:5px;background:#fff0f4;color:#9b174c;font-family:Consolas,monospace}pre{overflow:auto;padding:17px;border-radius:10px;background:#0f172a;color:#e6edf8;line-height:1.55}pre code{padding:0;background:none;color:inherit}
+    table{width:100%;border-collapse:collapse;margin:13px 0}th,td{padding:11px;border:1px solid var(--line);text-align:left;vertical-align:top}th{background:#edf3ff}
+    .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:17px 0}.flow span{padding:9px 12px;border-radius:8px;background:#e8efff;color:#174397;font-weight:700}.flow b{color:#7a8699}
+    .ok,.note,.warn{padding:14px 16px;border-radius:8px;margin:13px 0}.ok{background:#ecfdf3;border-left:4px solid var(--green)}.note{background:#eef4ff;border-left:4px solid var(--blue)}.warn{background:#fff7e6;border-left:4px solid var(--orange)}
+    .tree{white-space:pre;overflow:auto;padding:16px;background:#f7f9fc;border:1px solid var(--line);border-radius:9px;font-family:Consolas,monospace}.small{color:var(--muted);font-size:14px}.danger{color:var(--red);font-weight:700}ul,ol{padding-left:23px}
+  </style>
+</head>
+<body>
+<header><div>
+  <h1>Final Cache Architecture — A to Z</h1>
+  <p>Laravel admin + Nuxt storefront: cache তৈরি, automatic invalidation, Observer, versioning এবং troubleshooting</p>
+  <nav><a href="#overview">Overview</a><a href="#inventory">Cache list</a><a href="#menu">Menu cache</a><a href="#filter">Filter cache</a><a href="#observer">Observers</a><a href="#rules">Rules</a><a href="#test">Testing</a></nav>
+</div></header>
+<main>
+
+<section id="overview">
+  <h2>1. Final সিদ্ধান্ত</h2>
+  <p>এই project-এ final pattern হলো <strong>Cache Aside + Model Observer + After-Commit Invalidation + Versioned Filter Cache</strong>। Controller cache জানবে না; Model পরিবর্তন হলে Observer automatic কাজ করবে।</p>
+  <div class="flow"><span>Admin / Job / Seeder</span><b>→</b><span>Eloquent Model</span><b>→</b><span>DB Commit</span><b>→</b><span>Observer</span><b>→</b><span>Targeted Cache Invalidate</span></div>
+  <div class="ok"><strong>ফল:</strong> Admin panel দিয়ে Section, Category, Product বা Brand পরিবর্তন করলে client-কে TTL শেষ হওয়া পর্যন্ত অপেক্ষা করতে হয় না। পরবর্তী API request fresh data পায়।</div>
+  <div class="warn"><strong>সৎ সীমাবদ্ধতা:</strong> phpMyAdmin/raw SQL এবং mass query <code>Model::where(...)-&gt;update()</code> individual model event চালায় না। এগুলোর পরে explicit invalidation বা <code>php artisan cache:clear</code> প্রয়োজন।</div>
+</section>
+
+<section id="inventory">
+  <h2>2. কোন cache কী কাজে লাগে</h2>
+  <table><thead><tr><th>Cache</th><th>সময়</th><th>কখন invalidate হয়</th><th>কৌশল</th></tr></thead><tbody>
+    <tr><td><code>api.sections-with-categories.v5</code></td><td>৬ ঘণ্টা</td><td>Section, Category, Product save/delete</td><td>Exact key <code>forget()</code></td></tr>
+    <tr><td><code>api.shop-filter.brands.{scope}.v{version}</code></td><td>১০ মিনিট</td><td>Product, Brand, Category save/delete</td><td>Atomic version increment</td></tr>
+    <tr><td><code>admin.category-form.sections.v3</code></td><td>Admin-defined</td><td>Section বা Category save/delete</td><td>Exact key <code>forget()</code></td></tr>
+    <tr><td><code>admin.category-form.parents.v3</code></td><td>Admin-defined</td><td>Category save/delete</td><td>Exact key <code>forget()</code></td></tr>
+  </tbody></table>
+  <p><code>.v5</code> হলো menu response schema version। এটি প্রতিবার update-এ বাড়ে না। Shop filter-এর শেষের dynamic version প্রতিবার relevant data change-এ বাড়ে।</p>
+</section>
+
+<section id="menu">
+  <h2>3. Menu cache কীভাবে তৈরি হয়</h2>
+  <p>File: <code>app/Http/Controllers/Api/FrontController.php</code></p>
+  <pre><code>public function menu(): JsonResponse
+{
+    $sections = Cache::remember(
+        'api.sections-with-categories.v5',
+        now()-&gt;addHours(6),
+        fn () =&gt; Section::sections(),
+    );
+
+    return response()-&gt;json([
+        'status' =&gt; true,
+        'categories' =&gt; $sections,
+    ]);
+}</code></pre>
+  <div class="flow"><span>Cache hit</span><b>→</b><span>Cached menu return</span></div>
+  <div class="flow"><span>Cache miss</span><b>→</b><span>DB query</span><b>→</b><span>৬ ঘণ্টা cache</span><b>→</b><span>Response</span></div>
+  <p>৬ ঘণ্টা মানে client-কে ৬ ঘণ্টা অপেক্ষা করতে হবে না। Data change হলে Observer key delete করে; পরবর্তী request আবার DB থেকে fresh menu বানায়।</p>
+
+  <h3>Products পুরো load না করে count</h3>
+  <p>File: <code>app/Models/Section.php</code></p>
+  <pre><code>public function categories(): HasMany
+{
+    return $this-&gt;hasMany(Category::class)
+        -&gt;where('parent_id', 0)
+        -&gt;where('status', true)
+        -&gt;with('subcategories')
+        -&gt;withCount('products')
+        -&gt;orderBy('position')
+        -&gt;orderBy('category_name');
+}</code></pre>
+  <p>Nuxt Home page count পড়ে:</p>
+  <pre><code>&lt;small&gt;{{ category.products_count ?? 0 }} products&lt;/small&gt;</code></pre>
+  <div class="ok">Menu response-এ সব product/brand object যায় না; শুধু <code>products_count</code> যায়। Catalog বড় হলেও payload নিয়ন্ত্রিত থাকে।</div>
+</section>
+
+<section id="filter">
+  <h2>4. Shop Brand filter-এর versioned cache</h2>
+  <p>File: <code>app/Support/ShopFilterCache.php</code></p>
+  <pre><code>&lt;?php
+
+namespace App\Support;
+
+use Illuminate\Support\Facades\Cache;
+
+final class ShopFilterCache
+{
+    private const VERSION_KEY = 'api.shop-filter.version';
+
+    public static function version(): int
+    {
+        return (int) Cache::rememberForever(
+            self::VERSION_KEY,
+            fn () =&gt; 1
+        );
+    }
+
+    public static function invalidate(): void
+    {
+        self::version();
+        Cache::increment(self::VERSION_KEY);
+    }
+}</code></pre>
+  <p><code>rememberForever()</code> শুধু ছোট version number রাখে। <code>increment()</code> atomic—একই সময়ে দুই update হলে version হারায় না।</p>
+  <div class="flow"><span>Current v7</span><b>→</b><span>Product update</span><b>→</b><span>Atomic increment</span><b>→</b><span>v8</span></div>
+
+  <h3>Category-specific brand key</h3>
+  <pre><code>sort($categoryIds);
+$scope = $categoryIds === []
+    ? 'all'
+    : sha1(implode(',', $categoryIds));
+
+$version = ShopFilterCache::version();
+
+return Cache::remember(
+    "api.shop-filter.brands.{$scope}.v{$version}",
+    now()-&gt;addMinutes(10),
+    fn () =&gt; /* available Brand + product count query */
+);</code></pre>
+  <p><code>$scope</code> থাকার কারণে Laptop ও T-Shirt-এর cache আলাদা। Version বদলালে পুরোনো key আর read হয় না; তার ১০ মিনিট TTL শেষে cache store থেকে expire হয়।</p>
+</section>
+
+<section id="observer">
+  <h2>5. Observer: write-side automation</h2>
+  <p>Observers একবার register করা হয়েছে <code>app/Providers/AppServiceProvider.php</code>-এ:</p>
+  <pre><code>public function boot(): void
+{
+    Product::observe(ProductObserver::class);
+    Brand::observe(BrandObserver::class);
+    Category::observe(CategoryObserver::class);
+    Section::observe(SectionObserver::class);
+
+    Paginator::useBootstrap();
+}</code></pre>
+
+  <h3>CategoryObserver — সম্পূর্ণ code</h3>
+  <pre><code>class CategoryObserver implements ShouldHandleEventsAfterCommit
+{
+    public function saved(Category $category): void
+    {
+        $this-&gt;invalidate();
+    }
+
+    public function deleted(Category $category): void
+    {
+        $this-&gt;invalidate();
+    }
+
+    private function invalidate(): void
+    {
+        Cache::forget('api.sections-with-categories.v5');
+        Cache::forget('admin.category-form.sections.v3');
+        Cache::forget('admin.category-form.parents.v3');
+        ShopFilterCache::invalidate();
+    }
+}</code></pre>
+
+  <h3>ProductObserver — সম্পূর্ণ code</h3>
+  <pre><code>class ProductObserver implements ShouldHandleEventsAfterCommit
+{
+    public function saved(Product $product): void
+    {
+        $this-&gt;invalidate();
+    }
+
+    public function deleted(Product $product): void
+    {
+        $this-&gt;invalidate();
+    }
+
+    private function invalidate(): void
+    {
+        Cache::forget('api.sections-with-categories.v5');
+        ShopFilterCache::invalidate();
+    }
+}</code></pre>
+
+  <h3>BrandObserver</h3>
+  <pre><code>class BrandObserver implements ShouldHandleEventsAfterCommit
+{
+    public function saved(Brand $brand): void
+    {
+        ShopFilterCache::invalidate();
+    }
+
+    public function deleted(Brand $brand): void
+    {
+        ShopFilterCache::invalidate();
+    }
+}</code></pre>
+
+  <h3>SectionObserver</h3>
+  <pre><code>class SectionObserver implements ShouldHandleEventsAfterCommit
+{
+    public function saved(Section $section): void
+    {
+        $this-&gt;invalidate();
+    }
+
+    public function deleted(Section $section): void
+    {
+        $this-&gt;invalidate();
+    }
+
+    private function invalidate(): void
+    {
+        Cache::forget('api.sections-with-categories.v5');
+        Cache::forget('admin.category-form.sections.v3');
+    }
+}</code></pre>
+  <div class="note"><code>saved()</code> create এবং update—দুটোর পরে চলে। <code>deleted()</code> model delete-এর পরে চলে। তাই Controller-এর প্রতিটি method-এ cache code লিখতে হয় না।</div>
+  <div class="ok"><code>ShouldHandleEventsAfterCommit</code> নিশ্চিত করে transaction সফল হওয়ার পরেই observer কাজ করবে। Rollback হলে cache অকারণে invalidate হবে না।</div>
+</section>
+
+<section>
+  <h2>6. চারটি real-life scenario</h2>
+  <h3>নতুন Product</h3><div class="flow"><span>Product::create()</span><b>→</b><span>Commit</span><b>→</b><span>ProductObserver</span><b>→</b><span>Menu forget + Filter version++</span></div>
+  <h3>Product-এর Brand পরিবর্তন</h3><div class="flow"><span>$product-&gt;update()</span><b>→</b><span>ProductObserver</span><b>→</b><span>নতুন brand/count পরবর্তী request-এ</span></div>
+  <h3>নতুন Category</h3><div class="flow"><span>Category::create()</span><b>→</b><span>CategoryObserver</span><b>→</b><span>Menu/admin options/filter fresh</span></div>
+  <h3>কোনো পরিবর্তন নেই</h3><div class="flow"><span>Client request</span><b>→</b><span>Cache hit</span><b>→</b><span>কম DB query, দ্রুত response</span></div>
+</section>
+
+<section id="rules">
+  <h2>7. Development rules</h2>
+  <h3>এগুলো Observer চালায়</h3>
+  <pre><code>Product::create($data);
+$product-&gt;update($data);
+$product-&gt;save();
+$product-&gt;delete();</code></pre>
+  <h3 class="danger">এগুলো individual Observer চালায় না</h3>
+  <pre><code>DB::table('products')-&gt;where(...)-&gt;update([...]);
+Product::where(...)-&gt;update([...]);
+// phpMyAdmin direct edit</code></pre>
+  <p>Bulk operation দরকার হলে operation শেষে explicitভাবে:</p>
+  <pre><code>ShopFilterCache::invalidate();
+Cache::forget('api.sections-with-categories.v5');</code></pre>
+  <div class="warn">DB-level import বা direct SQL একটি আলাদা maintenance operation। Normal admin CRUD নয়।</div>
+</section>
+
+<section>
+  <h2>8. Backend cache বনাম Nuxt key</h2>
+  <pre><code>useFetch('/menu', {
+    baseURL: config.public.apiBase,
+    key: 'catalog-menu'
+})</code></pre>
+  <p>Nuxt-এর <code>key: 'catalog-menu'</code> হলো একই page/app-এর async-data identity ও deduplication key। এটি Laravel-এর <code>api.sections-with-categories.v5</code> database cache নয়। দুই layer-এর নাম ও দায়িত্ব আলাদা।</p>
+</section>
+
+<section>
+  <h2>9. Production configuration</h2>
+  <p>বর্তমান environment:</p>
+  <pre><code>CACHE_STORE=database</code></pre>
+  <p>Production deployment-এ নিশ্চিত করতে হবে:</p>
+  <ol>
+    <li>Laravel migrations সফল হয়েছে এবং <code>cache</code>/<code>cache_locks</code> table আছে।</li>
+    <li>Web processes একই cache store/database ব্যবহার করছে।</li>
+    <li>Deploy-এর পরে সাধারণ Laravel optimization commands চালানো হয়েছে।</li>
+  </ol>
+  <pre><code>php artisan migrate --force
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache</code></pre>
+  <p class="small">এগুলো deployment commands; প্রতিটি Product add/update-এর পরে চালানোর command নয়।</p>
+</section>
+
+<section id="test">
+  <h2>10. Testing checklist</h2>
+  <ol>
+    <li><code>/api/menu</code> request করে current Category দেখুন।</li>
+    <li>Admin panel থেকে নতুন Category add করুন।</li>
+    <li>আবার <code>/api/menu</code> request করুন—নতুন Category সঙ্গে সঙ্গে থাকবে।</li>
+    <li><code>/api/listing/laptops</code> থেকে Brand counts নিন।</li>
+    <li>একটি Laptop-এর Brand বদলান।</li>
+    <li>Listing API আবার call করুন—counts সঙ্গে সঙ্গে বদলাবে।</li>
+  </ol>
+  <pre><code>php -l app/Support/ShopFilterCache.php
+php -l app/Observers/ProductObserver.php
+php -l app/Observers/CategoryObserver.php
+php artisan about --only=environment</code></pre>
+</section>
+
+<section>
+  <h2>11. Troubleshooting</h2>
+  <table><thead><tr><th>লক্ষণ</th><th>সম্ভাব্য কারণ</th><th>সমাধান</th></tr></thead><tbody>
+    <tr><td>Admin update-এর পর stale data</td><td>Raw/bulk query; Observer bypass</td><td>Eloquent instance update ব্যবহার বা explicit invalidation</td></tr>
+    <tr><td>Local ঠিক, production stale</td><td>Processes আলাদা cache store/config পড়ছে</td><td><code>CACHE_STORE</code> এবং config cache যাচাই</td></tr>
+    <tr><td>Cache table error</td><td>Database cache migration হয়নি</td><td>Cache table migration + <code>php artisan migrate --force</code></td></tr>
+    <tr><td>Debugging-এর জন্য সব fresh চাই</td><td>Existing cache</td><td><code>php artisan cache:clear</code>—শুধু troubleshooting-এ</td></tr>
+  </tbody></table>
+</section>
+
+<section>
+  <h2>12. File map</h2>
+  <div class="tree">app/
+├── Http/Controllers/Api/FrontController.php   # cache read + API
+├── Models/Section.php                         # category tree + products_count
+├── Models/Category.php                        # recursive subcategories + count
+├── Observers/
+│   ├── ProductObserver.php                    # menu + filter invalidation
+│   ├── BrandObserver.php                      # filter invalidation
+│   ├── CategoryObserver.php                   # menu/admin/filter invalidation
+│   └── SectionObserver.php                    # menu/admin invalidation
+├── Providers/AppServiceProvider.php           # observer registration
+└── Support/ShopFilterCache.php                 # atomic filter version
+
+frontend/app/
+├── composables/useCatalogMenu.ts               # Nuxt menu request
+├── pages/index.vue                             # products_count display
+└── pages/shop.vue                              # instant Brand filtering</div>
+  <div class="ok"><strong>Operational rule:</strong> Normal admin use-এ manual cache clear দরকার নেই। Framework/server/security upgrade আলাদা maintenance বিষয়; cache architecture নিজে সময় ধরে broken হওয়ার logic ব্যবহার করে না।</div>
+</section>
+
+</main>
+</body>
+</html>
