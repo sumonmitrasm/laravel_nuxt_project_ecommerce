@@ -102,9 +102,23 @@ class FrontController extends Controller
             ], 404);
         }
 
+        $productData = $product->toArray();
+        $productData['variants'] = $product->variants->map(function ($variant) use ($product) {
+            $regularPrice = $product->regularPriceForVariant($variant);
+
+            return [
+                ...$variant->only(['id', 'product_id', 'sku', 'price', 'stock', 'status']),
+                'uses_base_price' => $variant->price === null,
+                'regular_price' => $regularPrice,
+                'effective_discount' => $product->effective_discount,
+                'final_price' => $product->discountedPrice((float) $regularPrice),
+                'values' => $variant->values,
+            ];
+        })->values();
+
         return response()->json([
             'status' => true,
-            'product' => $product,
+            'product' => $productData,
         ], 200);
     }
 }
