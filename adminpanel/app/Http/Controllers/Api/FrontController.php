@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Section;
+use App\Support\ShopFilterCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 class FrontController extends Controller
@@ -15,7 +18,7 @@ class FrontController extends Controller
     public function menu(): JsonResponse
     {
         $sections = Cache::remember(
-            'api.sections-with-categories.v4',
+            'api.sections-with-categories.v5',
             now()->addHours(6),
             fn () => Section::sections(),
         );
@@ -26,7 +29,7 @@ class FrontController extends Controller
         ], 200);
     }
 
-    public function listing(string $url): JsonResponse
+    public function listing(Request $request, string $url): JsonResponse
     {
         $categoryDetails = Category::categoryDetails($url);
 
@@ -37,9 +40,12 @@ class FrontController extends Controller
             ], 404);
         }
 
+        $brandIds = $this->selectedBrandIds($request);
+
         $products = Product::with(['brand:id,name', 'category:id,category_name,category_discount'])
             ->whereIn('category_id', $categoryDetails['catIds'])
             ->where('status', true)
+            ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
             ->latest('id')
             ->paginate(8);
 
@@ -47,15 +53,21 @@ class FrontController extends Controller
             'status' => true,
             'categoryDetails' => $categoryDetails['categoryDetails'],
             'breadcrumbs' => $categoryDetails['breadcrumbs'],
+            'filters' => [
+                'brands' => $this->availableBrands($categoryDetails['catIds']),
+            ],
             'products' => $products->items(),
             'pagination' => $this->paginationData($products),
         ], 200);
     }
 
-    public function products(): JsonResponse
+    public function products(Request $request): JsonResponse
     {
+        $brandIds = $this->selectedBrandIds($request);
+
         $products = Product::with(['brand:id,name', 'category:id,category_name,category_discount'])
             ->where('status', true)
+            ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
             ->latest('id')
             ->paginate(8);
 
@@ -63,9 +75,52 @@ class FrontController extends Controller
             'status' => true,
             'categoryDetails' => null,
             'breadcrumbs' => [],
+            'filters' => [
+                'brands' => $this->availableBrands(),
+            ],
             'products' => $products->items(),
             'pagination' => $this->paginationData($products),
         ], 200);
+    }
+
+    private function selectedBrandIds(Request $request): array
+    {
+        $brands = $request->query('brand', '');
+        $brands = is_array($brands) ? $brands : explode(',', (string) $brands);
+
+        return collect($brands)
+            ->map(fn ($brandId) => filter_var($brandId, FILTER_VALIDATE_INT))
+            ->filter(fn ($brandId) => $brandId !== false && $brandId > 0)
+            ->unique()
+            ->take(50)
+            ->values()
+            ->all();
+    }
+
+    private function availableBrands(array $categoryIds = []): array
+    {
+        sort($categoryIds);
+        $scope = $categoryIds === [] ? 'all' : sha1(implode(',', $categoryIds));
+        $version = ShopFilterCache::version();
+
+        return Cache::remember("api.shop-filter.brands.{$scope}.v{$version}", now()->addMinutes(120), function () use ($categoryIds) {
+            return Brand::query()
+                ->select(['brands.id', 'brands.name'])
+                ->selectRaw('COUNT(DISTINCT products.id) AS product_count')
+                ->join('products', 'products.brand_id', '=', 'brands.id')
+                ->where('brands.status', true)
+                ->where('products.status', true)
+                ->when($categoryIds !== [], fn ($query) => $query->whereIn('products.category_id', $categoryIds))
+                ->groupBy('brands.id', 'brands.name')
+                ->orderBy('brands.name')
+                ->get()
+                ->map(fn ($brand) => [
+                    'id' => (int) $brand->id,
+                    'name' => $brand->name,
+                    'product_count' => (int) $brand->product_count,
+                ])
+                ->all();
+        });
     }
 
     private function paginationData(LengthAwarePaginator $products): array

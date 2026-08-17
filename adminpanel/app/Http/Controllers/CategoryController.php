@@ -7,7 +7,6 @@ use App\Models\Section;
 use App\Models\ProductAttributeDefinition;
 use App\Support\ImageOptimizer;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
 class CategoryController extends Controller
 {
@@ -46,7 +45,6 @@ class CategoryController extends Controller
     {
         $category = Category::create($this->validatedData($request));
         $this->syncAttributes($request, $category);
-        $this->clearCategoryCache();
 
         return response()->json(['message' => 'Category saved successfully.'], 201);
     }
@@ -70,7 +68,6 @@ class CategoryController extends Controller
     {
         $category->update($this->validatedData($request, $category));
         $this->syncAttributes($request, $category);
-        $this->clearCategoryCache();
 
         return response()->json(['message' => 'Category updated successfully.']);
     }
@@ -83,7 +80,6 @@ class CategoryController extends Controller
 
         $this->deleteOldImage($category->image);
         $category->delete();
-        $this->clearCategoryCache();
 
         return response()->json(['message' => 'Category deleted successfully.']);
     }
@@ -91,7 +87,6 @@ class CategoryController extends Controller
     public function updateStatus(Category $category)
     {
         $category->update(['status' => ! $category->status]);
-        $this->clearCategoryCache();
 
         return response()->json(['message' => 'Category status updated successfully.']);
     }
@@ -172,19 +167,6 @@ class CategoryController extends Controller
     private function deleteOldImage(?string $imageName): void
     {
         $this->images->delete($imageName, 'admin/categoryimage');
-    }
-
-    /**
-     * Clear all cached category data (Permanent fix)
-     */
-    private function clearCategoryCache(): void
-    {
-        Cache::forget('api.sections-with-categories.v1');
-        Cache::forget('api.sections-with-categories.v2');
-        Cache::forget('api.sections-with-categories.v3');
-        Cache::forget('api.sections-with-categories.v4');
-        Cache::forget('admin.category-form.sections.v3');
-        Cache::forget('admin.category-form.parents.v3');
     }
 
     private function isArrayList(mixed $value): bool

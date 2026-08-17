@@ -25,7 +25,8 @@ class Section extends Model
         return $this->hasMany(Category::class)
             ->where('parent_id', 0)
             ->where('status', true)
-            ->with(['subcategories', 'products.brand'])
+            ->with('subcategories')
+            ->withCount('products')
             ->orderBy('position')
             ->orderBy('category_name');
     }

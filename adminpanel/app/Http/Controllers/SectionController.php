@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Section;
 use App\Support\ImageOptimizer;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
 class SectionController extends Controller
@@ -28,7 +27,6 @@ class SectionController extends Controller
     public function store(Request $request)
     {
         Section::create($this->validateSection($request));
-        $this->clearSectionCache();
         return response()->json(['message' => 'Section saved successfully.'], 201);
     }
 
@@ -57,7 +55,6 @@ class SectionController extends Controller
     public function update(Request $request, Section $section)
     {
         $section->update($this->validateSection($request, $section));
-        $this->clearSectionCache();
         return response()->json(['message' => 'Section updated successfully.']);
     }
 
@@ -68,14 +65,12 @@ class SectionController extends Controller
     {
         $this->deleteOldImage($section->image);
         $section->delete();
-        $this->clearSectionCache();
         return response()->json(['message' => 'Section deleted successfully.']);
     }
 
     public function updateStatus(Section $section)
     {
         $section->update(['status' => ! $section->status]);
-        $this->clearSectionCache();
         return response()->json(['message' => 'Section status updated successfully.']);
     }
 
@@ -109,14 +104,6 @@ class SectionController extends Controller
     private function deleteOldImage(?string $imageName): void
     {
         $this->images->delete($imageName, 'admin/sectionimage');
-    }
-
-    private function clearSectionCache(): void
-    {
-        Cache::forget('api.sections-with-categories.v1');
-        Cache::forget('api.sections-with-categories.v2');
-        Cache::forget('api.sections-with-categories.v3');
-        Cache::forget('api.sections-with-categories.v4');
     }
 
 }

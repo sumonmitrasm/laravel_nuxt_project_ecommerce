@@ -1,5 +1,6 @@
 <script setup>
 const route = useRoute()
+const router = useRouter()
 const config = useRuntimeConfig()
 
 const categoryUrl = computed(() => {
@@ -19,6 +20,18 @@ const currentPage = computed(() => {
     return Number.isInteger(page) && page > 0 ? page : 1
 })
 
+const selectedBrandIds = computed(() => {
+    const value = Array.isArray(route.query.brand)
+        ? route.query.brand.join(',')
+        : route.query.brand?.toString() ?? ''
+
+    return [...new Set(value.split(',')
+        .map(id => Number.parseInt(id, 10))
+        .filter(id => Number.isInteger(id) && id > 0))]
+})
+
+const brandQuery = computed(() => selectedBrandIds.value.join(','))
+
 const {
     data,
     status,
@@ -34,13 +47,16 @@ const {
                 : '/products',
             {
                 baseURL: config.public.apiBase,
-                query: { page: currentPage.value }
+                query: {
+                    page: currentPage.value,
+                    ...(brandQuery.value ? { brand: brandQuery.value } : {})
+                }
             }
         )
     },
 
     {
-        watch: [categoryUrl, currentPage]
+        watch: [categoryUrl, currentPage, brandQuery]
     }
 )
 
@@ -55,6 +71,32 @@ const category = computed(() =>
 const breadcrumbs = computed(() =>
     data.value?.breadcrumbs ?? []
 )
+
+const brands = computed(() => data.value?.filters?.brands ?? [])
+
+const isBrandSelected = brandId => selectedBrandIds.value.includes(Number(brandId))
+
+const toggleBrand = async brandId => {
+    const id = Number(brandId)
+    const next = isBrandSelected(id)
+        ? selectedBrandIds.value.filter(selectedId => selectedId !== id)
+        : [...selectedBrandIds.value, id]
+
+    await router.replace({
+        path: '/shop',
+        query: {
+            ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
+            ...(next.length ? { brand: next.join(',') } : {})
+        }
+    })
+}
+
+const clearFilters = async () => {
+    await router.replace({
+        path: '/shop',
+        query: categoryUrl.value ? { category: categoryUrl.value } : {}
+    })
+}
 
 const pagination = computed(() => data.value?.pagination ?? {
     current_page: 1,
@@ -77,6 +119,7 @@ const pageLink = page => ({
     path: '/shop',
     query: {
         ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
+        ...(brandQuery.value ? { brand: brandQuery.value } : {}),
         ...(page > 1 ? { page } : {})
     }
 })
@@ -133,7 +176,7 @@ const productBadge = product => {
         <section class="shop-catalog container py-4 py-lg-5">
             <div class="row g-4">
                 <aside class="col-lg-3 shop-sidebar" id="shopFilters">
-                    <div class="shop-filter-head"><strong>Filters</strong><button type="reset">Clean All</button></div>
+                    <div class="shop-filter-head"><strong>Filters</strong><button type="button" @click="clearFilters">Clean All</button></div>
                     <div class="shop-filter-group">
                         <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#filterCategory"
                             aria-expanded="true">
@@ -164,11 +207,11 @@ const productBadge = product => {
                             Brand <i class="bi bi-chevron-down"></i>
                         </button>
                         <div class="collapse show" id="filterBrand">
-                            <label><input type="checkbox" /> HP <span>8</span></label>
-                            <label><input type="checkbox" /> Dell <span>6</span></label>
-                            <label><input type="checkbox" /> Lenovo <span>5</span></label>
-                            <label><input type="checkbox" /> Asus <span>4</span></label>
-                            <label><input type="checkbox" /> Apple <span>6</span></label>
+                            <label v-for="brand in brands" :key="`desktop-brand-${brand.id}`">
+                                <input type="checkbox" :checked="isBrandSelected(brand.id)"
+                                    @change="toggleBrand(brand.id)" /> {{ brand.name }}
+                                <span>{{ brand.product_count }}</span>
+                            </label>
                         </div>
                     </div>
                     <div class="shop-filter-group">
@@ -222,7 +265,7 @@ const productBadge = product => {
                                     class="bi bi-list"></i></button>
                         </div>
                     </div>
-                    <div v-if="status === 'pending'">Loading products...</div>
+                    <div v-if="status === 'pending' && !data">Loading products...</div>
                     <div v-else-if="error">Products could not be loaded.</div>
                     <div v-else-if="!products.length">No products found.</div>
                     <div v-else class="shop-products">
@@ -304,11 +347,11 @@ const productBadge = product => {
                     Brand <i class="bi bi-chevron-down"></i>
                 </button>
                 <div class="collapse show" id="mobileFilterPanel5">
-                    <label><input type="checkbox" /> HP <span>8</span></label>
-                    <label><input type="checkbox" /> Dell <span>6</span></label>
-                    <label><input type="checkbox" /> Lenovo <span>5</span></label>
-                    <label><input type="checkbox" /> Asus <span>4</span></label>
-                    <label><input type="checkbox" /> Apple <span>6</span></label>
+                    <label v-for="brand in brands" :key="`mobile-brand-${brand.id}`">
+                        <input type="checkbox" :checked="isBrandSelected(brand.id)"
+                            @change="toggleBrand(brand.id)" /> {{ brand.name }}
+                        <span>{{ brand.product_count }}</span>
+                    </label>
                 </div>
             </div>
             <div class="shop-filter-group">
