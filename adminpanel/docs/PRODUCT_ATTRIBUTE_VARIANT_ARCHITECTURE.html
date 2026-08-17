@@ -253,6 +253,13 @@ function applicableVariantAttributeGroups() {
         .sort((a,b) => (mapping[a.id]?.position || 0) - (mapping[b.id]?.position || 0));
 }</code></pre>
         <p>প্রতি Variant row-তে applicable attribute dropdowns + Price + Stock + SKU থাকে। Required mapping হলে select field-এ HTML <code>required</code> এবং server validation দুটোই কাজ করে। Blank variant price হলে মূল product price ব্যবহার করার নিয়ম রাখা হয়েছে। Blank SKU দিলে backend product code + random suffix দিয়ে SKU বানায়।</p>
+        <h3>Central pricing rule</h3>
+        <p><code>variant.price</code> null হলে Base Price, নইলে Variant Price regular price হয়। Product discount 0-এর বেশি হলে সেটি Category discount-কে override করে; অন্যথায় Category discount fallback হয়। একই percentage effective regular price-এর ওপর প্রয়োগ হয়। Backend <code>regular_price</code>, <code>effective_discount</code> ও <code>final_price</code> API-তে পাঠায়।</p>
+<pre><code>$regularPrice = $variant->price ?? $product->product_price;
+$discount = $product->product_discount > 0
+    ? $product->product_discount
+    : $product->category->category_discount;
+$finalPrice = $regularPrice - ($regularPrice * $discount / 100);</code></pre>
         <h3>Save algorithm</h3>
 <pre><code>$product->variants()->delete();
 foreach ($validRows as $row) {

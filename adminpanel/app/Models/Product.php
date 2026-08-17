@@ -36,7 +36,7 @@ class Product extends Model
     public function brand(): BelongsTo { return $this->belongsTo(Brand::class); }
     public function admin(): BelongsTo { return $this->belongsTo(Admin::class); }
 
-    public static function getDiscountPrice(int $productId): float
+    public static function getDiscountPrice(int $productId, ?int $variantId = null): float
     {
         $product = self::with('category:id,category_discount')
             ->whereKey($productId)
@@ -48,9 +48,15 @@ class Product extends Model
 
         $discount = $product->effective_discount;
 
-        return $discount > 0
-            ? round((float) $product->product_price * (1 - $discount / 100), 2)
-            : (float) $product->product_price;
+        $regularPrice = (float) $product->product_price;
+        if ($variantId) {
+            $variantPrice = ProductVariant::whereKey($variantId)
+                ->where('product_id', $product->id)
+                ->value('price');
+            if ($variantPrice !== null) $regularPrice = (float) $variantPrice;
+        }
+
+        return (float) $product->discountedPrice($regularPrice);
     }
 
     public function getImageUrlAttribute(): ?string
@@ -62,10 +68,29 @@ class Product extends Model
 
     public function getFinalPriceAttribute(): string
     {
-        $price = (float) $this->product_price;
-        $discount = $this->effective_discount;
+        return $this->discountedPrice((float) $this->product_price);
+    }
 
-        return number_format(max(0, $price - ($price * $discount / 100)), 2, '.', '');
+    public function regularPriceForVariant(?ProductVariant $variant): string
+    {
+        $price = $variant && $variant->price !== null
+            ? (float) $variant->price
+            : (float) $this->product_price;
+
+        return number_format($price, 2, '.', '');
+    }
+
+    public function finalPriceForVariant(?ProductVariant $variant): string
+    {
+        return $this->discountedPrice((float) $this->regularPriceForVariant($variant));
+    }
+
+    public function discountedPrice(float $regularPrice): string
+    {
+        $discount = $this->effective_discount;
+        $finalPrice = max(0, $regularPrice - ($regularPrice * $discount / 100));
+
+        return number_format($finalPrice, 2, '.', '');
     }
 
     public function getEffectiveDiscountAttribute(): float
