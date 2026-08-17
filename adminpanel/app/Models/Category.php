@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Category extends Model
 {
@@ -62,6 +63,16 @@ class Category extends Model
             ->where('status', true)
             ->with('brand:id,name')
             ->latest('id');
+    }
+
+    public function attributes(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            ProductAttributeDefinition::class,
+            'category_attribute',
+            'category_id',
+            'attribute_id'
+        )->withPivot(['is_filterable', 'is_required', 'position'])->orderByPivot('position');
     }
 
     public static function categories(): array

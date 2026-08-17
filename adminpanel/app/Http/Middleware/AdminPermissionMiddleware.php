@@ -65,12 +65,11 @@ class AdminPermissionMiddleware
             'admin-brand.update', 'admin-brand.status' => ['brand', 'edit'],
             'admin-brand.delete' => ['brand', 'delete'],
 
-            'colors', 'admin-color.show' => ['color', 'view'],
-            'admin-color.store' => ['color', 'add'],
-            'admin-color.update', 'admin-color.status' => ['color', 'edit'],
-            'admin-color.delete' => ['color', 'delete'],
-
             'products', 'admin-product.show' => ['product', 'view'],
+            'product-attributes' => ['attribute', 'view'],
+            'product-attributes.store' => ['attribute', 'add'],
+            'product-attributes.values.store' => ['attribute', 'edit'],
+            'product-attributes.destroy', 'product-attribute-values.destroy' => ['attribute', 'delete'],
             'admin-product.store' => ['product', 'add'],
             'admin-product.update', 'admin-product.status' => ['product', 'edit'],
             'admin-product.delete' => ['product', 'delete'],

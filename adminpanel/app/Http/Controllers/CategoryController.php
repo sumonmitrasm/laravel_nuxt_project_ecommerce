@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Section;
+use App\Models\ProductAttributeDefinition;
 use App\Support\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -36,13 +37,15 @@ class CategoryController extends Controller
 
         $getSection = Section::select('id', 'name')->orderBy('name')->get();
         $getCategories = Category::with('subcategories')->where('parent_id', 0)->orderBy('category_name')->get();
+        $attributeDefinitions = ProductAttributeDefinition::where('status', true)->orderBy('position')->orderBy('name')->get(['id', 'name', 'type']);
 
-        return view('admin.category.category', compact('categories', 'title', 'getSection', 'getCategories'));
+        return view('admin.category.category', compact('categories', 'title', 'getSection', 'getCategories', 'attributeDefinitions'));
     }
 
     public function store(Request $request)
     {
-        Category::create($this->validatedData($request));
+        $category = Category::create($this->validatedData($request));
+        $this->syncAttributes($request, $category);
         $this->clearCategoryCache();
 
         return response()->json(['message' => 'Category saved successfully.'], 201);
@@ -50,15 +53,23 @@ class CategoryController extends Controller
 
     public function show(Category $category)
     {
+        $category->load('attributes:id,name');
         return response()->json([
             'record' => $category,
             'image_url' => $category->image ? asset('admin/categoryimage/' . $category->image) : null,
+            'category_attributes' => $category->attributes->map(fn ($attribute) => [
+                'id' => $attribute->id,
+                'is_filterable' => (bool) $attribute->pivot->is_filterable,
+                'is_required' => (bool) $attribute->pivot->is_required,
+                'position' => (int) $attribute->pivot->position,
+            ]),
         ]);
     }
 
     public function update(Request $request, Category $category)
     {
         $category->update($this->validatedData($request, $category));
+        $this->syncAttributes($request, $category);
         $this->clearCategoryCache();
 
         return response()->json(['message' => 'Category updated successfully.']);
@@ -105,9 +116,15 @@ class CategoryController extends Controller
             'meta_keywords' => ['nullable', 'string', 'max:255'],
             'meta_robot' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'boolean'],
+            'category_attributes' => ['nullable', 'array'],
+            'category_attributes.*.enabled' => ['nullable', 'boolean'],
+            'category_attributes.*.is_filterable' => ['nullable', 'boolean'],
+            'category_attributes.*.is_required' => ['nullable', 'boolean'],
+            'category_attributes.*.position' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $data['category_discount'] ??= 0;
+        unset($data['category_attributes']);
 
         if (($data['parent_id'] ?? 0) && ! Category::whereKey($data['parent_id'])->where('section_id', $data['section_id'])->exists()) {
             abort(422, 'The parent category must belong to the selected section.');
@@ -131,6 +148,20 @@ class CategoryController extends Controller
         }
 
         return $data;
+    }
+
+    private function syncAttributes(Request $request, Category $category): void
+    {
+        $availableIds = ProductAttributeDefinition::where('status', true)->pluck('id')->map(fn ($id) => (int) $id);
+        $sync = collect($request->input('category_attributes', []))
+            ->filter(fn ($row, $attributeId) => ! empty($row['enabled']) && $availableIds->contains((int) $attributeId))
+            ->mapWithKeys(fn ($row, $attributeId) => [(int) $attributeId => [
+                'is_filterable' => (bool) ($row['is_filterable'] ?? false),
+                'is_required' => (bool) ($row['is_required'] ?? false),
+                'position' => (int) ($row['position'] ?? 0),
+            ]]);
+
+        $category->attributes()->sync($sync->all());
     }
 
     private function uploadImage($file): string

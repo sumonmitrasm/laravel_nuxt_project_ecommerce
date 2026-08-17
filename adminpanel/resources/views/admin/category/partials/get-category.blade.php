@@ -164,6 +164,38 @@
 
                     <hr class="my-4">
 
+                    <h6 class="fw-bold mb-2 text-primary">Product Attributes</h6>
+                    <p class="text-muted small">Choose only the attributes relevant to this category. Subcategories inherit these when they have no mapping of their own.</p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead><tr><th>Use</th><th>Attribute</th><th>Shop Filter</th><th>Required</th><th>Order</th></tr></thead>
+                            <tbody>
+                                @forelse ($attributeDefinitions as $attribute)
+                                    <tr data-category-attribute-row="{{ $attribute->id }}">
+                                        <td>
+                                            <input type="hidden" name="category_attributes[{{ $attribute->id }}][enabled]" value="0">
+                                            <input type="checkbox" name="category_attributes[{{ $attribute->id }}][enabled]" value="1" class="form-check-input" data-category-attribute-enabled>
+                                        </td>
+                                        <td><strong>{{ $attribute->name }}</strong><small class="text-muted d-block">{{ ucfirst($attribute->type) }}</small></td>
+                                        <td>
+                                            <input type="hidden" name="category_attributes[{{ $attribute->id }}][is_filterable]" value="0">
+                                            <input type="checkbox" name="category_attributes[{{ $attribute->id }}][is_filterable]" value="1" class="form-check-input" data-category-attribute-filterable>
+                                        </td>
+                                        <td>
+                                            <input type="hidden" name="category_attributes[{{ $attribute->id }}][is_required]" value="0">
+                                            <input type="checkbox" name="category_attributes[{{ $attribute->id }}][is_required]" value="1" class="form-check-input" data-category-attribute-required>
+                                        </td>
+                                        <td><input type="number" name="category_attributes[{{ $attribute->id }}][position]" value="{{ $loop->iteration }}" min="0" class="form-control form-control-sm" style="width:80px" data-category-attribute-position></td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="5" class="text-muted text-center">Create attributes from Products → Attributes first.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <hr class="my-4">
+
                     <!-- Part 2: SEO & Meta Details -->
                     <h6 class="fw-bold mb-3 text-primary">SEO & Meta Information</h6>
                     <div class="row g-3">

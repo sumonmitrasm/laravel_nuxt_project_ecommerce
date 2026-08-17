@@ -271,6 +271,6 @@ class AdminController extends Controller
     private function permissionModules()
     {
         return AdminRole::query()->select('module')->distinct()->pluck('module')
-            ->merge(['admin', 'section', 'category', 'setting', 'tag', 'brand', 'color', 'product'])->unique()->sort()->values();
+            ->merge(['admin', 'section', 'category', 'setting', 'tag', 'brand', 'product', 'attribute'])->unique()->sort()->values();
     }
 }

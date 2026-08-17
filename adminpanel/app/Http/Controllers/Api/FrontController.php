@@ -86,6 +86,10 @@ class FrontController extends Controller
                 'section:id,name',
                 'category:id,category_name,url,category_discount',
                 'brand:id,name',
+                'variants' => fn ($query) => $query->where('status', true)
+                    ->select('id', 'product_id', 'sku', 'price', 'stock', 'status'),
+                'variants.values:id,attribute_id,value,color_code',
+                'variants.values.attribute:id,name,slug,type',
             ])
             ->whereKey($id)
             ->where('status', true)

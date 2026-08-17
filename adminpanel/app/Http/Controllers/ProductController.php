@@ -4,15 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\Color;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductAttributeDefinition;
 use App\Models\Section;
 use App\Support\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -27,7 +29,7 @@ class ProductController extends Controller
         $search = trim((string) $request->query('search', ''));
         $getProducts = Product::query()
             ->with(['section:id,name', 'category:id,category_name,category_discount', 'brand:id,name'])
-            ->select('id', 'section_id', 'category_id', 'brand_id', 'product_name', 'product_code', 'product_image', 'product_color', 'product_price', 'product_discount', 'is_featured', 'status')
+            ->select('id', 'section_id', 'category_id', 'brand_id', 'product_name', 'product_code', 'product_image', 'product_price', 'product_discount', 'is_featured', 'status')
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('product_name', 'like', "%{$search}%")
                     ->orWhere('product_code', 'like', "%{$search}%")
@@ -38,7 +40,7 @@ class ProductController extends Controller
             ->cursorPaginate($this->perPage($request))
             ->withQueryString()
             ->through(fn (Product $product) => [
-                ...$product->only(['id', 'product_name', 'product_code', 'product_image', 'product_color', 'product_price', 'product_discount', 'is_featured', 'status']),
+                ...$product->only(['id', 'product_name', 'product_code', 'product_image', 'product_price', 'product_discount', 'is_featured', 'status']),
                 'section_name' => $product->section?->name,
                 'category_name' => $product->category?->category_name,
                 'brand_name' => $product->brand?->name,
@@ -51,18 +53,26 @@ class ProductController extends Controller
         $categories = Category::where('status', true)->orderBy('category_name')->get(['id', 'parent_id', 'section_id', 'category_name']);
         $categoryGroups = $this->categoryGroups($sections, $categories);
         $brands = Brand::where('status', true)->orderBy('name')->get(['id', 'name']);
-        $colors = Color::where('status', true)->orderBy('name')->get(['id', 'name', 'color_code']);
-        return view('admin.product.product', compact('getProducts', 'sections', 'categoryGroups', 'brands', 'colors', 'title'));
+        $variantAttributes = ProductAttributeDefinition::query()
+            ->where('status', true)
+            ->with(['values' => fn ($query) => $query->where('status', true)->orderBy('position')->orderBy('value')])
+            ->orderBy('position')->orderBy('name')->get();
+        $categoryAttributeMap = $this->categoryAttributeMap($categories);
+        return view('admin.product.product', compact('getProducts', 'sections', 'categoryGroups', 'brands', 'variantAttributes', 'categoryAttributeMap', 'title'));
     }
 
     public function store(Request $request)
     {
+        $this->validateVariantSelections($request);
         $data = $this->validatedData($request);
         $admin = Auth::guard('admin')->user();
         $data['admin_id'] = $admin?->id;
         $data['admin_type'] = $admin?->type;
-        $product = Product::create($data);
-        $this->storeProductImages($request, $product);
+        DB::transaction(function () use ($data, $request) {
+            $product = Product::create($data);
+            $this->storeProductImages($request, $product);
+            $this->syncProductAttributes($request, $product);
+        });
         $this->clearMenuCache();
         return response()->json(['message' => 'Product created successfully.'], 201);
     }
@@ -72,7 +82,11 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-        $product->load('images:id,product_id,image,status');
+        $product->load([
+            'images:id,product_id,image,status',
+            'variants:id,product_id,sku,price,stock,status',
+            'variants.values:id,attribute_id,value,color_code',
+        ]);
 
         return response()->json([
             'record' => $product,
@@ -85,6 +99,16 @@ class ProductController extends Controller
                 'url' => asset('admin/productgallery/'.basename($image->image)),
                 'status' => $image->status,
                 'delete_url' => route('admin-product.image.delete', $image),
+            ]),
+            'product_variants' => $product->variants->map(fn ($variant) => [
+                'id' => $variant->id,
+                'sku' => $variant->sku,
+                'price' => $variant->price,
+                'stock' => $variant->stock,
+                'status' => $variant->status,
+                'values' => $variant->values->mapWithKeys(
+                    fn ($value) => [(string) $value->attribute_id => $value->id]
+                ),
             ]),
         ]);
     }
@@ -102,8 +126,13 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        $product->update($this->validatedData($request, $product));
-        $this->storeProductImages($request, $product);
+        $this->validateVariantSelections($request, $product);
+        $data = $this->validatedData($request, $product);
+        DB::transaction(function () use ($data, $request, $product) {
+            $product->update($data);
+            $this->storeProductImages($request, $product);
+            $this->syncProductAttributes($request, $product);
+        });
         $this->clearMenuCache();
 
         return response()->json(['message' => 'Product updated successfully.']);
@@ -150,13 +179,19 @@ class ProductController extends Controller
             'brand_id' => ['nullable', Rule::exists('brands', 'id')->where('status', 1)],
             'product_name' => ['required', 'string', 'max:255'],
             'product_code' => ['required', 'string', 'max:100', Rule::unique('products', 'product_code')->ignore($product)],
-            'product_color' => ['nullable', Rule::exists('colors', 'color_code')->where('status', 1)],
             'product_price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'product_discount' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'product_weight' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'product_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:8192'],
             'product_images' => ['nullable', 'array', 'max:10'],
             'product_images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:8192'],
+            'variants' => ['nullable', 'array', 'max:100'],
+            'variants.*.values' => ['nullable', 'array'],
+            'variants.*.values.*' => ['nullable', 'integer', Rule::exists('attribute_values', 'id')->where('status', 1)],
+            'variants.*.price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'variants.*.stock' => ['nullable', 'integer', 'min:0', 'max:2147483647'],
+            'variants.*.sku' => ['nullable', 'string', 'max:255'],
+            'variants.*.status' => ['nullable', 'boolean'],
             'product_video' => ['nullable', 'url', 'max:255'],
             'description' => ['nullable', 'string'],
             'meta_title' => ['nullable', 'string', 'max:255'],
@@ -186,7 +221,7 @@ class ProductController extends Controller
         }
 
         $data['product_discount'] ??= 0;
-        unset($data['product_images']);
+        unset($data['product_images'], $data['variants']);
 
         return $data;
     }
@@ -206,6 +241,106 @@ class ProductController extends Controller
                 'status' => true,
             ]);
         }
+    }
+
+    private function syncProductAttributes(Request $request, Product $product): void
+    {
+        $variants = collect($request->input('variants', []))
+            ->filter(fn (array $row) => collect($row)->except(['status', 'values'])->contains(
+                fn ($value) => $value !== null && $value !== ''
+            ) || collect($row['values'] ?? [])->contains(fn ($value) => $value !== null && $value !== ''));
+
+        $product->variants()->delete();
+        foreach ($variants as $row) {
+            $variant = $product->variants()->create([
+                'sku' => $row['sku'] ?: $product->product_code.'-'.str()->upper(str()->random(6)),
+                'price' => ($row['price'] ?? '') !== '' ? $row['price'] : null,
+                'stock' => ($row['stock'] ?? '') !== '' ? $row['stock'] : 0,
+                'status' => (bool) ($row['status'] ?? true),
+            ]);
+            $variant->values()->sync(collect($row['values'] ?? [])->filter()->unique()->values());
+        }
+    }
+
+    private function validateVariantSelections(Request $request, ?Product $product = null): void
+    {
+        $rows = collect($request->input('variants', []));
+        $errors = [];
+        $combinations = [];
+        $skus = [];
+        $applicable = collect($this->applicableCategoryAttributes((int) $request->input('category_id')));
+        $allowedAttributeIds = $applicable->keys()->map(fn ($id) => (int) $id);
+        $requiredAttributeIds = $applicable->filter(fn ($config) => $config['is_required'])->keys()->map(fn ($id) => (int) $id);
+
+        foreach ($rows as $index => $row) {
+            $values = collect($row['values'] ?? [])->filter()->map(fn ($id) => (int) $id);
+            if ($values->isEmpty() && empty($row['sku']) && ($row['price'] ?? '') === '' && ($row['stock'] ?? '') === '') continue;
+
+            foreach ($values->keys() as $attributeId) {
+                if (! $allowedAttributeIds->contains((int) $attributeId)) {
+                    $errors["variants.$index.values.$attributeId"] = 'This attribute is not available for the selected category.';
+                }
+            }
+            foreach ($requiredAttributeIds as $attributeId) {
+                if (! $values->has($attributeId) && ! $values->has((string) $attributeId)) {
+                    $errors["variants.$index.values.$attributeId"] = 'This category requires an option for this attribute.';
+                }
+            }
+
+            $actual = DB::table('attribute_values')->whereIn('id', $values->values())->pluck('attribute_id', 'id');
+            foreach ($values as $attributeId => $valueId) {
+                if ((int) ($actual[$valueId] ?? 0) !== (int) $attributeId) {
+                    $errors["variants.$index.values.$attributeId"] = 'The selected value does not belong to this attribute.';
+                }
+            }
+
+            $combination = $values->sort()->implode('-');
+            if ($combination !== '' && isset($combinations[$combination])) {
+                $errors["variants.$index.values"] = 'This option combination is duplicated.';
+            }
+            $combinations[$combination] = true;
+
+            $sku = trim((string) ($row['sku'] ?? ''));
+            if ($sku !== '') {
+                if (isset($skus[$sku])) $errors["variants.$index.sku"] = 'Variant SKU must be unique.';
+                $skus[$sku] = true;
+                $exists = DB::table('product_variants')->where('sku', $sku)
+                    ->when($product, fn ($query) => $query->where('product_id', '!=', $product->id))->exists();
+                if ($exists) $errors["variants.$index.sku"] = 'This variant SKU is already in use.';
+            }
+        }
+
+        if ($errors) throw ValidationException::withMessages($errors);
+    }
+
+    private function categoryAttributeMap($categories): array
+    {
+        $map = [];
+        foreach ($categories as $category) {
+            $map[(string) $category->id] = $this->applicableCategoryAttributes((int) $category->id);
+        }
+        return $map;
+    }
+
+    private function applicableCategoryAttributes(int $categoryId): array
+    {
+        $visited = [];
+        while ($categoryId && ! in_array($categoryId, $visited, true)) {
+            $visited[] = $categoryId;
+            $rows = DB::table('category_attribute')
+                ->where('category_id', $categoryId)
+                ->orderBy('position')
+                ->get(['attribute_id', 'is_filterable', 'is_required', 'position']);
+            if ($rows->isNotEmpty()) {
+                return $rows->mapWithKeys(fn ($row) => [(string) $row->attribute_id => [
+                    'is_filterable' => (bool) $row->is_filterable,
+                    'is_required' => (bool) $row->is_required,
+                    'position' => (int) $row->position,
+                ]])->all();
+            }
+            $categoryId = (int) Category::whereKey($categoryId)->value('parent_id');
+        }
+        return [];
     }
 
     private function storeImage($file, string $prefix): string

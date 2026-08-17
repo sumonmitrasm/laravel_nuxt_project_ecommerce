@@ -8,8 +8,8 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\BrandController;
-use App\Http\Controllers\ColorController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductAttributeController;
 
 Route::get('/clear-cache', function() {
     Artisan::call('view:clear');
@@ -83,14 +83,6 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::patch('brand/{brand}/status', [BrandController::class, 'updateStatus'])->name('admin-brand.status');
         Route::delete('brand/{brand}', [BrandController::class, 'destroy'])->name('admin-brand.delete');
         //>>>>>>>>>>>>>>>>>>>>>>>>Brand activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        //>>>>>>>>>>>>>>>>>>>>>>>>Color activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        Route::get('colors', [ColorController::class, 'index'])->name('colors');
-        Route::post('color', [ColorController::class, 'store'])->name('admin-color.store');
-        Route::get('color/{color}', [ColorController::class, 'show'])->name('admin-color.show');
-        Route::put('color/{color}', [ColorController::class, 'update'])->name('admin-color.update');
-        Route::patch('color/{color}/status', [ColorController::class, 'updateStatus'])->name('admin-color.status');
-        Route::delete('color/{color}', [ColorController::class, 'destroy'])->name('admin-color.delete');
-        //>>>>>>>>>>>>>>>>>>>>>>>>Color activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         //>>>>>>>>>>>>>>>>>>>>>>>>Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('products', [ProductController::class, 'index'])->name('products');
         Route::post('product', [ProductController::class, 'store'])->name('admin-product.store');
@@ -99,6 +91,11 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::patch('product/{product}/status', [ProductController::class, 'updateStatus'])->name('admin-product.status');
         Route::delete('product-images/{productImage}', [ProductController::class, 'destroyImage'])->name('admin-product.image.delete');
         Route::delete('product/{product}', [ProductController::class, 'destroy'])->name('admin-product.delete');
+        Route::get('product-attributes', [ProductAttributeController::class, 'index'])->name('product-attributes');
+        Route::post('product-attributes', [ProductAttributeController::class, 'store'])->name('product-attributes.store');
+        Route::post('product-attributes/{attribute}/values', [ProductAttributeController::class, 'storeValue'])->name('product-attributes.values.store');
+        Route::delete('product-attributes/{attribute}', [ProductAttributeController::class, 'destroy'])->name('product-attributes.destroy');
+        Route::delete('product-attribute-values/{value}', [ProductAttributeController::class, 'destroyValue'])->name('product-attribute-values.destroy');
         //>>>>>>>>>>>>>>>>>>>>>>>>Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     });
