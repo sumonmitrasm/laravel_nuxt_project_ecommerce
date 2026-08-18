@@ -45,8 +45,13 @@ class FrontController extends Controller
         $brandIds = $this->selectedBrandIds($request);
         $filterableAttributeIds = $this->filterableAttributeIds((int) $categoryDetails['categoryDetails']['id']);
         $attributeValueGroups = $this->selectedAttributeValueGroups($request, $filterableAttributeIds);
+        $priceRange = $this->selectedPriceRange($request);
 
-        $products = Product::with(['brand:id,name', 'category:id,category_name,category_discount'])
+        $products = Product::with([
+                'brand:id,name',
+                'category:id,category_name,category_discount',
+                'variants' => fn ($query) => $query->where('status', true)->select('id', 'product_id', 'price'),
+            ])
             ->whereIn('category_id', $categoryDetails['catIds'])
             ->where('status', true)
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
@@ -58,8 +63,10 @@ class FrontController extends Controller
                     }
                 });
             })
+            ->when($priceRange !== [], fn ($query) => $this->applyPriceFilter($query, $priceRange))
             ->latest('id')
             ->paginate(8);
+        $this->prepareListingPrices($products);
 
         return response()->json([
             'status' => true,
@@ -68,6 +75,7 @@ class FrontController extends Controller
             'filters' => [
                 'brands' => $this->availableBrands($categoryDetails['catIds']),
                 'attributes' => $this->availableAttributeFilters($categoryDetails['catIds'], $filterableAttributeIds),
+                'price' => $this->availablePriceRange($categoryDetails['catIds']),
             ],
             'products' => $products->items(),
             'pagination' => $this->paginationData($products),
@@ -77,12 +85,19 @@ class FrontController extends Controller
     public function products(Request $request): JsonResponse
     {
         $brandIds = $this->selectedBrandIds($request);
+        $priceRange = $this->selectedPriceRange($request);
 
-        $products = Product::with(['brand:id,name', 'category:id,category_name,category_discount'])
+        $products = Product::with([
+                'brand:id,name',
+                'category:id,category_name,category_discount',
+                'variants' => fn ($query) => $query->where('status', true)->select('id', 'product_id', 'price'),
+            ])
             ->where('status', true)
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
+            ->when($priceRange !== [], fn ($query) => $this->applyPriceFilter($query, $priceRange))
             ->latest('id')
             ->paginate(8);
+        $this->prepareListingPrices($products);
 
         return response()->json([
             'status' => true,
@@ -90,6 +105,8 @@ class FrontController extends Controller
             'breadcrumbs' => [],
             'filters' => [
                 'brands' => $this->availableBrands(),
+                'attributes' => [],
+                'price' => $this->availablePriceRange(),
             ],
             'products' => $products->items(),
             'pagination' => $this->paginationData($products),
@@ -108,6 +125,79 @@ class FrontController extends Controller
             ->take(50)
             ->values()
             ->all();
+    }
+
+    private function selectedPriceRange(Request $request): array
+    {
+        $minimum = filter_var($request->query('min_price'), FILTER_VALIDATE_FLOAT);
+        $maximum = filter_var($request->query('max_price'), FILTER_VALIDATE_FLOAT);
+        $minimum = $minimum !== false && $minimum >= 0 ? min((float) $minimum, 999999999999.99) : null;
+        $maximum = $maximum !== false && $maximum >= 0 ? min((float) $maximum, 999999999999.99) : null;
+
+        if ($minimum === null && $maximum === null) {
+            return [];
+        }
+
+        if ($minimum !== null && $maximum !== null && $minimum > $maximum) {
+            [$minimum, $maximum] = [$maximum, $minimum];
+        }
+
+        return ['min' => $minimum, 'max' => $maximum];
+    }
+
+    private function applyPriceFilter($query, array $range): void
+    {
+        $discount = 'COALESCE(NULLIF(products.product_discount, 0), (SELECT category_discount FROM categories WHERE categories.id = products.category_id), 0)';
+        $basePrice = "GREATEST(0, products.product_price * (1 - ({$discount} / 100)))";
+        $variantPrice = "GREATEST(0, COALESCE(product_variants.price, products.product_price) * (1 - ({$discount} / 100)))";
+
+        $query->where(function ($priceQuery) use ($range, $basePrice, $variantPrice) {
+            $priceQuery->where(function ($baseQuery) use ($range, $basePrice) {
+                $baseQuery->whereDoesntHave('variants', fn ($variant) => $variant->where('status', true));
+                $this->applyPriceBounds($baseQuery, $basePrice, $range);
+            })->orWhereHas('variants', function ($variant) use ($range, $variantPrice) {
+                $variant->where('status', true);
+                $this->applyPriceBounds($variant, $variantPrice, $range);
+            });
+        });
+    }
+
+    private function applyPriceBounds($query, string $priceExpression, array $range): void
+    {
+        if ($range['min'] !== null) {
+            $query->whereRaw("{$priceExpression} >= ?", [$range['min']]);
+        }
+        if ($range['max'] !== null) {
+            $query->whereRaw("{$priceExpression} <= ?", [$range['max']]);
+        }
+    }
+
+    private function availablePriceRange(array $categoryIds = []): array
+    {
+        sort($categoryIds);
+        $scope = $categoryIds === [] ? 'all' : sha1(implode(',', $categoryIds));
+        $version = ShopFilterCache::version();
+
+        return Cache::remember("api.shop-filter.price.{$scope}.v{$version}", now()->addMinutes(10), function () use ($categoryIds) {
+            $discount = 'COALESCE(NULLIF(product.product_discount, 0), category.category_discount, 0)';
+            $effectivePrice = "GREATEST(0, COALESCE(variant.price, product.product_price) * (1 - ({$discount} / 100)))";
+
+            $range = DB::table('products as product')
+                ->join('categories as category', 'category.id', '=', 'product.category_id')
+                ->leftJoin('product_variants as variant', function ($join) {
+                    $join->on('variant.product_id', '=', 'product.id')->where('variant.status', true);
+                })
+                ->where('product.status', true)
+                ->when($categoryIds !== [], fn ($query) => $query->whereIn('product.category_id', $categoryIds))
+                ->selectRaw("MIN({$effectivePrice}) as minimum, MAX({$effectivePrice}) as maximum")
+                ->first();
+
+            $minimum = $range?->minimum !== null ? floor((float) $range->minimum) : 0;
+            $maximum = $range?->maximum !== null ? ceil((float) $range->maximum) : 0;
+            $step = max(1, 10 ** max(0, strlen((string) max(1, (int) $maximum)) - 3));
+
+            return ['min' => $minimum, 'max' => $maximum, 'step' => $step];
+        });
     }
 
     private function selectedAttributeValueGroups(Request $request, array $filterableAttributeIds): array
@@ -240,6 +330,20 @@ class FrontController extends Controller
             'from' => $products->firstItem(),
             'to' => $products->lastItem(),
         ];
+    }
+
+    private function prepareListingPrices(LengthAwarePaginator $products): void
+    {
+        $products->getCollection()->each(function (Product $product) {
+            $regularPrice = $product->variants->isNotEmpty()
+                ? $product->variants->map(fn ($variant) => (float) $product->regularPriceForVariant($variant))->min()
+                : (float) $product->product_price;
+
+            $product->setAttribute('listing_regular_price', number_format($regularPrice, 2, '.', ''));
+            $product->setAttribute('listing_final_price', $product->discountedPrice($regularPrice));
+            $product->setAttribute('has_variant_pricing', $product->variants->isNotEmpty());
+            $product->unsetRelation('variants');
+        });
     }
 
     public function details(int $id): JsonResponse
