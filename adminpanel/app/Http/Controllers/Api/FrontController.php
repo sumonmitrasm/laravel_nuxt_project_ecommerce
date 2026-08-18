@@ -46,6 +46,7 @@ class FrontController extends Controller
         $filterableAttributeIds = $this->filterableAttributeIds((int) $categoryDetails['categoryDetails']['id']);
         $attributeValueGroups = $this->selectedAttributeValueGroups($request, $filterableAttributeIds);
         $priceRange = $this->selectedPriceRange($request);
+        $sort = $this->selectedSort($request);
 
         $products = Product::with([
                 'brand:id,name',
@@ -64,8 +65,9 @@ class FrontController extends Controller
                 });
             })
             ->when($priceRange !== [], fn ($query) => $this->applyPriceFilter($query, $priceRange))
-            ->latest('id')
-            ->paginate(8);
+            ->tap(fn ($query) => $this->applySorting($query, $sort))
+            ->paginate(8)
+            ->withQueryString();
         $this->prepareListingPrices($products);
 
         return response()->json([
@@ -86,6 +88,7 @@ class FrontController extends Controller
     {
         $brandIds = $this->selectedBrandIds($request);
         $priceRange = $this->selectedPriceRange($request);
+        $sort = $this->selectedSort($request);
 
         $products = Product::with([
                 'brand:id,name',
@@ -95,8 +98,9 @@ class FrontController extends Controller
             ->where('status', true)
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
             ->when($priceRange !== [], fn ($query) => $this->applyPriceFilter($query, $priceRange))
-            ->latest('id')
-            ->paginate(8);
+            ->tap(fn ($query) => $this->applySorting($query, $sort))
+            ->paginate(8)
+            ->withQueryString();
         $this->prepareListingPrices($products);
 
         return response()->json([
@@ -143,6 +147,39 @@ class FrontController extends Controller
         }
 
         return ['min' => $minimum, 'max' => $maximum];
+    }
+
+    private function selectedSort(Request $request): string
+    {
+        $sort = (string) $request->query('sort', 'popular');
+
+        return in_array($sort, ['popular', 'newest', 'price_asc', 'price_desc'], true)
+            ? $sort
+            : 'popular';
+    }
+
+    private function applySorting($query, string $sort): void
+    {
+        if ($sort === 'newest') {
+            $query->latest('products.id');
+            return;
+        }
+
+        if (in_array($sort, ['price_asc', 'price_desc'], true)) {
+            $discount = 'COALESCE(NULLIF(products.product_discount, 0), (SELECT category_discount FROM categories WHERE categories.id = products.category_id), 0)';
+            $regularPrice = 'COALESCE((SELECT MIN(COALESCE(product_variants.price, products.product_price)) FROM product_variants WHERE product_variants.product_id = products.id AND product_variants.status = 1), products.product_price)';
+            $effectivePrice = "GREATEST(0, ({$regularPrice}) * (1 - ({$discount} / 100)))";
+            $direction = $sort === 'price_asc' ? 'asc' : 'desc';
+
+            $query->orderByRaw("{$effectivePrice} {$direction}")
+                ->orderByDesc('products.id');
+            return;
+        }
+
+        // Until real sales/view metrics exist, featured products are the safest
+        // popularity signal; newest products break ties deterministically.
+        $query->orderByRaw("CASE WHEN products.is_featured = 'Yes' THEN 0 ELSE 1 END")
+            ->orderByDesc('products.id');
     }
 
     private function applyPriceFilter($query, array $range): void

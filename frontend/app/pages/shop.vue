@@ -52,6 +52,11 @@ const queryPrice = name => computed(() => {
 
 const selectedMinPrice = queryPrice('min_price')
 const selectedMaxPrice = queryPrice('max_price')
+const allowedSorts = ['popular', 'newest', 'price_asc', 'price_desc']
+const selectedSort = computed(() => {
+    const value = Array.isArray(route.query.sort) ? route.query.sort[0] : route.query.sort
+    return allowedSorts.includes(value) ? value : 'popular'
+})
 
 const {
     data,
@@ -73,14 +78,15 @@ const {
                     ...(brandQuery.value ? { brand: brandQuery.value } : {}),
                     ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
                     ...(selectedMinPrice.value !== null ? { min_price: selectedMinPrice.value } : {}),
-                    ...(selectedMaxPrice.value !== null ? { max_price: selectedMaxPrice.value } : {})
+                    ...(selectedMaxPrice.value !== null ? { max_price: selectedMaxPrice.value } : {}),
+                    ...(selectedSort.value !== 'popular' ? { sort: selectedSort.value } : {})
                 }
             }
         )
     },
 
     {
-        watch: [categoryUrl, currentPage, brandQuery, attributeQuery, selectedMinPrice, selectedMaxPrice]
+        watch: [categoryUrl, currentPage, brandQuery, attributeQuery, selectedMinPrice, selectedMaxPrice, selectedSort]
     }
 )
 
@@ -138,6 +144,7 @@ const replaceFilterQuery = extra => router.replace({
         ...(brandQuery.value ? { brand: brandQuery.value } : {}),
         ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
         ...priceQueryParts(),
+        ...(selectedSort.value !== 'popular' ? { sort: selectedSort.value } : {}),
         ...extra
     }
 })
@@ -177,7 +184,8 @@ const toggleBrand = async brandId => {
             ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
             ...(next.length ? { brand: next.join(',') } : {}),
             ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
-            ...priceQueryParts()
+            ...priceQueryParts(),
+            ...(selectedSort.value !== 'popular' ? { sort: selectedSort.value } : {})
         }
     })
 }
@@ -196,7 +204,8 @@ const toggleAttributeValue = async valueId => {
             ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
             ...(brandQuery.value ? { brand: brandQuery.value } : {}),
             ...(next.length ? { attribute: next.join(',') } : {}),
-            ...priceQueryParts()
+            ...priceQueryParts(),
+            ...(selectedSort.value !== 'popular' ? { sort: selectedSort.value } : {})
         }
     })
 }
@@ -204,7 +213,18 @@ const toggleAttributeValue = async valueId => {
 const clearFilters = async () => {
     await router.replace({
         path: '/shop',
-        query: categoryUrl.value ? { category: categoryUrl.value } : {}
+        query: {
+            ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
+            ...(selectedSort.value !== 'popular' ? { sort: selectedSort.value } : {})
+        }
+    })
+}
+
+const updateSort = async event => {
+    const sort = allowedSorts.includes(event.target.value) ? event.target.value : 'popular'
+    await replaceFilterQuery({
+        sort: sort === 'popular' ? undefined : sort,
+        page: undefined
     })
 }
 
@@ -233,6 +253,7 @@ const pageLink = page => ({
         ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
         ...(selectedMinPrice.value !== null ? { min_price: selectedMinPrice.value } : {}),
         ...(selectedMaxPrice.value !== null ? { max_price: selectedMaxPrice.value } : {}),
+        ...(selectedSort.value !== 'popular' ? { sort: selectedSort.value } : {}),
         ...(page > 1 ? { page } : {})
     }
 })
@@ -384,11 +405,12 @@ const productBadge = product => {
                         <div>Showing <strong>{{ pagination.from ?? 0 }}–{{ pagination.to ?? 0 }}</strong> of
                             <strong>{{ pagination.total }}</strong> products</div>
                         <div class="shop-sort">
-                            <label for="sortProducts">Sort by:</label><select id="sortProducts">
-                                <option>Most Popular</option>
-                                <option>Newest</option>
-                                <option>Price: Low to High</option>
-                                <option>Price: High to Low</option>
+                            <label for="sortProducts">Sort by:</label><select id="sortProducts" :value="selectedSort"
+                                @change="updateSort">
+                                <option value="popular">Most Popular</option>
+                                <option value="newest">Newest</option>
+                                <option value="price_asc">Price: Low to High</option>
+                                <option value="price_desc">Price: High to Low</option>
                             </select><button class="active" aria-label="Grid view">
                                 <i class="bi bi-grid-3x3-gap-fill"></i></button><button aria-label="List view"><i
                                     class="bi bi-list"></i></button>
