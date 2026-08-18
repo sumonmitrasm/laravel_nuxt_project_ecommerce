@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductAttributeValue;
 use App\Models\Section;
 use App\Support\ShopFilterCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class FrontController extends Controller
 {
@@ -41,11 +43,21 @@ class FrontController extends Controller
         }
 
         $brandIds = $this->selectedBrandIds($request);
+        $filterableAttributeIds = $this->filterableAttributeIds((int) $categoryDetails['categoryDetails']['id']);
+        $attributeValueGroups = $this->selectedAttributeValueGroups($request, $filterableAttributeIds);
 
         $products = Product::with(['brand:id,name', 'category:id,category_name,category_discount'])
             ->whereIn('category_id', $categoryDetails['catIds'])
             ->where('status', true)
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
+            ->when($attributeValueGroups !== [], function ($query) use ($attributeValueGroups) {
+                $query->whereHas('variants', function ($variant) use ($attributeValueGroups) {
+                    $variant->where('status', true);
+                    foreach ($attributeValueGroups as $valueIds) {
+                        $variant->whereHas('values', fn ($value) => $value->whereIn('attribute_values.id', $valueIds));
+                    }
+                });
+            })
             ->latest('id')
             ->paginate(8);
 
@@ -55,6 +67,7 @@ class FrontController extends Controller
             'breadcrumbs' => $categoryDetails['breadcrumbs'],
             'filters' => [
                 'brands' => $this->availableBrands($categoryDetails['catIds']),
+                'attributes' => $this->availableAttributeFilters($categoryDetails['catIds'], $filterableAttributeIds),
             ],
             'products' => $products->items(),
             'pagination' => $this->paginationData($products),
@@ -95,6 +108,100 @@ class FrontController extends Controller
             ->take(50)
             ->values()
             ->all();
+    }
+
+    private function selectedAttributeValueGroups(Request $request, array $filterableAttributeIds): array
+    {
+        $values = $request->query('attribute', '');
+        $values = is_array($values) ? $values : explode(',', (string) $values);
+        $valueIds = collect($values)
+            ->map(fn ($valueId) => filter_var($valueId, FILTER_VALIDATE_INT))
+            ->filter(fn ($valueId) => $valueId !== false && $valueId > 0)
+            ->unique()
+            ->take(100)
+            ->values();
+
+        if ($valueIds->isEmpty() || $filterableAttributeIds === []) {
+            return [];
+        }
+
+        return ProductAttributeValue::query()
+            ->whereIn('id', $valueIds)
+            ->whereIn('attribute_id', $filterableAttributeIds)
+            ->where('status', true)
+            ->get(['id', 'attribute_id'])
+            ->groupBy('attribute_id')
+            ->map(fn ($values) => $values->pluck('id')->map(fn ($id) => (int) $id)->all())
+            ->all();
+    }
+
+    private function filterableAttributeIds(int $categoryId): array
+    {
+        $visited = [];
+        while ($categoryId && ! in_array($categoryId, $visited, true)) {
+            $visited[] = $categoryId;
+            $rows = DB::table('category_attribute')
+                ->where('category_id', $categoryId)
+                ->orderBy('position')
+                ->get(['attribute_id', 'is_filterable']);
+
+            if ($rows->isNotEmpty()) {
+                return $rows->where('is_filterable', true)
+                    ->pluck('attribute_id')->map(fn ($id) => (int) $id)->values()->all();
+            }
+
+            $categoryId = (int) Category::whereKey($categoryId)->value('parent_id');
+        }
+
+        return [];
+    }
+
+    private function availableAttributeFilters(array $categoryIds, array $attributeIds): array
+    {
+        if ($attributeIds === []) {
+            return [];
+        }
+
+        sort($categoryIds);
+        sort($attributeIds);
+        $scope = sha1(implode(',', $categoryIds).'|'.implode(',', $attributeIds));
+        $version = ShopFilterCache::version();
+
+        return Cache::remember("api.shop-filter.attributes.{$scope}.v{$version}", now()->addMinutes(10), function () use ($categoryIds, $attributeIds) {
+            $rows = DB::table('attributes as attribute')
+                ->join('attribute_values as value', 'value.attribute_id', '=', 'attribute.id')
+                ->join('attribute_value_product_variant as pivot', 'pivot.attribute_value_id', '=', 'value.id')
+                ->join('product_variants as variant', 'variant.id', '=', 'pivot.product_variant_id')
+                ->join('products as product', 'product.id', '=', 'variant.product_id')
+                ->whereIn('attribute.id', $attributeIds)
+                ->whereIn('product.category_id', $categoryIds)
+                ->where('attribute.status', true)
+                ->where('value.status', true)
+                ->where('variant.status', true)
+                ->where('product.status', true)
+                ->groupBy('attribute.id', 'attribute.name', 'attribute.slug', 'attribute.type', 'attribute.position', 'value.id', 'value.value', 'value.color_code', 'value.position')
+                ->orderBy('attribute.position')->orderBy('attribute.name')
+                ->orderBy('value.position')->orderBy('value.value')
+                ->get([
+                    'attribute.id as attribute_id', 'attribute.name as attribute_name',
+                    'attribute.slug as attribute_slug', 'attribute.type as attribute_type',
+                    'value.id as value_id', 'value.value', 'value.color_code',
+                    DB::raw('COUNT(DISTINCT product.id) as product_count'),
+                ]);
+
+            return $rows->groupBy('attribute_id')->map(fn ($values) => [
+                'id' => (int) $values->first()->attribute_id,
+                'name' => $values->first()->attribute_name,
+                'slug' => $values->first()->attribute_slug,
+                'type' => $values->first()->attribute_type,
+                'values' => $values->map(fn ($value) => [
+                    'id' => (int) $value->value_id,
+                    'value' => $value->value,
+                    'color_code' => $value->color_code,
+                    'product_count' => (int) $value->product_count,
+                ])->values()->all(),
+            ])->values()->all();
+        });
     }
 
     private function availableBrands(array $categoryIds = []): array
