@@ -32,6 +32,18 @@ const selectedBrandIds = computed(() => {
 
 const brandQuery = computed(() => selectedBrandIds.value.join(','))
 
+const selectedAttributeValueIds = computed(() => {
+    const value = Array.isArray(route.query.attribute)
+        ? route.query.attribute.join(',')
+        : route.query.attribute?.toString() ?? ''
+
+    return [...new Set(value.split(',')
+        .map(id => Number.parseInt(id, 10))
+        .filter(id => Number.isInteger(id) && id > 0))]
+})
+
+const attributeQuery = computed(() => selectedAttributeValueIds.value.join(','))
+
 const {
     data,
     status,
@@ -49,14 +61,15 @@ const {
                 baseURL: config.public.apiBase,
                 query: {
                     page: currentPage.value,
-                    ...(brandQuery.value ? { brand: brandQuery.value } : {})
+                    ...(brandQuery.value ? { brand: brandQuery.value } : {}),
+                    ...(attributeQuery.value ? { attribute: attributeQuery.value } : {})
                 }
             }
         )
     },
 
     {
-        watch: [categoryUrl, currentPage, brandQuery]
+        watch: [categoryUrl, currentPage, brandQuery, attributeQuery]
     }
 )
 
@@ -73,6 +86,7 @@ const breadcrumbs = computed(() =>
 )
 
 const brands = computed(() => data.value?.filters?.brands ?? [])
+const attributeFilters = computed(() => data.value?.filters?.attributes ?? [])
 
 const isBrandSelected = brandId => selectedBrandIds.value.includes(Number(brandId))
 
@@ -86,7 +100,26 @@ const toggleBrand = async brandId => {
         path: '/shop',
         query: {
             ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
-            ...(next.length ? { brand: next.join(',') } : {})
+            ...(next.length ? { brand: next.join(',') } : {}),
+            ...(attributeQuery.value ? { attribute: attributeQuery.value } : {})
+        }
+    })
+}
+
+const isAttributeValueSelected = valueId => selectedAttributeValueIds.value.includes(Number(valueId))
+
+const toggleAttributeValue = async valueId => {
+    const id = Number(valueId)
+    const next = isAttributeValueSelected(id)
+        ? selectedAttributeValueIds.value.filter(selectedId => selectedId !== id)
+        : [...selectedAttributeValueIds.value, id]
+
+    await router.replace({
+        path: '/shop',
+        query: {
+            ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
+            ...(brandQuery.value ? { brand: brandQuery.value } : {}),
+            ...(next.length ? { attribute: next.join(',') } : {})
         }
     })
 }
@@ -120,6 +153,7 @@ const pageLink = page => ({
     query: {
         ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
         ...(brandQuery.value ? { brand: brandQuery.value } : {}),
+        ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
         ...(page > 1 ? { page } : {})
     }
 })
@@ -211,6 +245,20 @@ const productBadge = product => {
                                 <input type="checkbox" :checked="isBrandSelected(brand.id)"
                                     @change="toggleBrand(brand.id)" /> {{ brand.name }}
                                 <span>{{ brand.product_count }}</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div v-for="attribute in attributeFilters" :key="`desktop-attribute-${attribute.id}`"
+                        class="shop-filter-group">
+                        <button class="shop-filter-title" data-bs-toggle="collapse"
+                            :data-bs-target="`#filterAttribute${attribute.id}`" aria-expanded="true">
+                            {{ attribute.name }} <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <div class="collapse show" :id="`filterAttribute${attribute.id}`">
+                            <label v-for="value in attribute.values" :key="`desktop-value-${value.id}`">
+                                <input type="checkbox" :checked="isAttributeValueSelected(value.id)"
+                                    @change="toggleAttributeValue(value.id)" /> {{ value.value }}
+                                <span>{{ value.product_count }}</span>
                             </label>
                         </div>
                     </div>
@@ -351,6 +399,20 @@ const productBadge = product => {
                         <input type="checkbox" :checked="isBrandSelected(brand.id)"
                             @change="toggleBrand(brand.id)" /> {{ brand.name }}
                         <span>{{ brand.product_count }}</span>
+                    </label>
+                </div>
+            </div>
+            <div v-for="attribute in attributeFilters" :key="`mobile-attribute-${attribute.id}`"
+                class="shop-filter-group">
+                <button class="shop-filter-title" data-bs-toggle="collapse"
+                    :data-bs-target="`#mobileAttribute${attribute.id}`" aria-expanded="true">
+                    {{ attribute.name }} <i class="bi bi-chevron-down"></i>
+                </button>
+                <div class="collapse show" :id="`mobileAttribute${attribute.id}`">
+                    <label v-for="value in attribute.values" :key="`mobile-value-${value.id}`">
+                        <input type="checkbox" :checked="isAttributeValueSelected(value.id)"
+                            @change="toggleAttributeValue(value.id)" /> {{ value.value }}
+                        <span>{{ value.product_count }}</span>
                     </label>
                 </div>
             </div>

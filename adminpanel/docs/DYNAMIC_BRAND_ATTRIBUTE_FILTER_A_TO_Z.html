@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dynamic Brand & Attribute Filter — A to Z</title>
+  <style>
+    :root{--ink:#172033;--muted:#667085;--line:#d9e2f0;--paper:#fff;--bg:#f5f7fb;--blue:#2357c6;--green:#08715e;--orange:#a15c00;--red:#b42318}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 Arial,"Noto Sans Bengali",sans-serif}
+    header{padding:55px 22px;background:linear-gradient(125deg,#102a66,#08715e);color:#fff}header>div,main{max-width:1140px;margin:auto}
+    h1{margin:0 0 8px;font-size:clamp(31px,5vw,47px);line-height:1.15}h2{margin:0 0 14px;font-size:26px}h3{margin:25px 0 9px}p{margin:8px 0 14px}
+    main{padding:25px 18px 70px}section{margin:18px 0;padding:27px;background:var(--paper);border:1px solid var(--line);border-radius:15px;box-shadow:0 5px 18px #22345b0a}
+    nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}nav a{padding:7px 11px;border:1px solid #ffffff55;border-radius:7px;color:#fff;text-decoration:none}
+    code{padding:2px 6px;border-radius:5px;background:#fff0f4;color:#9b174c;font-family:Consolas,monospace}pre{overflow:auto;padding:17px;border-radius:10px;background:#0f172a;color:#e6edf8;line-height:1.55}pre code{padding:0;background:none;color:inherit}
+    table{width:100%;border-collapse:collapse;margin:13px 0}th,td{padding:11px;border:1px solid var(--line);text-align:left;vertical-align:top}th{background:#edf3ff}
+    .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0}.flow span{padding:9px 12px;border-radius:8px;background:#e8efff;color:#174397;font-weight:700}.flow b{color:#7a8699}
+    .ok,.note,.warn,.danger{padding:14px 16px;border-radius:8px;margin:13px 0}.ok{background:#ecfdf3;border-left:4px solid var(--green)}.note{background:#eef4ff;border-left:4px solid var(--blue)}.warn{background:#fff7e6;border-left:4px solid var(--orange)}.danger{background:#fff1f0;border-left:4px solid var(--red)}
+    .tree{white-space:pre;overflow:auto;padding:16px;background:#f7f9fc;border:1px solid var(--line);border-radius:9px;font-family:Consolas,monospace}.small{color:var(--muted);font-size:14px}ul,ol{padding-left:23px}
+  </style>
+</head>
+<body>
+<header><div>
+  <h1>Dynamic Brand & Attribute Filter — A to Z</h1>
+  <p>Laravel API + Nuxt 4: category-aware facets, instant URL filter, exact variant matching এবং reusable architecture</p>
+  <nav><a href="#architecture">Architecture</a><a href="#database">Database</a><a href="#brand">Brand</a><a href="#attribute">Attribute</a><a href="#api">API</a><a href="#nuxt">Nuxt</a><a href="#cache">Cache</a><a href="#reuse">Reuse</a></nav>
+</div></header>
+<main>
+
+<section id="architecture">
+  <h2>1. সম্পূর্ণ architecture</h2>
+  <div class="flow"><span>Admin data</span><b>→</b><span>Database relations</span><b>→</b><span>Laravel facets</span><b>→</b><span>JSON API</span><b>→</b><span>Nuxt sidebar</span><b>→</b><span>URL query</span><b>→</b><span>Filtered products</span></div>
+  <p>এই implementation-এ <strong>facet</strong> অর্থ sidebar-এর একটি available filter option এবং তার product count। যেমন <code>HP (1)</code> বা <code>Red (3)</code>।</p>
+  <table><thead><tr><th>Filter</th><th>Source</th><th>URL</th><th>Selection rule</th></tr></thead><tbody>
+    <tr><td>Brand</td><td><code>products.brand_id</code></td><td><code>?brand=7,6</code></td><td>একাধিক Brand = OR</td></tr>
+    <tr><td>Attribute values</td><td>Variant ↔ value pivot</td><td><code>?attribute=3,8,12</code></td><td>একই attribute = OR; ভিন্ন attribute = AND</td></tr>
+  </tbody></table>
+  <div class="ok">API শুধু selected category-তে active products/variants-এ বাস্তবে ব্যবহৃত Brand ও Attribute values পাঠায়। Static HP/Dell/L/XL list রাখা হয় না।</div>
+</section>
+
+<section id="database">
+  <h2>2. Database structure</h2>
+  <div class="tree">brands
+  id ───────────────┐
+                    │
+products            │
+  id                 │
+  category_id        │
+  brand_id ──────────┘
+       │
+       └── product_variants
+             id
+             product_id
+             sku, price, stock, status
+                    │
+                    └── attribute_value_product_variant
+                              product_variant_id
+                              attribute_value_id
+                                      │
+attributes                            │
+  id                                  │
+  name, slug, type                    │
+  │                                   │
+  └── attribute_values ────────────────┘
+        id, attribute_id, value, color_code
+
+categories ─── category_attribute ─── attributes
+               is_filterable
+               is_required
+               position</div>
+
+  <h3>Category mapping-এর অর্থ</h3>
+  <table><thead><tr><th>Field</th><th>কাজ</th></tr></thead><tbody>
+    <tr><td><code>USE / enabled</code></td><td>এই category-এর Product Variant form-এ Attribute ব্যবহার করা যাবে।</td></tr>
+    <tr><td><code>is_filterable</code></td><td>Shop sidebar-এ Attribute দেখানোর অনুমতি।</td></tr>
+    <tr><td><code>is_required</code></td><td>Product save করার সময় variant row-তে value নির্বাচন বাধ্যতামূলক। Filter দেখানোর শর্ত নয়।</td></tr>
+    <tr><td><code>position</code></td><td>Admin/Product form-এ Attribute order।</td></tr>
+  </tbody></table>
+
+  <h3>Frontend-এ Attribute দেখানোর চারটি শর্ত</h3>
+  <ol>
+    <li>Attribute এবং value active হতে হবে।</li>
+    <li>Category mapping-এ Attribute enabled এবং <code>is_filterable = true</code> হতে হবে।</li>
+    <li>কোনো active Product-এর active Variant-এ value ব্যবহৃত হতে হবে।</li>
+    <li>Product selected category বা তার descendant category-এর মধ্যে থাকতে হবে।</li>
+  </ol>
+</section>
+
+<section id="brand">
+  <h2>3. Brand filter: backend</h2>
+  <h3>URL থেকে IDs নিরাপদভাবে নেওয়া</h3>
+  <pre><code>private function selectedBrandIds(Request $request): array
+{
+    $brands = $request-&gt;query('brand', '');
+    $brands = is_array($brands)
+        ? $brands
+        : explode(',', (string) $brands);
+
+    return collect($brands)
+        -&gt;map(fn ($brandId) =&gt;
+            filter_var($brandId, FILTER_VALIDATE_INT)
+        )
+        -&gt;filter(fn ($brandId) =&gt;
+            $brandId !== false &amp;&amp; $brandId &gt; 0
+        )
+        -&gt;unique()
+        -&gt;take(50)
+        -&gt;values()
+        -&gt;all();
+}</code></pre>
+  <p>এতে invalid text, negative ID ও duplicate বাদ যায়। Maximum ৫০টি ID query abuse সীমিত করে।</p>
+
+  <h3>Product query-তে Brand apply</h3>
+  <pre><code>$brandIds = $this-&gt;selectedBrandIds($request);
+
+$products = Product::query()
+    -&gt;whereIn('category_id', $categoryIds)
+    -&gt;where('status', true)
+    -&gt;when(
+        $brandIds !== [],
+        fn ($query) =&gt; $query-&gt;whereIn('brand_id', $brandIds)
+    );</code></pre>
+  <p><code>whereIn()</code> অর্থ selected Brands-এর যেকোনো একটি মিললেই Product আসবে:</p>
+  <pre><code>brand=7,6  →  brand_id IN (7, 6)  →  Dell OR HP</code></pre>
+
+  <h3>Available Brand এবং count query</h3>
+  <pre><code>Brand::query()
+    -&gt;select(['brands.id', 'brands.name'])
+    -&gt;selectRaw('COUNT(DISTINCT products.id) AS product_count')
+    -&gt;join('products', 'products.brand_id', '=', 'brands.id')
+    -&gt;where('brands.status', true)
+    -&gt;where('products.status', true)
+    -&gt;when(
+        $categoryIds !== [],
+        fn ($query) =&gt;
+            $query-&gt;whereIn('products.category_id', $categoryIds)
+    )
+    -&gt;groupBy('brands.id', 'brands.name')
+    -&gt;orderBy('brands.name')
+    -&gt;get();</code></pre>
+  <div class="note"><code>COUNT(DISTINCT products.id)</code> ব্যবহার করায় একই Product একাধিক row-তে join হলেও count দ্বিগুণ হয় না।</div>
+</section>
+
+<section id="attribute">
+  <h2>4. Attribute filter: backend</h2>
+  <h3>Category-এর filterable Attributes নির্ধারণ</h3>
+  <pre><code>private function filterableAttributeIds(int $categoryId): array
+{
+    $visited = [];
+
+    while ($categoryId &amp;&amp; ! in_array($categoryId, $visited, true)) {
+        $visited[] = $categoryId;
+
+        $rows = DB::table('category_attribute')
+            -&gt;where('category_id', $categoryId)
+            -&gt;orderBy('position')
+            -&gt;get(['attribute_id', 'is_filterable']);
+
+        if ($rows-&gt;isNotEmpty()) {
+            return $rows
+                -&gt;where('is_filterable', true)
+                -&gt;pluck('attribute_id')
+                -&gt;map(fn ($id) =&gt; (int) $id)
+                -&gt;values()
+                -&gt;all();
+        }
+
+        $categoryId = (int) Category::whereKey($categoryId)
+            -&gt;value('parent_id');
+    }
+
+    return [];
+}</code></pre>
+  <p>Current category-এর mapping না থাকলে parent mapping inherit হয়। Mapping থাকলে শুধু সেখানকার <code>is_filterable</code> Attributes নেওয়া হয়।</p>
+
+  <h3>Selected value IDs validate এবং attribute অনুযায়ী group</h3>
+  <pre><code>private function selectedAttributeValueGroups(
+    Request $request,
+    array $filterableAttributeIds
+): array {
+    $values = $request-&gt;query('attribute', '');
+    $values = is_array($values)
+        ? $values
+        : explode(',', (string) $values);
+
+    $valueIds = collect($values)
+        -&gt;map(fn ($id) =&gt; filter_var($id, FILTER_VALIDATE_INT))
+        -&gt;filter(fn ($id) =&gt; $id !== false &amp;&amp; $id &gt; 0)
+        -&gt;unique()
+        -&gt;take(100)
+        -&gt;values();
+
+    return ProductAttributeValue::query()
+        -&gt;whereIn('id', $valueIds)
+        -&gt;whereIn('attribute_id', $filterableAttributeIds)
+        -&gt;where('status', true)
+        -&gt;get(['id', 'attribute_id'])
+        -&gt;groupBy('attribute_id')
+        -&gt;map(fn ($values) =&gt;
+            $values-&gt;pluck('id')-&gt;map(fn ($id) =&gt; (int) $id)-&gt;all()
+        )
+        -&gt;all();
+}</code></pre>
+
+  <h3>OR এবং AND rule</h3>
+  <p>ধরুন selected values:</p>
+  <pre><code>Color: [Red, Blue]
+Size:  [XL]</code></pre>
+  <p>Business condition:</p>
+  <pre><code>(Color = Red OR Color = Blue) AND (Size = XL)</code></pre>
+  <p>একই Variant-এর মধ্যে combination নিশ্চিত করার query:</p>
+  <pre><code>$query-&gt;whereHas('variants', function ($variant) use ($groups) {
+    $variant-&gt;where('status', true);
+
+    foreach ($groups as $valueIds) {
+        $variant-&gt;whereHas(
+            'values',
+            fn ($value) =&gt;
+                $value-&gt;whereIn('attribute_values.id', $valueIds)
+        );
+    }
+});</code></pre>
+  <div class="ok">Outer <code>whereHas('variants')</code> একবার হওয়ায় Red variant এবং অন্য XL variant ভুলভাবে এক Product match করায় না। একটি active Variant-এই সব selected attribute groups মিলতে হয়।</div>
+
+  <h3>Available Attribute facets query</h3>
+  <pre><code>DB::table('attributes as attribute')
+    -&gt;join('attribute_values as value',
+        'value.attribute_id', '=', 'attribute.id')
+    -&gt;join('attribute_value_product_variant as pivot',
+        'pivot.attribute_value_id', '=', 'value.id')
+    -&gt;join('product_variants as variant',
+        'variant.id', '=', 'pivot.product_variant_id')
+    -&gt;join('products as product',
+        'product.id', '=', 'variant.product_id')
+    -&gt;whereIn('attribute.id', $attributeIds)
+    -&gt;whereIn('product.category_id', $categoryIds)
+    -&gt;where('attribute.status', true)
+    -&gt;where('value.status', true)
+    -&gt;where('variant.status', true)
+    -&gt;where('product.status', true)
+    -&gt;groupBy(/* attribute and value columns */)
+    -&gt;get([
+        'attribute.id as attribute_id',
+        'attribute.name as attribute_name',
+        'attribute.slug as attribute_slug',
+        'attribute.type as attribute_type',
+        'value.id as value_id',
+        'value.value',
+        'value.color_code',
+        DB::raw('COUNT(DISTINCT product.id) as product_count'),
+    ]);</code></pre>
+</section>
+
+<section id="api">
+  <h2>5. API response contract</h2>
+  <pre><code>{
+  "status": true,
+  "filters": {
+    "brands": [
+      { "id": 7, "name": "Dell", "product_count": 1 }
+    ],
+    "attributes": [
+      {
+        "id": 2,
+        "name": "Color",
+        "slug": "color",
+        "type": "color",
+        "values": [
+          {
+            "id": 11,
+            "value": "Red",
+            "color_code": "#EA0606",
+            "product_count": 3
+          }
+        ]
+      }
+    ]
+  },
+  "products": [],
+  "pagination": {
+    "current_page": 1,
+    "last_page": 1,
+    "total": 0
+  }
+}</code></pre>
+  <p>Brand ও Attribute একই Product builder-এ apply হয়। তাই URL:</p>
+  <pre><code>/api/listing/t-shirt?brand=2&amp;attribute=11,15&amp;page=1</code></pre>
+  <p>অর্থ:</p>
+  <pre><code>Category = T-Shirt
+AND Brand = 2
+AND selected Attribute combination
+AND Product active</code></pre>
+</section>
+
+<section id="nuxt">
+  <h2>6. Nuxt: URL-কে filter state করা</h2>
+  <h3>Selected Brand IDs</h3>
+  <pre><code>const selectedBrandIds = computed(() =&gt; {
+  const value = Array.isArray(route.query.brand)
+    ? route.query.brand.join(',')
+    : route.query.brand?.toString() ?? ''
+
+  return [...new Set(value.split(',')
+    .map(id =&gt; Number.parseInt(id, 10))
+    .filter(id =&gt; Number.isInteger(id) &amp;&amp; id &gt; 0))]
+})
+
+const brandQuery = computed(() =&gt; selectedBrandIds.value.join(','))</code></pre>
+
+  <h3>Selected Attribute value IDs</h3>
+  <pre><code>const selectedAttributeValueIds = computed(() =&gt; {
+  const value = Array.isArray(route.query.attribute)
+    ? route.query.attribute.join(',')
+    : route.query.attribute?.toString() ?? ''
+
+  return [...new Set(value.split(',')
+    .map(id =&gt; Number.parseInt(id, 10))
+    .filter(id =&gt; Number.isInteger(id) &amp;&amp; id &gt; 0))]
+})
+
+const attributeQuery = computed(() =&gt;
+  selectedAttributeValueIds.value.join(',')
+)</code></pre>
+
+  <h3>API request এবং background refresh</h3>
+  <pre><code>const { data, status, error } = await useAsyncData(
+  'shop-products',
+  () =&gt; $fetch(
+    categoryUrl.value
+      ? `/listing/${encodeURIComponent(categoryUrl.value)}`
+      : '/products',
+    {
+      baseURL: config.public.apiBase,
+      query: {
+        page: currentPage.value,
+        ...(brandQuery.value
+          ? { brand: brandQuery.value }
+          : {}),
+        ...(attributeQuery.value
+          ? { attribute: attributeQuery.value }
+          : {})
+      }
+    }
+  ),
+  {
+    watch: [
+      categoryUrl,
+      currentPage,
+      brandQuery,
+      attributeQuery
+    ]
+  }
+)</code></pre>
+  <p>URL query বদলালে computed value বদলায়; <code>watch</code> background API request চালায়। Existing <code>data</code> থাকলে grid blank করা হয় না।</p>
+  <pre><code>&lt;div v-if="status === 'pending' &amp;&amp; !data"&gt;
+  Loading products...
+&lt;/div&gt;</code></pre>
+
+  <h3>Brand toggle</h3>
+  <pre><code>const toggleBrand = async brandId =&gt; {
+  const id = Number(brandId)
+  const next = selectedBrandIds.value.includes(id)
+    ? selectedBrandIds.value.filter(item =&gt; item !== id)
+    : [...selectedBrandIds.value, id]
+
+  await router.replace({
+    path: '/shop',
+    query: {
+      ...(categoryUrl.value
+        ? { category: categoryUrl.value }
+        : {}),
+      ...(next.length
+        ? { brand: next.join(',') }
+        : {}),
+      ...(attributeQuery.value
+        ? { attribute: attributeQuery.value }
+        : {})
+    }
+  })
+}</code></pre>
+
+  <h3>Attribute value toggle</h3>
+  <pre><code>const toggleAttributeValue = async valueId =&gt; {
+  const id = Number(valueId)
+  const next = selectedAttributeValueIds.value.includes(id)
+    ? selectedAttributeValueIds.value.filter(item =&gt; item !== id)
+    : [...selectedAttributeValueIds.value, id]
+
+  await router.replace({
+    path: '/shop',
+    query: {
+      ...(categoryUrl.value
+        ? { category: categoryUrl.value }
+        : {}),
+      ...(brandQuery.value
+        ? { brand: brandQuery.value }
+        : {}),
+      ...(next.length
+        ? { attribute: next.join(',') }
+        : {})
+    }
+  })
+}</code></pre>
+
+  <h3>Desktop Brand markup</h3>
+  <pre><code>&lt;label v-for="brand in brands" :key="brand.id"&gt;
+  &lt;input
+    type="checkbox"
+    :checked="isBrandSelected(brand.id)"
+    @change="toggleBrand(brand.id)"
+  /&gt;
+  {{ brand.name }}
+  &lt;span&gt;{{ brand.product_count }}&lt;/span&gt;
+&lt;/label&gt;</code></pre>
+
+  <h3>Dynamic Attribute markup</h3>
+  <pre><code>&lt;div
+  v-for="attribute in attributeFilters"
+  :key="attribute.id"
+  class="shop-filter-group"
+&gt;
+  &lt;button class="shop-filter-title"&gt;
+    {{ attribute.name }}
+  &lt;/button&gt;
+
+  &lt;div&gt;
+    &lt;label
+      v-for="value in attribute.values"
+      :key="value.id"
+    &gt;
+      &lt;input
+        type="checkbox"
+        :checked="isAttributeValueSelected(value.id)"
+        @change="toggleAttributeValue(value.id)"
+      /&gt;
+      {{ value.value }}
+      &lt;span&gt;{{ value.product_count }}&lt;/span&gt;
+    &lt;/label&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+  <div class="note">Mobile offcanvas-এ একই data/functions ব্যবহার করুন; শুধু Bootstrap collapse IDs আলাদা রাখুন, যাতে duplicate DOM ID না হয়।</div>
+
+  <h3>Pagination-এ filters ধরে রাখা</h3>
+  <pre><code>const pageLink = page =&gt; ({
+  path: '/shop',
+  query: {
+    ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
+    ...(brandQuery.value ? { brand: brandQuery.value } : {}),
+    ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
+    ...(page &gt; 1 ? { page } : {})
+  }
+})</code></pre>
+</section>
+
+<section id="cache">
+  <h2>7. Filter cache এবং invalidation</h2>
+  <p>Brand/Attribute facets category অনুযায়ী ১০ মিনিট cache হয়। Key:</p>
+  <pre><code>api.shop-filter.brands.{category-scope}.v{version}
+api.shop-filter.attributes.{category-scope}.v{version}</code></pre>
+  <p>Relevant data পরিবর্তন হলে Observer চালায়:</p>
+  <pre><code>ShopFilterCache::invalidate();</code></pre>
+  <p>এটি atomicভাবে version বাড়ায়:</p>
+  <pre><code>public static function invalidate(): void
+{
+    self::version();
+    Cache::increment(self::VERSION_KEY);
+}</code></pre>
+  <table><thead><tr><th>পরিবর্তন</th><th>Observer</th><th>Filter cache</th></tr></thead><tbody>
+    <tr><td>Product/Variants save বা delete</td><td>ProductObserver</td><td>Version increment</td></tr>
+    <tr><td>Brand save/delete/status</td><td>BrandObserver</td><td>Version increment</td></tr>
+    <tr><td>Category mapping/change</td><td>CategoryObserver</td><td>Version increment</td></tr>
+    <tr><td>Attribute বা value save/delete</td><td>ProductAttributeObserver</td><td>Version increment</td></tr>
+  </tbody></table>
+  <div class="ok">Admin panel-এর normal Eloquent CRUD ব্যবহার করলে manual <code>cache:clear</code> প্রয়োজন নেই।</div>
+</section>
+
+<section>
+  <h2>8. Security rules</h2>
+  <ul>
+    <li>URL IDs secret নয়; backend-এ integer validation আবশ্যক।</li>
+    <li>Selected value অবশ্যই current category-এর filterable Attribute-এর হতে হবে।</li>
+    <li><code>whereIn()</code>/Query Builder parameter binding ব্যবহার করুন; raw input SQL string-এ বসাবেন না।</li>
+    <li>Request IDs limit করুন: Brand ৫০, Attribute values ১০০।</li>
+    <li>Only active Product, Brand, Variant, Attribute ও value query করুন।</li>
+    <li>Private inventory/admin endpoint-এ authorization আলাদাভাবে লাগবে; public catalog filter public data।</li>
+  </ul>
+  <div class="danger">Slug ব্যবহার করলে URL সুন্দর হয়, কিন্তু ID-এর চেয়ে বেশি secure হয় না। Security backend validation ও authorization থেকে আসে।</div>
+</section>
+
+<section>
+  <h2>9. Performance rules</h2>
+  <ul>
+    <li>Products paginate করুন; সব products এক response-এ পাঠাবেন না।</li>
+    <li>Facet query-তে <code>COUNT(DISTINCT product.id)</code> ব্যবহার করুন।</li>
+    <li>Existing indexes রাখুন: <code>products(category_id)</code>, <code>products(brand_id)</code>, <code>product_variants(product_id,status)</code>, pivot primary key এবং <code>category_attribute(category_id,is_filterable)</code>।</li>
+    <li>Facet result cache করুন; paginated live product results indiscriminately cache করবেন না—price/stock stale হতে পারে ও cache-key explosion হয়।</li>
+    <li>Nuxt filter change-এ old grid retain করুন; full-page loader দেবেন না।</li>
+  </ul>
+</section>
+
+<section id="reuse">
+  <h2>10. অন্য project-এ apply করার order</h2>
+  <ol>
+    <li>Brand/Product/Category tables ও relations তৈরি করুন।</li>
+    <li>Attributes, values, variants এবং pivot tables তৈরি করুন।</li>
+    <li>Category ↔ Attribute mapping এবং <code>is_filterable</code> যোগ করুন।</li>
+    <li>Admin-এ Attribute/values/category mapping UI তৈরি করুন।</li>
+    <li>Product form-এ category-aware Variant rows তৈরি করুন।</li>
+    <li>API-তে category descendant IDs resolve করুন।</li>
+    <li>Brand facet query ও Brand product condition যোগ করুন।</li>
+    <li>Filterable Attribute inheritance resolve করুন।</li>
+    <li>Attribute facet query ও same-variant filtering যোগ করুন।</li>
+    <li>API response contract স্থির করুন।</li>
+    <li>Nuxt URL computed state, toggle, watch ও pagination preservation যোগ করুন।</li>
+    <li>Observers এবং versioned facet cache register করুন।</li>
+    <li>OR/AND/invalid IDs/pagination/mobile/empty-result test করুন।</li>
+  </ol>
+
+  <h3>Minimum test matrix</h3>
+  <table><thead><tr><th>Test</th><th>Expected</th></tr></thead><tbody>
+    <tr><td>একটি Brand</td><td>শুধু সেই Brand-এর products</td></tr>
+    <tr><td>দুটি Brand</td><td>Brand A OR Brand B</td></tr>
+    <tr><td>Red + Blue</td><td>Red OR Blue</td></tr>
+    <tr><td>Red + XL</td><td>একই variant-এ Red AND XL</td></tr>
+    <tr><td>Brand + Attribute</td><td>দুই condition-ই মিলবে</td></tr>
+    <tr><td>Invalid ID</td><td>Ignored; SQL/error নয়</td></tr>
+    <tr><td>Page 2</td><td>সব selected filters URL-এ থাকবে</td></tr>
+    <tr><td>Admin value/product update</td><td>পরবর্তী request-এ fresh facet</td></tr>
+  </tbody></table>
+</section>
+
+<section>
+  <h2>11. বর্তমান project-এর file map</h2>
+  <div class="tree">adminpanel/app/
+├── Http/Controllers/Api/FrontController.php
+│   ├── listing()
+│   ├── selectedBrandIds()
+│   ├── availableBrands()
+│   ├── filterableAttributeIds()
+│   ├── selectedAttributeValueGroups()
+│   └── availableAttributeFilters()
+├── Models/
+│   ├── Product.php
+│   ├── ProductVariant.php
+│   ├── ProductAttributeDefinition.php
+│   ├── ProductAttributeValue.php
+│   └── Category.php
+├── Observers/
+│   ├── ProductObserver.php
+│   ├── BrandObserver.php
+│   ├── CategoryObserver.php
+│   └── ProductAttributeObserver.php
+├── Providers/AppServiceProvider.php
+└── Support/ShopFilterCache.php
+
+frontend/app/pages/shop.vue
+├── URL-derived filter state
+├── useAsyncData API request
+├── Brand toggle/render
+├── Attribute toggle/render
+├── mobile filter render
+├── Clean All
+└── pagination query preservation</div>
+</section>
+
+<section>
+  <h2>12. এখনো implement হয়নি</h2>
+  <p>বর্তমান UI-এর Category/Subcategory, Price এবং Customer Rating sections-এর static markup আলাদা বিষয়। এই document-এর working implementation হলো Brand + dynamic Attributes।</p>
+  <ul>
+    <li><strong>Category filter:</strong> category IDs/slugs, descendant scope এবং counts API থেকে আনতে হবে।</li>
+    <li><strong>Price filter:</strong> base/variant effective price ও discounts বিবেচনা করে min/max condition লাগবে।</li>
+    <li><strong>Rating filter:</strong> reviews table থেকে approved review average/count লাগবে।</li>
+  </ul>
+  <div class="warn">Price filter শুধু <code>products.product_price</code> দিয়ে করলে variant price ও discount থাকা product-এ ভুল result হতে পারে। Pricing rule আগে এক জায়গায় centralize করতে হবে।</div>
+</section>
+
+</main>
+</body>
+</html>
