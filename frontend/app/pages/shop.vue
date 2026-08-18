@@ -44,6 +44,15 @@ const selectedAttributeValueIds = computed(() => {
 
 const attributeQuery = computed(() => selectedAttributeValueIds.value.join(','))
 
+const queryPrice = name => computed(() => {
+    const value = Array.isArray(route.query[name]) ? route.query[name][0] : route.query[name]
+    const number = Number(value)
+    return Number.isFinite(number) && number >= 0 ? number : null
+})
+
+const selectedMinPrice = queryPrice('min_price')
+const selectedMaxPrice = queryPrice('max_price')
+
 const {
     data,
     status,
@@ -62,14 +71,16 @@ const {
                 query: {
                     page: currentPage.value,
                     ...(brandQuery.value ? { brand: brandQuery.value } : {}),
-                    ...(attributeQuery.value ? { attribute: attributeQuery.value } : {})
+                    ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
+                    ...(selectedMinPrice.value !== null ? { min_price: selectedMinPrice.value } : {}),
+                    ...(selectedMaxPrice.value !== null ? { max_price: selectedMaxPrice.value } : {})
                 }
             }
         )
     },
 
     {
-        watch: [categoryUrl, currentPage, brandQuery, attributeQuery]
+        watch: [categoryUrl, currentPage, brandQuery, attributeQuery, selectedMinPrice, selectedMaxPrice]
     }
 )
 
@@ -87,6 +98,70 @@ const breadcrumbs = computed(() =>
 
 const brands = computed(() => data.value?.filters?.brands ?? [])
 const attributeFilters = computed(() => data.value?.filters?.attributes ?? [])
+const availablePrice = computed(() => data.value?.filters?.price ?? { min: 0, max: 0, step: 1 })
+const priceFloor = computed(() => Number(availablePrice.value.min) || 0)
+const priceStep = computed(() => Math.max(1, Number(availablePrice.value.step) || 1))
+const priceCeiling = computed(() => Math.max(
+    priceFloor.value + priceStep.value,
+    Number(availablePrice.value.max) || 0
+))
+const draftMinPrice = ref(0)
+const draftMaxPrice = ref(0)
+let priceFilterTimer
+
+watch(
+    [priceFloor, priceCeiling, selectedMinPrice, selectedMaxPrice],
+    ([floor, ceiling, minimum, maximum]) => {
+        draftMinPrice.value = Math.min(ceiling, Math.max(floor, minimum ?? floor))
+        draftMaxPrice.value = Math.max(draftMinPrice.value + priceStep.value, Math.min(ceiling, maximum ?? ceiling))
+    },
+    { immediate: true }
+)
+
+const priceProgressStyle = computed(() => {
+    const range = Math.max(1, priceCeiling.value - priceFloor.value)
+    return {
+        '--range-left': `${((draftMinPrice.value - priceFloor.value) / range) * 100}%`,
+        '--range-right': `${100 - ((draftMaxPrice.value - priceFloor.value) / range) * 100}%`
+    }
+})
+
+const priceQueryParts = () => ({
+    ...(draftMinPrice.value > priceFloor.value ? { min_price: draftMinPrice.value } : {}),
+    ...(draftMaxPrice.value < priceCeiling.value ? { max_price: draftMaxPrice.value } : {})
+})
+
+const replaceFilterQuery = extra => router.replace({
+    path: '/shop',
+    query: {
+        ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
+        ...(brandQuery.value ? { brand: brandQuery.value } : {}),
+        ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
+        ...priceQueryParts(),
+        ...extra
+    }
+})
+
+const updatePriceFilter = changed => {
+    if (changed === 'min' && draftMaxPrice.value - draftMinPrice.value < priceStep.value) {
+        draftMinPrice.value = draftMaxPrice.value - priceStep.value
+    }
+    if (changed === 'max' && draftMaxPrice.value - draftMinPrice.value < priceStep.value) {
+        draftMaxPrice.value = draftMinPrice.value + priceStep.value
+    }
+
+    clearTimeout(priceFilterTimer)
+    priceFilterTimer = setTimeout(() => replaceFilterQuery({}), 350)
+}
+
+const resetPriceFilter = async () => {
+    clearTimeout(priceFilterTimer)
+    draftMinPrice.value = priceFloor.value
+    draftMaxPrice.value = priceCeiling.value
+    await replaceFilterQuery({ min_price: undefined, max_price: undefined })
+}
+
+onBeforeUnmount(() => clearTimeout(priceFilterTimer))
 
 const isBrandSelected = brandId => selectedBrandIds.value.includes(Number(brandId))
 
@@ -101,7 +176,8 @@ const toggleBrand = async brandId => {
         query: {
             ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
             ...(next.length ? { brand: next.join(',') } : {}),
-            ...(attributeQuery.value ? { attribute: attributeQuery.value } : {})
+            ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
+            ...priceQueryParts()
         }
     })
 }
@@ -119,7 +195,8 @@ const toggleAttributeValue = async valueId => {
         query: {
             ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
             ...(brandQuery.value ? { brand: brandQuery.value } : {}),
-            ...(next.length ? { attribute: next.join(',') } : {})
+            ...(next.length ? { attribute: next.join(',') } : {}),
+            ...priceQueryParts()
         }
     })
 }
@@ -154,6 +231,8 @@ const pageLink = page => ({
         ...(categoryUrl.value ? { category: categoryUrl.value } : {}),
         ...(brandQuery.value ? { brand: brandQuery.value } : {}),
         ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
+        ...(selectedMinPrice.value !== null ? { min_price: selectedMinPrice.value } : {}),
+        ...(selectedMaxPrice.value !== null ? { max_price: selectedMaxPrice.value } : {}),
         ...(page > 1 ? { page } : {})
     }
 })
@@ -268,17 +347,19 @@ const productBadge = product => {
                             Price <i class="bi bi-chevron-down"></i>
                         </button>
                         <div class="collapse show" id="filterPrice">
-                            <div class="dual-price-filter" data-price-filter data-min="0" data-max="100000">
-                                <strong class="price-filter-selection" data-price-output>৳0 – ৳100,000</strong>
+                            <div class="dual-price-filter">
+                                <strong class="price-filter-selection">৳{{ formatPrice(draftMinPrice) }} – ৳{{ formatPrice(draftMaxPrice) }}</strong>
                                 <div class="dual-range">
                                     <div class="dual-range-rail"></div>
-                                    <div class="dual-range-progress" data-price-progress></div>
-                                    <input type="range" min="0" max="100000" step="500" value="0" data-price-min
-                                        aria-label="Minimum price" />
-                                    <input type="range" min="0" max="100000" step="500" value="100000" data-price-max
-                                        aria-label="Maximum price" />
+                                    <div class="dual-range-progress" :style="priceProgressStyle"></div>
+                                    <input v-model.number="draftMinPrice" type="range" :min="priceFloor"
+                                        :max="priceCeiling" :step="priceStep" aria-label="Minimum price"
+                                        @input="updatePriceFilter('min')" />
+                                    <input v-model.number="draftMaxPrice" type="range" :min="priceFloor"
+                                        :max="priceCeiling" :step="priceStep" aria-label="Maximum price"
+                                        @input="updatePriceFilter('max')" />
                                 </div>
-                                <button class="price-filter-reset" type="button" data-price-reset>
+                                <button class="price-filter-reset" type="button" @click="resetPriceFilter">
                                     Reset price range
                                 </button>
                             </div>
@@ -334,8 +415,8 @@ const productBadge = product => {
                                 <h2>
                                     <NuxtLink :to="{ path: '/product', query: { id: product.id } }">{{ product.product_name }}</NuxtLink>
                                 </h2>
-                                <div class="shop-price">৳{{ formatPrice(product.final_price) }}
-                                    <del v-if="Number(product.effective_discount) > 0">৳{{ formatPrice(product.product_price) }}</del>
+                                <div class="shop-price"><small v-if="product.has_variant_pricing">From </small>৳{{ formatPrice(product.listing_final_price ?? product.final_price) }}
+                                    <del v-if="Number(product.effective_discount) > 0">৳{{ formatPrice(product.listing_regular_price ?? product.product_price) }}</del>
                                 </div>
                                 <div class="shop-rating">★★★★★ <span>{{ product.brand?.name ?? '' }}</span></div>
                             </div>
@@ -422,17 +503,19 @@ const productBadge = product => {
                     Price <i class="bi bi-chevron-down"></i>
                 </button>
                 <div class="collapse show" id="mobileFilterPanel2">
-                    <div class="dual-price-filter" data-price-filter data-min="0" data-max="100000">
-                        <strong class="price-filter-selection" data-price-output>৳0 – ৳100,000</strong>
+                    <div class="dual-price-filter">
+                        <strong class="price-filter-selection">৳{{ formatPrice(draftMinPrice) }} – ৳{{ formatPrice(draftMaxPrice) }}</strong>
                         <div class="dual-range">
                             <div class="dual-range-rail"></div>
-                            <div class="dual-range-progress" data-price-progress></div>
-                            <input type="range" min="0" max="100000" step="500" value="0" data-price-min
-                                aria-label="Minimum price" />
-                            <input type="range" min="0" max="100000" step="500" value="100000" data-price-max
-                                aria-label="Maximum price" />
+                            <div class="dual-range-progress" :style="priceProgressStyle"></div>
+                            <input v-model.number="draftMinPrice" type="range" :min="priceFloor"
+                                :max="priceCeiling" :step="priceStep" aria-label="Minimum price"
+                                @input="updatePriceFilter('min')" />
+                            <input v-model.number="draftMaxPrice" type="range" :min="priceFloor"
+                                :max="priceCeiling" :step="priceStep" aria-label="Maximum price"
+                                @input="updatePriceFilter('max')" />
                         </div>
-                        <button class="price-filter-reset" type="button" data-price-reset>Reset price range</button>
+                        <button class="price-filter-reset" type="button" @click="resetPriceFilter">Reset price range</button>
                     </div>
                 </div>
             </div>
