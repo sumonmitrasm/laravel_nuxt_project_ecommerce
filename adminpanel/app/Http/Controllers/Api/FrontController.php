@@ -43,7 +43,7 @@ class FrontController extends Controller
         }
 
         $brandIds = $this->selectedBrandIds($request);
-        $filterableAttributeIds = $this->filterableAttributeIds((int) $categoryDetails['categoryDetails']['id']);
+        $filterableAttributeIds = $this->filterableAttributeIds($categoryDetails['catIds']);
         $attributeValueGroups = $this->selectedAttributeValueGroups($request, $filterableAttributeIds);
         $priceRange = $this->selectedPriceRange($request);
         $sort = $this->selectedSort($request);
@@ -51,18 +51,19 @@ class FrontController extends Controller
         $products = Product::with([
                 'brand:id,name',
                 'category:id,category_name,category_discount',
-                'variants' => fn ($query) => $query->where('status', true)->select('id', 'product_id', 'price'),
+                'variants' => fn ($query) => $query->where('status', true)->select('id', 'product_id', 'price', 'stock'),
             ])
             ->whereIn('category_id', $categoryDetails['catIds'])
             ->where('status', true)
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
             ->when($attributeValueGroups !== [], function ($query) use ($attributeValueGroups) {
-                $query->whereHas('variants', function ($variant) use ($attributeValueGroups) {
-                    $variant->where('status', true);
-                    foreach ($attributeValueGroups as $valueIds) {
-                        $variant->whereHas('values', fn ($value) => $value->whereIn('attribute_values.id', $valueIds));
-                    }
-                });
+                foreach ($attributeValueGroups as $valueIds) {
+                    $query->where(function ($attributeQuery) use ($valueIds) {
+                        $attributeQuery->whereHas('attributeValues', fn ($value) => $value->whereIn('attribute_values.id', $valueIds))
+                            ->orWhereHas('variants', fn ($variant) => $variant->where('status', true)
+                                ->whereHas('values', fn ($value) => $value->whereIn('attribute_values.id', $valueIds)));
+                    });
+                }
             })
             ->when($priceRange !== [], fn ($query) => $this->applyPriceFilter($query, $priceRange))
             ->tap(fn ($query) => $this->applySorting($query, $sort))
@@ -93,7 +94,7 @@ class FrontController extends Controller
         $products = Product::with([
                 'brand:id,name',
                 'category:id,category_name,category_discount',
-                'variants' => fn ($query) => $query->where('status', true)->select('id', 'product_id', 'price'),
+                'variants' => fn ($query) => $query->where('status', true)->select('id', 'product_id', 'price', 'stock'),
             ])
             ->where('status', true)
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
@@ -262,25 +263,31 @@ class FrontController extends Controller
             ->all();
     }
 
-    private function filterableAttributeIds(int $categoryId): array
+    private function filterableAttributeIds(array $categoryIds): array
     {
-        $visited = [];
-        while ($categoryId && ! in_array($categoryId, $visited, true)) {
-            $visited[] = $categoryId;
-            $rows = DB::table('category_attribute')
-                ->where('category_id', $categoryId)
-                ->orderBy('position')
-                ->get(['attribute_id', 'is_filterable']);
+        $attributeIds = collect();
 
-            if ($rows->isNotEmpty()) {
-                return $rows->where('is_filterable', true)
-                    ->pluck('attribute_id')->map(fn ($id) => (int) $id)->values()->all();
+        foreach (array_unique(array_map('intval', $categoryIds)) as $categoryId) {
+            $visited = [];
+            while ($categoryId && ! in_array($categoryId, $visited, true)) {
+                $visited[] = $categoryId;
+                $rows = DB::table('category_attribute')
+                    ->where('category_id', $categoryId)
+                    ->orderBy('position')
+                    ->get(['attribute_id', 'is_filterable']);
+
+                if ($rows->isNotEmpty()) {
+                    $attributeIds = $attributeIds->merge(
+                        $rows->where('is_filterable', true)->pluck('attribute_id')
+                    );
+                    break;
+                }
+
+                $categoryId = (int) Category::whereKey($categoryId)->value('parent_id');
             }
-
-            $categoryId = (int) Category::whereKey($categoryId)->value('parent_id');
         }
 
-        return [];
+        return $attributeIds->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     private function availableAttributeFilters(array $categoryIds, array $attributeIds): array
@@ -295,26 +302,38 @@ class FrontController extends Controller
         $version = ShopFilterCache::version();
 
         return Cache::remember("api.shop-filter.attributes.{$scope}.v{$version}", now()->addMinutes(10), function () use ($categoryIds, $attributeIds) {
-            $rows = DB::table('attributes as attribute')
+            $columns = [
+                'attribute.id as attribute_id', 'attribute.name as attribute_name',
+                'attribute.slug as attribute_slug', 'attribute.type as attribute_type',
+                'attribute.position as attribute_position', 'value.id as value_id',
+                'value.value', 'value.color_code', 'value.position as value_position',
+                'product.id as product_id',
+            ];
+
+            $variantRows = DB::table('attributes as attribute')
                 ->join('attribute_values as value', 'value.attribute_id', '=', 'attribute.id')
                 ->join('attribute_value_product_variant as pivot', 'pivot.attribute_value_id', '=', 'value.id')
                 ->join('product_variants as variant', 'variant.id', '=', 'pivot.product_variant_id')
                 ->join('products as product', 'product.id', '=', 'variant.product_id')
-                ->whereIn('attribute.id', $attributeIds)
-                ->whereIn('product.category_id', $categoryIds)
-                ->where('attribute.status', true)
-                ->where('value.status', true)
-                ->where('variant.status', true)
-                ->where('product.status', true)
-                ->groupBy('attribute.id', 'attribute.name', 'attribute.slug', 'attribute.type', 'attribute.position', 'value.id', 'value.value', 'value.color_code', 'value.position')
-                ->orderBy('attribute.position')->orderBy('attribute.name')
-                ->orderBy('value.position')->orderBy('value.value')
-                ->get([
-                    'attribute.id as attribute_id', 'attribute.name as attribute_name',
-                    'attribute.slug as attribute_slug', 'attribute.type as attribute_type',
-                    'value.id as value_id', 'value.value', 'value.color_code',
-                    DB::raw('COUNT(DISTINCT product.id) as product_count'),
-                ]);
+                ->whereIn('attribute.id', $attributeIds)->whereIn('product.category_id', $categoryIds)
+                ->where('attribute.status', true)->where('value.status', true)
+                ->where('variant.status', true)->where('product.status', true)->get($columns);
+
+            $specificationRows = DB::table('attributes as attribute')
+                ->join('attribute_values as value', 'value.attribute_id', '=', 'attribute.id')
+                ->join('attribute_value_product as pivot', 'pivot.attribute_value_id', '=', 'value.id')
+                ->join('products as product', 'product.id', '=', 'pivot.product_id')
+                ->whereIn('attribute.id', $attributeIds)->whereIn('product.category_id', $categoryIds)
+                ->where('attribute.status', true)->where('value.status', true)
+                ->where('product.status', true)->get($columns);
+
+            $rows = $variantRows->concat($specificationRows)
+                ->groupBy(fn ($row) => $row->attribute_id.'-'.$row->value_id)
+                ->map(function ($matches) {
+                    $row = $matches->first();
+                    $row->product_count = $matches->pluck('product_id')->unique()->count();
+                    return $row;
+                })->sortBy(fn ($row) => sprintf('%010d-%s-%010d-%s', $row->attribute_position, $row->attribute_name, $row->value_position, $row->value));
 
             return $rows->groupBy('attribute_id')->map(fn ($values) => [
                 'id' => (int) $values->first()->attribute_id,
@@ -389,6 +408,10 @@ class FrontController extends Controller
                 'section:id,name',
                 'category:id,category_name,url,category_discount',
                 'brand:id,name',
+                'attributeValues:id,attribute_id,value,color_code',
+                'attributeValues.attribute:id,name,slug,type',
+                'images' => fn ($query) => $query->where('status', true)
+                    ->select('id', 'product_id', 'image'),
                 'variants' => fn ($query) => $query->where('status', true)
                     ->select('id', 'product_id', 'sku', 'price', 'stock', 'status'),
                 'variants.values:id,attribute_id,value,color_code',
@@ -406,6 +429,19 @@ class FrontController extends Controller
         }
 
         $productData = $product->toArray();
+        $productData['specifications'] = $product->attributeValues
+            ->groupBy('attribute_id')
+            ->map(fn ($values) => [
+                'id' => (int) $values->first()->attribute_id,
+                'name' => $values->first()->attribute->name,
+                'slug' => $values->first()->attribute->slug,
+                'values' => $values->pluck('value')->values()->all(),
+            ])->values();
+        unset($productData['attribute_values']);
+        $productData['images'] = $product->images->map(fn ($image) => [
+            'id' => $image->id,
+            'url' => asset('admin/productgallery/'.basename($image->image)),
+        ])->values();
         $productData['variants'] = $product->variants->map(function ($variant) use ($product) {
             $regularPrice = $product->regularPriceForVariant($variant);
 

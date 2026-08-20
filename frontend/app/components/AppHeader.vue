@@ -1,3 +1,8 @@
+<script setup>
+const { cartCount, fetchCart } = useCart()
+onMounted(() => fetchCart().catch(error => console.error('Cart load error:', error)))
+</script>
+
 <template>
     <header>
         <div class="shop-topbar">
@@ -42,7 +47,7 @@
                         ><i class="bi bi-search"></i></NuxtLink
                     ><NuxtLink class="nav-icon d-none d-sm-grid" to="/wishlist"><i class="bi bi-heart"></i></NuxtLink
                     ><NuxtLink class="nav-icon" to="/cart"
-                        ><i class="bi bi-cart3"></i><span class="badge bg-danger rounded-pill">3</span></NuxtLink
+                        ><i class="bi bi-cart3"></i><span v-if="cartCount > 0" class="badge bg-danger rounded-pill">{{ cartCount }}</span></NuxtLink
                     >
                 </div>
             </div>

@@ -353,6 +353,12 @@
                             </div>
                         </div>
                     </div>
+                    <div class="product-form-section mb-0">
+                        <h6 class="product-section-title"><i class="fe fe-list"></i> Product Specifications</h6>
+                        <p class="text-muted mb-3">Descriptive values used in filters and product details. These do not create SKU or stock combinations.</p>
+                        <div id="product-specification-fields" class="row g-3"></div>
+                    </div>
+                    <br>
                     <!------- Product Attributes start-------->
                     <div class="product-form-section mb-0">
                         <h6 class="product-section-title">
@@ -616,9 +622,40 @@
         const category = document.querySelector('[data-crud-form] [name="category_id"]');
         const mapping = categoryAttributeMap[String(category ? category.value : '')] || {};
         return variantAttributeGroups
-            .filter(attribute => Object.prototype.hasOwnProperty.call(mapping, String(attribute.id)))
+            .filter(attribute => Object.prototype.hasOwnProperty.call(mapping, String(attribute.id)) && mapping[attribute.id]?.is_variant)
             .sort((left, right) => (mapping[left.id]?.position || 0) - (mapping[right.id]?.position || 0));
     }
+
+    function applicableSpecificationAttributeGroups() {
+        const category = document.querySelector('[data-crud-form] [name="category_id"]');
+        const mapping = categoryAttributeMap[String(category ? category.value : '')] || {};
+        return variantAttributeGroups
+            .filter(attribute => Object.prototype.hasOwnProperty.call(mapping, String(attribute.id)) && !mapping[attribute.id]?.is_variant)
+            .sort((left, right) => (mapping[left.id]?.position || 0) - (mapping[right.id]?.position || 0));
+    }
+
+    function renderProductSpecifications(selected) {
+        const container = document.getElementById('product-specification-fields');
+        if (!container) return;
+        const mapping = categoryAttributeMap[String(document.querySelector('[data-crud-form] [name="category_id"]')?.value || '')] || {};
+        container.innerHTML = applicableSpecificationAttributeGroups().map(function (attribute) {
+            const selectedIds = (selected && selected[attribute.id] ? selected[attribute.id] : []).map(String);
+            const options = (attribute.values || []).map(function (value) {
+                const isSelected = selectedIds.includes(String(value.id)) ? ' selected' : '';
+                return `<option value="${value.id}"${isSelected}>${escapeHtml(value.value)}</option>`;
+            }).join('');
+            return `<div class="col-md-4">
+                <label class="form-label">${escapeHtml(attribute.name)}${mapping[attribute.id]?.is_required ? ' *' : ''}</label>
+                <select name="product_attributes[${attribute.id}][]" class="form-select" multiple size="${Math.min(5, Math.max(2, (attribute.values || []).length))}"${mapping[attribute.id]?.is_required ? ' required' : ''}>${options}</select>
+                <small class="text-muted">Use Ctrl/Cmd to select more than one value.</small>
+            </div>`;
+        }).join('') || '<div class="col-12 text-muted small">No specifications configured for this category.</div>';
+    }
+
+    window.productSpecifications = {
+        clear: function () { renderProductSpecifications({}); },
+        renderExisting: function (selected) { renderProductSpecifications(selected || {}); }
+    };
 
     function addVariantRow(variant) {
         const container = document.getElementById('product-variant-rows');
@@ -696,6 +733,7 @@
     document.addEventListener('change', function (event) {
         if (event.target && event.target.matches('[data-crud-form] [name="category_id"]') && event.isTrusted) {
             window.productVariants.clear();
+            window.productSpecifications.clear();
         }
     }, { signal: productPageEventSignal });
 
@@ -703,6 +741,7 @@
         if (event.target.closest('[data-crud-create]')) {
             window.productGallery.clear();
             window.productVariants.clear();
+            window.productSpecifications.clear();
         }
     }, { signal: productPageEventSignal });
 })();

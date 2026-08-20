@@ -1,6 +1,8 @@
 <script setup>
 const { data } = await useCatalogMenu()
 const sections = computed(() => data.value?.categories ?? [])
+const { cartCount, fetchCart } = useCart()
+onMounted(() => fetchCart().catch(error => console.error('Cart load error:', error)))
 </script>
 
 <template>
@@ -27,8 +29,8 @@ const sections = computed(() => data.value?.categories ?? [])
             <div class="d-flex gap-2"><NuxtLink class="nav-icon d-none d-sm-grid" to="/login"><i
                         class="bi bi-person"></i></NuxtLink><NuxtLink class="nav-icon d-none d-sm-grid" to="/wishlist"><i
                         class="bi bi-heart"></i><span class="badge bg-danger rounded-pill">2</span></NuxtLink><NuxtLink
-                    class="nav-icon" to="/cart"><i class="bi bi-cart3 fs-5"></i><span
-                        class="badge bg-danger rounded-pill">3</span></NuxtLink></div>
+                    class="nav-icon" to="/cart"><i class="bi bi-cart3 fs-5"></i><span v-if="cartCount > 0"
+                        class="badge bg-danger rounded-pill">{{ cartCount }}</span></NuxtLink></div>
         </div>
     </nav>
     <div class="category-bar bg-white">
