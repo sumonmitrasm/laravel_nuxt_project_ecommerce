@@ -50,7 +50,7 @@ class CartController extends Controller
         $validated = $request->validate([
             'product_id' => ['required','integer','exists:products,id',],
             'product_variant_id' => ['nullable','integer','exists:product_variants,id',],
-            'quantity' => ['required','integer','min:1','max:99',],
+            'quantity' => ['required', 'integer', 'min:1', 'max:3'],
         ]);
         $guestToken = $this->validGuestToken($request);
         $product = Product::query()
@@ -98,6 +98,12 @@ class CartController extends Controller
 
             $newQuantity = ($cartItem?->quantity ?? 0)
                 + $validated['quantity'];
+
+            if ($newQuantity > 3) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'A maximum of 3 units of the same item can be added.',
+                ]);
+            }
 
             if ($variant && $newQuantity > $variant->stock) {
                 throw ValidationException::withMessages([

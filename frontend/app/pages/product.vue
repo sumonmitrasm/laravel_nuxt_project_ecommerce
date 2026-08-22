@@ -16,6 +16,13 @@ type ProductVariant = {
     values: AttributeValue[]
 }
 
+type ProductDetailResponse = {
+    status: boolean
+    product: Record<string, any> & {
+        variants?: ProductVariant[]
+    }
+}
+
 const route = useRoute()
 const config = useRuntimeConfig()
 const { addToCart } = useCart()
@@ -24,6 +31,7 @@ const interactionCleanups: Array<() => void> = []
 const selectedValues = reactive<Record<number, number>>({})
 const quantity = ref(1)
 const activeImage = ref('')
+const thumbnailStart = ref(0)
 const cartMessage = ref('')
 const cartError = ref('')
 const addingToCart = ref(false)
@@ -34,11 +42,11 @@ const productId = computed(() => {
     return Number.isInteger(id) && id > 0 ? id : null
 })
 
-const { data, status, error } = await useAsyncData(
+const { data, status, error } = await useAsyncData<ProductDetailResponse>(
     () => `product-detail-${productId.value ?? 'invalid'}`,
     () => {
         if (!productId.value) throw createError({ statusCode: 404, statusMessage: 'Product not found.' })
-        return $fetch(`/detail/${productId.value}`, { baseURL: config.public.apiBase })
+        return $fetch<ProductDetailResponse>(`/detail/${productId.value}`, { baseURL: config.public.apiBase })
     },
     { watch: [productId] }
 )
@@ -84,7 +92,7 @@ const selectOption = (attributeId: number, valueId: number) => {
     cartMessage.value = ''
 }
 
-const maximumQuantity = computed(() => selectedVariant.value?.stock ?? 99)
+const maximumQuantity = computed(() => Math.min(selectedVariant.value?.stock ?? 3, 3))
 const productAvailable = computed(() => !hasVariants.value || variants.value.some(variant => variant.stock > 0))
 const displayRegularPrice = computed(() => selectedVariant.value?.regular_price ?? product.value?.product_price ?? 0)
 const displayFinalPrice = computed(() => selectedVariant.value?.final_price ?? product.value?.final_price ?? 0)
@@ -102,12 +110,39 @@ const galleryImages = computed(() => {
     return [...new Set<string>(images.filter(Boolean))]
 })
 
+const visibleThumbnailCount = 5
+const visibleGalleryImages = computed(() =>
+    galleryImages.value.slice(thumbnailStart.value, thumbnailStart.value + visibleThumbnailCount)
+)
+const canShowPreviousThumbnails = computed(() => thumbnailStart.value > 0)
+const canShowNextThumbnails = computed(() => thumbnailStart.value + visibleThumbnailCount < galleryImages.value.length)
+
+const moveThumbnails = (direction: number) => {
+    const lastStart = Math.max(0, galleryImages.value.length - visibleThumbnailCount)
+    thumbnailStart.value = Math.min(lastStart, Math.max(0, thumbnailStart.value + direction))
+}
+
+const selectGalleryImage = (image: string) => {
+    activeImage.value = image
+    const index = galleryImages.value.indexOf(image)
+    if (index < thumbnailStart.value) thumbnailStart.value = index
+    if (index >= thumbnailStart.value + visibleThumbnailCount) thumbnailStart.value = index - visibleThumbnailCount + 1
+}
+
 watch(galleryImages, images => {
-    if (!images.includes(activeImage.value)) activeImage.value = images[0] ?? ''
+    if (!images.includes(activeImage.value)) {
+        activeImage.value = images[0] ?? ''
+        thumbnailStart.value = 0
+    }
 }, { immediate: true })
 
 const changeQuantity = (amount: number) => {
     quantity.value = Math.min(maximumQuantity.value, Math.max(1, quantity.value + amount))
+}
+
+const normalizeQuantity = () => {
+    const value = Number.isFinite(quantity.value) ? Math.trunc(quantity.value) : 1
+    quantity.value = Math.min(maximumQuantity.value, Math.max(1, value))
 }
 
 const validateSelection = () => {
@@ -187,7 +222,11 @@ onMounted(() => {
                     <div class="col-lg-6">
                         <div class="product-gallery">
                             <div class="product-thumbs" role="tablist">
-                                <button v-for="image in galleryImages" :key="image" type="button" :class="{ active: activeImage === image }" @click="activeImage = image"><img :src="image" :alt="product.product_name"></button>
+                                <button v-if="galleryImages.length > visibleThumbnailCount" class="product-thumb-nav previous" type="button" :disabled="!canShowPreviousThumbnails" aria-label="Show previous product images" @click="moveThumbnails(-1)"><i class="bi bi-chevron-up"></i></button>
+                                <div class="product-thumb-list">
+                                    <button v-for="image in visibleGalleryImages" :key="image" type="button" :class="{ active: activeImage === image }" @click="selectGalleryImage(image)"><img :src="image" :alt="product.product_name"></button>
+                                </div>
+                                <button v-if="galleryImages.length > visibleThumbnailCount" class="product-thumb-nav next" type="button" :disabled="!canShowNextThumbnails" aria-label="Show next product images" @click="moveThumbnails(1)"><i class="bi bi-chevron-down"></i></button>
                             </div>
                             <div class="product-main-image" data-zoom-container>
                                 <img :src="activeImage" :alt="product.product_name" data-product-main>
@@ -219,7 +258,7 @@ onMounted(() => {
                             <p v-if="cartError" class="product-cart-feedback error">{{ cartError }}</p>
                             <p v-if="cartMessage" class="product-cart-feedback success">{{ cartMessage }}</p>
                             <div class="product-purchase-row">
-                                <div class="product-qty qty"><button type="button" @click="changeQuantity(-1)">−</button><input v-model.number="quantity" type="number" min="1" :max="maximumQuantity" aria-label="Quantity"><button type="button" @click="changeQuantity(1)">+</button></div>
+                                <div class="product-qty qty"><button type="button" :disabled="quantity <= 1" @click="changeQuantity(-1)">−</button><input v-model.number="quantity" type="number" min="1" :max="maximumQuantity" aria-label="Quantity" @change="normalizeQuantity" @blur="normalizeQuantity"><button type="button" :disabled="quantity >= maximumQuantity" @click="changeQuantity(1)">+</button></div>
                                 <button class="product-add-cart" type="button" :disabled="addingToCart || !productAvailable" @click="submitCart(false)"><i class="bi bi-cart3"></i> Add to cart</button>
                                 <button class="product-action" type="button" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button>
                             </div>
