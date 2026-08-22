@@ -73,7 +73,7 @@ class Category extends Model
             'category_attribute',
             'category_id',
             'attribute_id'
-        )->withPivot(['is_filterable', 'is_required', 'position'])->orderByPivot('position');
+        )->withPivot(['is_variant', 'is_filterable', 'is_required', 'position'])->orderByPivot('position');
     }
 
     public static function categories(): array

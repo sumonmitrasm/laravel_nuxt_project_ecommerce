@@ -15,6 +15,6 @@ class ProductAttributeDefinition extends Model
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class, 'category_attribute', 'attribute_id', 'category_id')
-            ->withPivot(['is_filterable', 'is_required', 'position']);
+            ->withPivot(['is_variant', 'is_filterable', 'is_required', 'position']);
     }
 }

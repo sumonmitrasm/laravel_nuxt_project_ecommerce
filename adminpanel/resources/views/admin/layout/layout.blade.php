@@ -537,10 +537,14 @@
                     if (window.productVariants) {
                         window.productVariants.renderExisting(response.product_variants || []);
                     }
-                    $form.find('[data-category-attribute-enabled], [data-category-attribute-filterable], [data-category-attribute-required]').prop('checked', false);
+                    if (window.productSpecifications) {
+                        window.productSpecifications.renderExisting(response.product_attributes || {});
+                    }
+                    $form.find('[data-category-attribute-enabled], [data-category-attribute-variant], [data-category-attribute-filterable], [data-category-attribute-required]').prop('checked', false);
                     $.each(response.category_attributes || [], function (_, attribute) {
                         var $row = $form.find('[data-category-attribute-row="' + attribute.id + '"]');
                         $row.find('[data-category-attribute-enabled]').prop('checked', true);
+                        $row.find('[data-category-attribute-variant]').prop('checked', !!attribute.is_variant);
                         $row.find('[data-category-attribute-filterable]').prop('checked', !!attribute.is_filterable);
                         $row.find('[data-category-attribute-required]').prop('checked', !!attribute.is_required);
                         $row.find('[data-category-attribute-position]').val(attribute.position);
@@ -558,7 +562,7 @@
             $(document).on('change', '[data-category-attribute-enabled]', function () {
                 var $row = $(this).closest('[data-category-attribute-row]');
                 var enabled = this.checked;
-                var $dependent = $row.find('[data-category-attribute-filterable], [data-category-attribute-required]');
+                var $dependent = $row.find('[data-category-attribute-variant], [data-category-attribute-filterable], [data-category-attribute-required]');
                 if (!enabled) $dependent.prop('checked', false);
                 $dependent.prop('disabled', !enabled);
                 $row.find('[data-category-attribute-position]').prop('disabled', !enabled);

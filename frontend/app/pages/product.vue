@@ -1,20 +1,194 @@
 <script setup lang="ts">
+type AttributeValue = {
+    id: number
+    attribute_id: number
+    value: string
+    color_code: string | null
+    attribute: { id: number; name: string; slug: string; type: string }
+}
+
+type ProductVariant = {
+    id: number
+    sku: string
+    stock: number
+    regular_price: string
+    final_price: string
+    values: AttributeValue[]
+}
+
+type ProductDetailResponse = {
+    status: boolean
+    product: Record<string, any> & {
+        variants?: ProductVariant[]
+    }
+}
+
+const route = useRoute()
+const config = useRuntimeConfig()
+const { addToCart } = useCart()
 const productPage = ref<HTMLElement | null>(null)
 const interactionCleanups: Array<() => void> = []
+const selectedValues = reactive<Record<number, number>>({})
+const quantity = ref(1)
+const activeImage = ref('')
+const thumbnailStart = ref(0)
+const cartMessage = ref('')
+const cartError = ref('')
+const addingToCart = ref(false)
 
-onBeforeUnmount(() => {
-    interactionCleanups.splice(0).forEach(cleanup => cleanup())
+const productId = computed(() => {
+    const value = Array.isArray(route.query.id) ? route.query.id[0] : route.query.id
+    const id = Number.parseInt(value?.toString() ?? '', 10)
+    return Number.isInteger(id) && id > 0 ? id : null
 })
+
+const { data, status, error } = await useAsyncData<ProductDetailResponse>(
+    () => `product-detail-${productId.value ?? 'invalid'}`,
+    () => {
+        if (!productId.value) throw createError({ statusCode: 404, statusMessage: 'Product not found.' })
+        return $fetch<ProductDetailResponse>(`/detail/${productId.value}`, { baseURL: config.public.apiBase })
+    },
+    { watch: [productId] }
+)
+
+const product = computed<any>(() => data.value?.product ?? null)
+const variants = computed<ProductVariant[]>(() => product.value?.variants ?? [])
+const hasVariants = computed(() => variants.value.length > 0)
+
+const attributeGroups = computed(() => {
+    const groups = new Map<number, { id: number; name: string; slug: string; type: string; values: AttributeValue[] }>()
+
+    variants.value.forEach(variant => variant.values.forEach(value => {
+        if (!groups.has(value.attribute_id)) groups.set(value.attribute_id, { ...value.attribute, values: [] })
+        const group = groups.get(value.attribute_id)!
+        if (!group.values.some(option => option.id === value.id)) group.values.push(value)
+    }))
+
+    return [...groups.values()]
+})
+
+const selectedVariant = computed(() => {
+    if (!hasVariants.value || attributeGroups.value.some(group => !selectedValues[group.id])) return null
+    return variants.value.find(variant => attributeGroups.value.every(group =>
+        variant.values.some(value => value.attribute_id === group.id && value.id === selectedValues[group.id])
+    )) ?? null
+})
+
+const optionAvailable = (attributeId: number, valueId: number) => variants.value.some(variant => {
+    if (variant.stock < 1) return false
+    const includesCandidate = variant.values.some(value => value.attribute_id === attributeId && value.id === valueId)
+    const matchesOtherSelections = Object.entries(selectedValues).every(([selectedAttributeId, selectedValueId]) =>
+        Number(selectedAttributeId) === attributeId ||
+        variant.values.some(value => value.attribute_id === Number(selectedAttributeId) && value.id === selectedValueId)
+    )
+    return includesCandidate && matchesOtherSelections
+})
+
+const selectOption = (attributeId: number, valueId: number) => {
+    if (!optionAvailable(attributeId, valueId)) return
+    selectedValues[attributeId] = valueId
+    quantity.value = 1
+    cartError.value = ''
+    cartMessage.value = ''
+}
+
+const maximumQuantity = computed(() => Math.min(selectedVariant.value?.stock ?? 3, 3))
+const productAvailable = computed(() => !hasVariants.value || variants.value.some(variant => variant.stock > 0))
+const displayRegularPrice = computed(() => selectedVariant.value?.regular_price ?? product.value?.product_price ?? 0)
+const displayFinalPrice = computed(() => selectedVariant.value?.final_price ?? product.value?.final_price ?? 0)
+const displaySku = computed(() => selectedVariant.value?.sku ?? product.value?.product_code ?? '')
+
+const formatPrice = (value: unknown) => new Intl.NumberFormat('en-BD', { maximumFractionDigits: 2 }).format(Number(value) || 0)
+const discountText = computed(() => {
+    const discount = Number(product.value?.effective_discount) || 0
+    return discount > 0 ? `Save ${formatPrice(discount)}%` : ''
+})
+
+const galleryImages = computed(() => {
+    if (!product.value) return []
+    const images = [product.value.image_url, ...(product.value.images ?? []).map((image: any) => image.url)]
+    return [...new Set<string>(images.filter(Boolean))]
+})
+
+const visibleThumbnailCount = 5
+const visibleGalleryImages = computed(() =>
+    galleryImages.value.slice(thumbnailStart.value, thumbnailStart.value + visibleThumbnailCount)
+)
+const canShowPreviousThumbnails = computed(() => thumbnailStart.value > 0)
+const canShowNextThumbnails = computed(() => thumbnailStart.value + visibleThumbnailCount < galleryImages.value.length)
+
+const moveThumbnails = (direction: number) => {
+    const lastStart = Math.max(0, galleryImages.value.length - visibleThumbnailCount)
+    thumbnailStart.value = Math.min(lastStart, Math.max(0, thumbnailStart.value + direction))
+}
+
+const selectGalleryImage = (image: string) => {
+    activeImage.value = image
+    const index = galleryImages.value.indexOf(image)
+    if (index < thumbnailStart.value) thumbnailStart.value = index
+    if (index >= thumbnailStart.value + visibleThumbnailCount) thumbnailStart.value = index - visibleThumbnailCount + 1
+}
+
+watch(galleryImages, images => {
+    if (!images.includes(activeImage.value)) {
+        activeImage.value = images[0] ?? ''
+        thumbnailStart.value = 0
+    }
+}, { immediate: true })
+
+const changeQuantity = (amount: number) => {
+    quantity.value = Math.min(maximumQuantity.value, Math.max(1, quantity.value + amount))
+}
+
+const normalizeQuantity = () => {
+    const value = Number.isFinite(quantity.value) ? Math.trunc(quantity.value) : 1
+    quantity.value = Math.min(maximumQuantity.value, Math.max(1, value))
+}
+
+const validateSelection = () => {
+    if (!hasVariants.value) return true
+    const missing = attributeGroups.value.find(group => !selectedValues[group.id])
+    if (missing) {
+        cartError.value = `Please select ${missing.name}.`
+        return false
+    }
+    if (!selectedVariant.value || selectedVariant.value.stock < 1) {
+        cartError.value = 'This option combination is out of stock.'
+        return false
+    }
+    return true
+}
+
+const submitCart = async (buyNow = false) => {
+    cartMessage.value = ''
+    cartError.value = ''
+    if (!product.value || !validateSelection()) return
+
+    try {
+        addingToCart.value = true
+        const response = await addToCart({
+            product_id: product.value.id,
+            product_variant_id: selectedVariant.value?.id ?? null,
+            quantity: quantity.value
+        })
+        cartMessage.value = response.message
+        if (buyNow) await navigateTo('/checkout')
+    } catch (requestError: any) {
+        const errors = requestError?.data?.errors
+        cartError.value = errors ? Object.values(errors).flat().join(' ') : requestError?.data?.message ?? 'Product could not be added.'
+    } finally {
+        addingToCart.value = false
+    }
+}
+
+onBeforeUnmount(() => interactionCleanups.splice(0).forEach(cleanup => cleanup()))
 
 onMounted(() => {
     const page = productPage.value
     if (!page) return
-
     const mainImage = page.querySelector<HTMLImageElement>('[data-product-main]')
     const zoomContainer = page.querySelector<HTMLElement>('[data-zoom-container]')
     const modal = document.querySelector<HTMLElement>('[data-zoom-modal]')
-    const modalImage = modal?.querySelector<HTMLImageElement>('[data-zoom-image]')
-    interactionCleanups.splice(0).forEach(cleanup => cleanup())
 
     const listen = (element: EventTarget | null | undefined, event: string, handler: EventListener) => {
         if (!element) return
@@ -22,180 +196,90 @@ onMounted(() => {
         interactionCleanups.push(() => element.removeEventListener(event, handler))
     }
 
-    page.querySelectorAll<HTMLElement>('[data-product-image]').forEach((button) => {
-        listen(button, 'click', () => {
-            page.querySelectorAll('[data-product-image]').forEach(item => item.classList.remove('active'))
-            button.classList.add('active')
-            if (!mainImage) return
-            const image = button.dataset.productImage
-            if (image) mainImage.src = image
-            mainImage.style.objectPosition = button.dataset.position || 'center'
-            if (modalImage && image) modalImage.src = image
-        })
-    })
-
     listen(zoomContainer, 'mousemove', ((event: MouseEvent) => {
         if (!mainImage || !zoomContainer || !window.matchMedia('(hover: hover)').matches) return
         const rect = zoomContainer.getBoundingClientRect()
-        const x = ((event.clientX - rect.left) / rect.width) * 100
-        const y = ((event.clientY - rect.top) / rect.height) * 100
-        mainImage.style.transformOrigin = `${x}% ${y}%`
+        mainImage.style.transformOrigin = `${((event.clientX - rect.left) / rect.width) * 100}% ${((event.clientY - rect.top) / rect.height) * 100}%`
         mainImage.style.transform = 'scale(1.8)'
     }) as EventListener)
-
-    listen(zoomContainer, 'mouseleave', () => {
-        if (mainImage) mainImage.style.transform = 'scale(1)'
-    })
-
+    listen(zoomContainer, 'mouseleave', () => { if (mainImage) mainImage.style.transform = 'scale(1)' })
     listen(page.querySelector('[data-open-zoom]'), 'click', () => modal?.classList.add('show'))
     listen(modal?.querySelector('[data-close-zoom]'), 'click', () => modal?.classList.remove('show'))
-
-    interactionCleanups.push(() => {
-        modal?.classList.remove('show')
-        if (mainImage) mainImage.style.transform = 'scale(1)'
-    })
 })
 </script>
 
 <template>
-  <div ref="productPage">
-  <main>
-        <div class="product-breadcrumb">
-            <div class="container"><a href="index.html">Home</a><i class="bi bi-chevron-right"></i><a
-                    href="shop.html">Products</a><i class="bi bi-chevron-right"></i><span>Pulse Wireless
-                    Headphones</span>
-                <div class="ms-auto d-none d-sm-flex"><a href="#"><i class="bi bi-chevron-left"></i> Prev</a><a
-                        href="#">Next <i class="bi bi-chevron-right"></i></a></div>
+    <div ref="productPage">
+        <main>
+            <div class="product-breadcrumb">
+                <div class="container"><NuxtLink to="/">Home</NuxtLink><i class="bi bi-chevron-right"></i><NuxtLink to="/shop">Products</NuxtLink><i class="bi bi-chevron-right"></i><span>{{ product?.product_name ?? 'Product' }}</span></div>
             </div>
-        </div>
-        <section class="product-detail container py-4">
-            <div class="row g-4 g-xl-5">
-                <div class="col-lg-6">
-                    <div class="product-gallery">
-                        <div class="product-thumbs" role="tablist"><button class="active" type="button"
-                                data-product-image="/assets/images/product-1.svg"><img src="/assets/images/product-1.svg"
-                                    alt="Front view"></button><button type="button"
-                                data-product-image="/assets/images/category-products-grid.png"
-                                data-position="66.666% 0%"><span class="thumb-sprite"
-                                    style="--tx:2;--ty:0"></span></button><button type="button"
-                                data-product-image="/assets/images/product-3.svg"><img src="/assets/images/product-3.svg"
-                                    alt="Detail view"></button><button type="button"
-                                data-product-image="/assets/images/product-1.svg"><img src="/assets/images/product-1.svg"
-                                    alt="Side view"></button></div>
-                        <div class="product-main-image" data-zoom-container=""><img src="/assets/images/product-1.svg"
-                                alt="Pulse Wireless Headphones" data-product-main=""><button type="button"
-                                data-open-zoom="" aria-label="Open image zoom"><i
-                                    class="bi bi-arrows-fullscreen"></i></button><span class="zoom-hint"><i
-                                    class="bi bi-search"></i> Hover to zoom</span></div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="product-summary">
-                        <div class="product-stock"><span></span> In stock · Ready to ship</div>
-                        <h1>Pulse Wireless Headphones</h1>
-                        <div class="product-review"><span>★★★★★</span><a href="#reviews">(86 reviews)</a><i></i><span
-                                class="sku">SKU: NC-AU-104</span></div>
-                        <div class="product-detail-price">৳8,490 <del>৳9,900</del><em>Save 14%</em></div>
-                        <p class="product-intro">Immersive sound, soft memory cushions and up to 40-hour battery life.
-                            Built for focused work, effortless calls and everyday listening.</p>
-                        <div class="product-benefits"><span><i class="bi bi-truck"></i> Free delivery</span><span><i
-                                    class="bi bi-shield-check"></i> 1-year warranty</span><span><i
-                                    class="bi bi-arrow-counterclockwise"></i> 7-day returns</span></div>
-                        <div class="product-option">
-                            <div><strong>Colour:</strong><span data-selected-color="">Midnight</span></div>
-                            <div class="color-swatches"><button class="active" style="--swatch:#17211d"
-                                    data-color="Midnight" aria-label="Midnight"></button><button
-                                    style="--swatch:#ff5a3c" data-color="Coral" aria-label="Coral"></button><button
-                                    style="--swatch:#d7ddd9" data-color="Cloud" aria-label="Cloud"></button></div>
-                        </div>
-                        <div class="product-option">
-                            <div><strong>Connection:</strong></div>
-                            <div class="connection-options"><button class="active"
-                                    type="button">Bluetooth</button><button type="button">Bluetooth + USB-C</button>
+
+            <section v-if="status === 'pending'" class="container py-5">Loading product...</section>
+            <section v-else-if="error || !product" class="container py-5">Product could not be loaded.</section>
+            <section v-else class="product-detail container py-4">
+                <div class="row g-4 g-xl-5">
+                    <div class="col-lg-6">
+                        <div class="product-gallery">
+                            <div class="product-thumbs" role="tablist">
+                                <button v-if="galleryImages.length > visibleThumbnailCount" class="product-thumb-nav previous" type="button" :disabled="!canShowPreviousThumbnails" aria-label="Show previous product images" @click="moveThumbnails(-1)"><i class="bi bi-chevron-up"></i></button>
+                                <div class="product-thumb-list">
+                                    <button v-for="image in visibleGalleryImages" :key="image" type="button" :class="{ active: activeImage === image }" @click="selectGalleryImage(image)"><img :src="image" :alt="product.product_name"></button>
+                                </div>
+                                <button v-if="galleryImages.length > visibleThumbnailCount" class="product-thumb-nav next" type="button" :disabled="!canShowNextThumbnails" aria-label="Show next product images" @click="moveThumbnails(1)"><i class="bi bi-chevron-down"></i></button>
+                            </div>
+                            <div class="product-main-image" data-zoom-container>
+                                <img :src="activeImage" :alt="product.product_name" data-product-main>
+                                <button type="button" data-open-zoom aria-label="Open image zoom"><i class="bi bi-arrows-fullscreen"></i></button>
+                                <span class="zoom-hint"><i class="bi bi-search"></i> Hover to zoom</span>
                             </div>
                         </div>
-                        <div class="product-purchase-row">
-                            <div class="product-qty qty"><button class="minus" type="button">−</button><input value="1"
-                                    inputmode="numeric" aria-label="Quantity"><button class="plus"
-                                    type="button">+</button></div><button class="product-add-cart" type="button"
-                                data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button><button
-                                class="product-action" type="button" aria-label="Add to wishlist"><i
-                                    class="bi bi-heart"></i></button><button class="product-action d-none d-sm-grid"
-                                type="button" aria-label="Compare"><i class="bi bi-arrow-left-right"></i></button>
-                        </div><button class="buy-now" type="button">Buy it now</button>
-                        <div class="product-meta"><span><strong>Category:</strong> Audio,
-                                Headphones</span><span><strong>Share:</strong> <a href="#"><i
-                                        class="bi bi-facebook"></i></a><a href="#"><i class="bi bi-twitter-x"></i></a><a
-                                    href="#"><i class="bi bi-instagram"></i></a></span></div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="product-summary">
+                            <div class="product-stock"><span></span>{{ hasVariants && !variants.some(variant => variant.stock > 0) ? 'Out of stock' : 'In stock · Ready to ship' }}</div>
+                            <h1>{{ product.product_name }}</h1>
+                            <div class="product-review"><span>★★★★★</span><i></i><span class="sku">SKU: {{ displaySku }}</span></div>
+                            <div class="product-detail-price"><small v-if="hasVariants && !selectedVariant">From</small> ৳{{ formatPrice(displayFinalPrice) }}<del v-if="Number(product.effective_discount) > 0">৳{{ formatPrice(displayRegularPrice) }}</del><em v-if="discountText">{{ discountText }}</em></div>
+                            <p class="product-intro">{{ product.description || 'Product details and available options are shown below.' }}</p>
+                            <div class="product-benefits"><span><i class="bi bi-truck"></i> Free delivery</span><span><i class="bi bi-shield-check"></i> Secure purchase</span><span><i class="bi bi-arrow-counterclockwise"></i> Easy returns</span></div>
+
+                            <div v-for="group in attributeGroups" :key="group.id" class="product-option">
+                                <div><strong>{{ group.name }}:</strong><span data-selected-color>{{ group.values.find(value => value.id === selectedValues[group.id])?.value ?? 'Select' }}</span></div>
+                                <div v-if="group.type?.toLowerCase() === 'color'" class="color-swatches">
+                                    <button v-for="option in group.values" :key="option.id" type="button" :class="{ active: selectedValues[group.id] === option.id, unavailable: !optionAvailable(group.id, option.id) }" :disabled="!optionAvailable(group.id, option.id)" :style="{ '--swatch': option.color_code || '#ddd' }" :aria-label="option.value" @click="selectOption(group.id, option.id)"></button>
+                                </div>
+                                <div v-else class="connection-options">
+                                    <button v-for="option in group.values" :key="option.id" type="button" :class="{ active: selectedValues[group.id] === option.id, unavailable: !optionAvailable(group.id, option.id) }" :disabled="!optionAvailable(group.id, option.id)" @click="selectOption(group.id, option.id)">{{ option.value }}</button>
+                                </div>
+                            </div>
+
+                            <p v-if="cartError" class="product-cart-feedback error">{{ cartError }}</p>
+                            <p v-if="cartMessage" class="product-cart-feedback success">{{ cartMessage }}</p>
+                            <div class="product-purchase-row">
+                                <div class="product-qty qty"><button type="button" :disabled="quantity <= 1" @click="changeQuantity(-1)">−</button><input v-model.number="quantity" type="number" min="1" :max="maximumQuantity" aria-label="Quantity" @change="normalizeQuantity" @blur="normalizeQuantity"><button type="button" :disabled="quantity >= maximumQuantity" @click="changeQuantity(1)">+</button></div>
+                                <button class="product-add-cart" type="button" :disabled="addingToCart || !productAvailable" @click="submitCart(false)"><i class="bi bi-cart3"></i> Add to cart</button>
+                                <button class="product-action" type="button" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button>
+                            </div>
+                            <button class="buy-now" type="button" :disabled="addingToCart || !productAvailable" @click="submitCart(true)">Buy it now</button>
+                            <div class="product-meta"><span><strong>Category:</strong> {{ product.category?.category_name }}</span><span><strong>Brand:</strong> {{ product.brand?.name ?? 'No Brand' }}</span></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
-        <section class="product-tabs container pb-5" id="productDetails">
-            <ul class="nav" role="tablist">
-                <li><button class="active" data-bs-toggle="tab" data-bs-target="#description" aria-selected="true"
-                        role="tab">Description</button></li>
-                <li><button data-bs-toggle="tab" data-bs-target="#specifications" aria-selected="false" tabindex="-1"
-                        role="tab">Specifications</button></li>
-                <li><button data-bs-toggle="tab" data-bs-target="#shipping" aria-selected="false" tabindex="-1"
-                        role="tab">Shipping &amp; Returns</button></li>
-                <li><button data-bs-toggle="tab" data-bs-target="#reviews" aria-selected="false" tabindex="-1"
-                        role="tab">Reviews (86)</button></li>
-            </ul>
-            <div class="tab-content">
-                <div class="tab-pane fade show active" id="description" role="tabpanel">
-                    <h2>Sound designed around you</h2>
-                    <p>Balanced drivers deliver detailed highs and warm, controlled bass. Adaptive cushioning keeps the
-                        fit comfortable through long sessions, while dual microphones make every call clearer.</p>
-                    <div class="description-points"><span><i class="bi bi-check2"></i> 40-hour battery</span><span><i
-                                class="bi bi-check2"></i> Active noise cancellation</span><span><i
-                                class="bi bi-check2"></i> Multipoint Bluetooth 5.3</span><span><i
-                                class="bi bi-check2"></i> Fast USB-C charging</span></div>
-                </div>
-                <div class="tab-pane fade" id="specifications" role="tabpanel">
-                    <table>
-                        <tbody>
-                            <tr>
-                                <th>Driver</th>
-                                <td>40mm dynamic</td>
-                            </tr>
-                            <tr>
-                                <th>Battery</th>
-                                <td>Up to 40 hours</td>
-                            </tr>
-                            <tr>
-                                <th>Weight</th>
-                                <td>265g</td>
-                            </tr>
-                            <tr>
-                                <th>Connectivity</th>
-                                <td>Bluetooth 5.3, USB-C</td>
-                            </tr>
-                        </tbody>
+            </section>
+
+            <section v-if="product" class="product-tabs container pb-5" id="productDetails">
+                <ul class="nav"><li><button class="active">Description &amp; Specifications</button></li></ul>
+                <div class="tab-content">
+                    <div><h2>{{ product.product_name }}</h2><p>{{ product.description || 'No description available.' }}</p></div>
+                    <table v-if="product.specifications?.length" class="mt-3">
+                        <tbody><tr v-for="specification in product.specifications" :key="specification.id"><th>{{ specification.name }}</th><td>{{ specification.values.join(', ') }}</td></tr></tbody>
                     </table>
                 </div>
-                <div class="tab-pane fade" id="shipping" role="tabpanel">
-                    <h2>Fast, dependable delivery</h2>
-                    <p>Nationwide delivery within 2–5 business days. Unused products can be returned in their original
-                        packaging within 7 days.</p>
-                </div>
-                <div class="tab-pane fade" id="reviews" role="tabpanel">
-                    <h2>Customer reviews</h2>
-                    <p>Customers rate these headphones 4.8 out of 5 for sound quality, battery life and comfort.</p>
-                </div>
-            </div>
-        </section>
-    </main>
-    <div class="product-zoom-modal" data-zoom-modal="" aria-hidden="true"><button type="button" data-close-zoom=""
-            aria-label="Close"><i class="bi bi-x-lg"></i></button><img src="/assets/images/product-1.svg"
-            alt="Zoomed product" data-zoom-image=""><span>Scroll or pinch to inspect</span></div>
-    <div class="product-sticky-cart" data-sticky-cart="">
-        <div class="container"><img src="/assets/images/product-1.svg" alt="">
-            <div><strong>Pulse Wireless Headphones</strong><span>৳8,490</span></div>
-            <div class="product-qty qty d-none d-sm-flex"><button class="minus">−</button><input value="1"><button
-                    class="plus">+</button></div><button class="product-add-cart" data-toast="Added to cart"><i
-                    class="bi bi-cart3"></i> Add to cart</button>
-        </div>
+            </section>
+        </main>
+
+        <div class="product-zoom-modal" data-zoom-modal aria-hidden="true"><button type="button" data-close-zoom aria-label="Close"><i class="bi bi-x-lg"></i></button><img :src="activeImage" :alt="product?.product_name ?? 'Product'"><span>Inspect product image</span></div>
     </div>
-  </div>
 </template>

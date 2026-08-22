@@ -168,7 +168,7 @@
                     <p class="text-muted small">Choose only the attributes relevant to this category. Subcategories inherit these when they have no mapping of their own.</p>
                     <div class="table-responsive mb-3">
                         <table class="table table-bordered align-middle mb-0">
-                            <thead><tr><th>Use</th><th>Attribute</th><th>Shop Filter</th><th>Required</th><th>Order</th></tr></thead>
+                            <thead><tr><th>Use</th><th>Attribute</th><th>Variation</th><th>Shop Filter</th><th>Required</th><th>Order</th></tr></thead>
                             <tbody>
                                 @forelse ($attributeDefinitions as $attribute)
                                     <tr data-category-attribute-row="{{ $attribute->id }}">
@@ -177,6 +177,10 @@
                                             <input type="checkbox" name="category_attributes[{{ $attribute->id }}][enabled]" value="1" class="form-check-input" data-category-attribute-enabled>
                                         </td>
                                         <td><strong>{{ $attribute->name }}</strong><small class="text-muted d-block">{{ ucfirst($attribute->type) }}</small></td>
+                                        <td>
+                                            <input type="hidden" name="category_attributes[{{ $attribute->id }}][is_variant]" value="0">
+                                            <input type="checkbox" name="category_attributes[{{ $attribute->id }}][is_variant]" value="1" class="form-check-input" data-category-attribute-variant>
+                                        </td>
                                         <td>
                                             <input type="hidden" name="category_attributes[{{ $attribute->id }}][is_filterable]" value="0">
                                             <input type="checkbox" name="category_attributes[{{ $attribute->id }}][is_filterable]" value="1" class="form-check-input" data-category-attribute-filterable>

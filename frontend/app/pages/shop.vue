@@ -310,7 +310,9 @@ const productBadge = product => {
         <section class="shop-catalog container py-4 py-lg-5">
             <div class="row g-4">
                 <aside class="col-lg-3 shop-sidebar" id="shopFilters">
-                    <div class="shop-filter-head"><strong>Filters</strong><button type="button" @click="clearFilters">Clean All</button></div>
+                    <div class="shop-filter-head"><strong>Filters</strong><button type="button"
+                            @click="clearFilters">Clean
+                            All</button></div>
                     <div class="shop-filter-group">
                         <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#filterCategory"
                             aria-expanded="true">
@@ -318,7 +320,8 @@ const productBadge = product => {
                         </button>
                         <div class="collapse show" id="filterCategory">
                             <label><input type="checkbox" /> Electronics <span>24</span></label><label><input
-                                    type="checkbox" /> Fashion <span>18</span></label><label><input type="checkbox" />
+                                    type="checkbox" />
+                                Fashion <span>18</span></label><label><input type="checkbox" />
                                 Home &amp; Living <span>12</span></label><label><input type="checkbox" /> Accessories
                                 <span>9</span></label><label><input type="checkbox" /> Sports <span>7</span></label>
                         </div>
@@ -330,7 +333,8 @@ const productBadge = product => {
                         </button>
                         <div class="collapse show" id="filterSubcategory">
                             <label><input type="checkbox" /> Smartphones <span>8</span></label><label><input
-                                    type="checkbox" /> Computers <span>6</span></label><label><input type="checkbox" />
+                                    type="checkbox" />
+                                Computers <span>6</span></label><label><input type="checkbox" />
                                 Audio <span>5</span></label><label><input type="checkbox" /> Cameras
                                 <span>4</span></label><label><input type="checkbox" /> Wearables <span>6</span></label>
                         </div>
@@ -343,7 +347,8 @@ const productBadge = product => {
                         <div class="collapse show" id="filterBrand">
                             <label v-for="brand in brands" :key="`desktop-brand-${brand.id}`">
                                 <input type="checkbox" :checked="isBrandSelected(brand.id)"
-                                    @change="toggleBrand(brand.id)" /> {{ brand.name }}
+                                    @change="toggleBrand(brand.id)" />
+                                {{ brand.name }}
                                 <span>{{ brand.product_count }}</span>
                             </label>
                         </div>
@@ -369,7 +374,8 @@ const productBadge = product => {
                         </button>
                         <div class="collapse show" id="filterPrice">
                             <div class="dual-price-filter">
-                                <strong class="price-filter-selection">৳{{ formatPrice(draftMinPrice) }} – ৳{{ formatPrice(draftMaxPrice) }}</strong>
+                                <strong class="price-filter-selection">৳{{ formatPrice(draftMinPrice) }} – ৳{{
+                                    formatPrice(draftMaxPrice) }}</strong>
                                 <div class="dual-range">
                                     <div class="dual-range-rail"></div>
                                     <div class="dual-range-progress" :style="priceProgressStyle"></div>
@@ -403,7 +409,8 @@ const productBadge = product => {
                             <i class="bi bi-sliders"></i> Filters
                         </button>
                         <div>Showing <strong>{{ pagination.from ?? 0 }}–{{ pagination.to ?? 0 }}</strong> of
-                            <strong>{{ pagination.total }}</strong> products</div>
+                            <strong>{{ pagination.total }}</strong> products
+                        </div>
                         <div class="shop-sort">
                             <label for="sortProducts">Sort by:</label><select id="sortProducts" :value="selectedSort"
                                 @change="updateSort">
@@ -422,23 +429,30 @@ const productBadge = product => {
                     <div v-else class="shop-products">
                         <article v-for="product in products" :key="product.id" class="shop-product">
                             <div class="shop-product-media">
-                                <span class="shop-product-photo" :style="{
+                                <NuxtLink class="shop-product-photo" :to="{ path: '/product', query: { id: product.id } }" :style="{
                                     backgroundImage: product.image_url ? `url(${product.image_url})` : 'none',
                                     backgroundSize: 'contain',
                                     backgroundPosition: 'center',
                                     backgroundColor: '#faf7f4'
-                                }"></span><em v-if="productBadge(product)" class="product-label"
-                                    :class="productBadge(product).className">{{ productBadge(product).text }}</em><button class="shop-heart" type="button"><i
-                                        class="bi bi-heart"></i></button><span class="shop-cart"><i
-                                        class="bi bi-cart3"></i> Add to cart</span>
+                                }"></NuxtLink><em v-if="productBadge(product)" class="product-label"
+                                    :class="productBadge(product).className">{{ productBadge(product).text
+                                    }}</em><button class="shop-heart" type="button" aria-label="Add to wishlist">
+                                    <i class="bi bi-heart"></i>
+                                </button><NuxtLink class="shop-cart"
+                                    :to="{ path: '/product', query: { id: product.id } }"><i
+                                        class="bi bi-eye"></i> View product</NuxtLink>
                             </div>
                             <div class="shop-product-info">
                                 <small>{{ product.category?.category_name ?? category?.category_name }}</small>
                                 <h2>
-                                    <NuxtLink :to="{ path: '/product', query: { id: product.id } }">{{ product.product_name }}</NuxtLink>
+                                    <NuxtLink :to="{ path: '/product', query: { id: product.id } }">{{
+                                        product.product_name }}
+                                    </NuxtLink>
                                 </h2>
-                                <div class="shop-price"><small v-if="product.has_variant_pricing">From </small>৳{{ formatPrice(product.listing_final_price ?? product.final_price) }}
-                                    <del v-if="Number(product.effective_discount) > 0">৳{{ formatPrice(product.listing_regular_price ?? product.product_price) }}</del>
+                                <div class="shop-price"><small v-if="product.has_variant_pricing">From </small>৳{{
+                                    formatPrice(product.listing_final_price ?? product.final_price) }}
+                                    <del v-if="Number(product.effective_discount) > 0">৳{{
+                                        formatPrice(product.listing_regular_price ?? product.product_price) }}</del>
                                 </div>
                                 <div class="shop-rating">★★★★★ <span>{{ product.brand?.name ?? '' }}</span></div>
                             </div>
@@ -449,8 +463,9 @@ const productBadge = product => {
                                 class="bi bi-chevron-left"></i></span>
                         <NuxtLink v-else :to="pageLink(pagination.current_page - 1)" aria-label="Previous page"><i
                                 class="bi bi-chevron-left"></i></NuxtLink>
-                        <NuxtLink v-for="page in visiblePages" :key="page" :class="{ active: page === pagination.current_page }"
-                            :to="pageLink(page)">{{ page }}</NuxtLink>
+                        <NuxtLink v-for="page in visiblePages" :key="page"
+                            :class="{ active: page === pagination.current_page }" :to="pageLink(page)">{{ page }}
+                        </NuxtLink>
                         <span v-if="pagination.current_page === pagination.last_page" class="disabled"
                             aria-disabled="true"><i class="bi bi-chevron-right"></i></span>
                         <NuxtLink v-else :to="pageLink(pagination.current_page + 1)" aria-label="Next page"><i
@@ -499,8 +514,9 @@ const productBadge = product => {
                 </button>
                 <div class="collapse show" id="mobileFilterPanel5">
                     <label v-for="brand in brands" :key="`mobile-brand-${brand.id}`">
-                        <input type="checkbox" :checked="isBrandSelected(brand.id)"
-                            @change="toggleBrand(brand.id)" /> {{ brand.name }}
+                        <input type="checkbox" :checked="isBrandSelected(brand.id)" @change="toggleBrand(brand.id)" />
+                        {{
+                        brand.name }}
                         <span>{{ brand.product_count }}</span>
                     </label>
                 </div>
@@ -526,18 +542,18 @@ const productBadge = product => {
                 </button>
                 <div class="collapse show" id="mobileFilterPanel2">
                     <div class="dual-price-filter">
-                        <strong class="price-filter-selection">৳{{ formatPrice(draftMinPrice) }} – ৳{{ formatPrice(draftMaxPrice) }}</strong>
+                        <strong class="price-filter-selection">৳{{ formatPrice(draftMinPrice) }} – ৳{{
+                            formatPrice(draftMaxPrice) }}</strong>
                         <div class="dual-range">
                             <div class="dual-range-rail"></div>
                             <div class="dual-range-progress" :style="priceProgressStyle"></div>
-                            <input v-model.number="draftMinPrice" type="range" :min="priceFloor"
-                                :max="priceCeiling" :step="priceStep" aria-label="Minimum price"
-                                @input="updatePriceFilter('min')" />
-                            <input v-model.number="draftMaxPrice" type="range" :min="priceFloor"
-                                :max="priceCeiling" :step="priceStep" aria-label="Maximum price"
-                                @input="updatePriceFilter('max')" />
+                            <input v-model.number="draftMinPrice" type="range" :min="priceFloor" :max="priceCeiling"
+                                :step="priceStep" aria-label="Minimum price" @input="updatePriceFilter('min')" />
+                            <input v-model.number="draftMaxPrice" type="range" :min="priceFloor" :max="priceCeiling"
+                                :step="priceStep" aria-label="Maximum price" @input="updatePriceFilter('max')" />
                         </div>
-                        <button class="price-filter-reset" type="button" @click="resetPriceFilter">Reset price range</button>
+                        <button class="price-filter-reset" type="button" @click="resetPriceFilter">Reset price
+                            range</button>
                     </div>
                 </div>
             </div>

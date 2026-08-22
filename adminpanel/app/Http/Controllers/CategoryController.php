@@ -57,6 +57,7 @@ class CategoryController extends Controller
             'image_url' => $category->image ? asset('admin/categoryimage/' . $category->image) : null,
             'category_attributes' => $category->attributes->map(fn ($attribute) => [
                 'id' => $attribute->id,
+                'is_variant' => (bool) $attribute->pivot->is_variant,
                 'is_filterable' => (bool) $attribute->pivot->is_filterable,
                 'is_required' => (bool) $attribute->pivot->is_required,
                 'position' => (int) $attribute->pivot->position,
@@ -113,6 +114,7 @@ class CategoryController extends Controller
             'status' => ['required', 'boolean'],
             'category_attributes' => ['nullable', 'array'],
             'category_attributes.*.enabled' => ['nullable', 'boolean'],
+            'category_attributes.*.is_variant' => ['nullable', 'boolean'],
             'category_attributes.*.is_filterable' => ['nullable', 'boolean'],
             'category_attributes.*.is_required' => ['nullable', 'boolean'],
             'category_attributes.*.position' => ['nullable', 'integer', 'min:0'],
@@ -151,6 +153,7 @@ class CategoryController extends Controller
         $sync = collect($request->input('category_attributes', []))
             ->filter(fn ($row, $attributeId) => ! empty($row['enabled']) && $availableIds->contains((int) $attributeId))
             ->mapWithKeys(fn ($row, $attributeId) => [(int) $attributeId => [
+                'is_variant' => (bool) ($row['is_variant'] ?? false),
                 'is_filterable' => (bool) ($row['is_filterable'] ?? false),
                 'is_required' => (bool) ($row['is_required'] ?? false),
                 'position' => (int) ($row['position'] ?? 0),

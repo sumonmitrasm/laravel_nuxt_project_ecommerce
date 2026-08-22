@@ -62,6 +62,7 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        $this->validateProductSpecifications($request);
         $this->validateVariantSelections($request);
         $data = $this->validatedData($request);
         $admin = Auth::guard('admin')->user();
@@ -71,6 +72,7 @@ class ProductController extends Controller
             $product = Product::create($data);
             $this->storeProductImages($request, $product);
             $this->syncProductAttributes($request, $product);
+            $this->syncProductSpecifications($request, $product);
         });
         return response()->json(['message' => 'Product created successfully.'], 201);
     }
@@ -84,6 +86,7 @@ class ProductController extends Controller
             'images:id,product_id,image,status',
             'variants:id,product_id,sku,price,stock,status',
             'variants.values:id,attribute_id,value,color_code',
+            'attributeValues:id,attribute_id,value,color_code',
         ]);
 
         return response()->json([
@@ -108,6 +111,10 @@ class ProductController extends Controller
                     fn ($value) => [(string) $value->attribute_id => $value->id]
                 ),
             ]),
+            'product_attributes' => $product->attributeValues
+                ->groupBy('attribute_id')
+                ->map(fn ($values) => $values->pluck('id')->values())
+                ->all(),
         ]);
     }
 
@@ -124,12 +131,14 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
+        $this->validateProductSpecifications($request);
         $this->validateVariantSelections($request, $product);
         $data = $this->validatedData($request, $product);
         DB::transaction(function () use ($data, $request, $product) {
             $product->update($data);
             $this->storeProductImages($request, $product);
             $this->syncProductAttributes($request, $product);
+            $this->syncProductSpecifications($request, $product);
         });
 
         return response()->json(['message' => 'Product updated successfully.']);
@@ -187,6 +196,9 @@ class ProductController extends Controller
             'variants.*.stock' => ['nullable', 'integer', 'min:0', 'max:2147483647'],
             'variants.*.sku' => ['nullable', 'string', 'max:255'],
             'variants.*.status' => ['nullable', 'boolean'],
+            'product_attributes' => ['nullable', 'array'],
+            'product_attributes.*' => ['nullable', 'array'],
+            'product_attributes.*.*' => ['integer', 'distinct', Rule::exists('attribute_values', 'id')->where('status', 1)],
             'product_video' => ['nullable', 'url', 'max:255'],
             'description' => ['nullable', 'string'],
             'meta_title' => ['nullable', 'string', 'max:255'],
@@ -216,7 +228,7 @@ class ProductController extends Controller
         }
 
         $data['product_discount'] ??= 0;
-        unset($data['product_images'], $data['variants']);
+        unset($data['product_images'], $data['variants'], $data['product_attributes']);
 
         return $data;
     }
@@ -257,6 +269,40 @@ class ProductController extends Controller
         }
     }
 
+    private function syncProductSpecifications(Request $request, Product $product): void
+    {
+        $valueIds = collect($request->input('product_attributes', []))
+            ->flatten()->filter()->map(fn ($id) => (int) $id)->unique()->values();
+        $product->attributeValues()->sync($valueIds);
+    }
+
+    private function validateProductSpecifications(Request $request): void
+    {
+        $applicable = collect($this->applicableCategoryAttributes((int) $request->input('category_id')))
+            ->reject(fn ($config) => $config['is_variant']);
+        $submitted = collect($request->input('product_attributes', []));
+        $errors = [];
+
+        foreach ($submitted as $attributeId => $valueIds) {
+            if (! $applicable->has((string) $attributeId)) {
+                $errors["product_attributes.$attributeId"] = 'This specification is not available for the selected category.';
+                continue;
+            }
+            $actualAttributeIds = DB::table('attribute_values')->whereIn('id', collect($valueIds)->filter())->pluck('attribute_id');
+            if ($actualAttributeIds->contains(fn ($actualId) => (int) $actualId !== (int) $attributeId)) {
+                $errors["product_attributes.$attributeId"] = 'A selected value does not belong to this specification.';
+            }
+        }
+
+        foreach ($applicable->filter(fn ($config) => $config['is_required'])->keys() as $attributeId) {
+            if (collect($submitted->get($attributeId, $submitted->get((string) $attributeId, [])))->filter()->isEmpty()) {
+                $errors["product_attributes.$attributeId"] = 'This product specification is required.';
+            }
+        }
+
+        if ($errors) throw ValidationException::withMessages($errors);
+    }
+
     private function validateVariantSelections(Request $request, ?Product $product = null): void
     {
         $rows = collect($request->input('variants', []));
@@ -264,8 +310,9 @@ class ProductController extends Controller
         $combinations = [];
         $skus = [];
         $applicable = collect($this->applicableCategoryAttributes((int) $request->input('category_id')));
-        $allowedAttributeIds = $applicable->keys()->map(fn ($id) => (int) $id);
-        $requiredAttributeIds = $applicable->filter(fn ($config) => $config['is_required'])->keys()->map(fn ($id) => (int) $id);
+        $variantApplicable = $applicable->filter(fn ($config) => $config['is_variant']);
+        $allowedAttributeIds = $variantApplicable->keys()->map(fn ($id) => (int) $id);
+        $requiredAttributeIds = $variantApplicable->filter(fn ($config) => $config['is_required'])->keys()->map(fn ($id) => (int) $id);
 
         foreach ($rows as $index => $row) {
             $values = collect($row['values'] ?? [])->filter()->map(fn ($id) => (int) $id);
@@ -325,9 +372,10 @@ class ProductController extends Controller
             $rows = DB::table('category_attribute')
                 ->where('category_id', $categoryId)
                 ->orderBy('position')
-                ->get(['attribute_id', 'is_filterable', 'is_required', 'position']);
+                ->get(['attribute_id', 'is_variant', 'is_filterable', 'is_required', 'position']);
             if ($rows->isNotEmpty()) {
                 return $rows->mapWithKeys(fn ($row) => [(string) $row->attribute_id => [
+                    'is_variant' => (bool) $row->is_variant,
                     'is_filterable' => (bool) $row->is_filterable,
                     'is_required' => (bool) $row->is_required,
                     'position' => (int) $row->position,
