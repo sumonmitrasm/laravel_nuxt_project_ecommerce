@@ -73,6 +73,10 @@ class AdminPermissionMiddleware
             'admin-product.store' => ['product', 'add'],
             'admin-product.update', 'admin-product.status' => ['product', 'edit'],
             'admin-product.delete' => ['product', 'delete'],
+            'coupons', 'admin-coupon.show' => ['coupon', 'view'],
+            'admin-coupon.store' => ['coupon', 'add'],
+            'admin-coupon.update', 'admin-coupon.status' => ['coupon', 'edit'],
+            'admin-coupon.delete' => ['coupon', 'delete'],
             default => null,
         };
     }
