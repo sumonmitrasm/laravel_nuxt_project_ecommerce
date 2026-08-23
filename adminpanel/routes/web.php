@@ -10,6 +10,7 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductAttributeController;
+use App\Http\Controllers\CouponController;
 
 Route::get('/clear-cache', function() {
     Artisan::call('view:clear');
@@ -82,8 +83,8 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::put('brand/{brand}', [BrandController::class, 'update'])->name('admin-brand.update');
         Route::patch('brand/{brand}/status', [BrandController::class, 'updateStatus'])->name('admin-brand.status');
         Route::delete('brand/{brand}', [BrandController::class, 'destroy'])->name('admin-brand.delete');
-        //>>>>>>>>>>>>>>>>>>>>>>>>Brand activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        //>>>>>>>>>>>>>>>>>>>>>>>>Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        //>>>>>>>>>>>>>>>>>>>>>>>>Brand activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        //>>>>>>>>>>>>>>>>>>>>>>>>Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('products', [ProductController::class, 'index'])->name('products');
         Route::post('product', [ProductController::class, 'store'])->name('admin-product.store');
         Route::get('product/{product}', [ProductController::class, 'show'])->name('admin-product.show');
@@ -91,12 +92,22 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::patch('product/{product}/status', [ProductController::class, 'updateStatus'])->name('admin-product.status');
         Route::delete('product-images/{productImage}', [ProductController::class, 'destroyImage'])->name('admin-product.image.delete');
         Route::delete('product/{product}', [ProductController::class, 'destroy'])->name('admin-product.delete');
+        //>>>>>>>>>>>>>>>>>>>>>>>>End Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        //>>>>>>>>>>>>>>>>>>>>>>>>Coupon activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        Route::get('coupons', [CouponController::class, 'index'])->name('coupons');
+        Route::post('coupon', [CouponController::class, 'store'])->name('admin-coupon.store');
+        Route::get('coupon/{coupon}', [CouponController::class, 'show'])->name('admin-coupon.show');
+        Route::put('coupon/{coupon}', [CouponController::class, 'update'])->name('admin-coupon.update');
+        Route::patch('coupon/{coupon}/status', [CouponController::class, 'updateStatus'])->name('admin-coupon.status');
+        Route::delete('coupon/{coupon}', [CouponController::class, 'destroy'])->name('admin-coupon.delete');
+        //>>>>>>>>>>>>>>>>>>>>>>>>End Coupon activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        //>>>>>>>>>>>>>>>>>>>>>>>>Product Attributes activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('product-attributes', [ProductAttributeController::class, 'index'])->name('product-attributes');
         Route::post('product-attributes', [ProductAttributeController::class, 'store'])->name('product-attributes.store');
         Route::post('product-attributes/{attribute}/values', [ProductAttributeController::class, 'storeValue'])->name('product-attributes.values.store');
         Route::delete('product-attributes/{attribute}', [ProductAttributeController::class, 'destroy'])->name('product-attributes.destroy');
         Route::delete('product-attribute-values/{value}', [ProductAttributeController::class, 'destroyValue'])->name('product-attribute-values.destroy');
-        //>>>>>>>>>>>>>>>>>>>>>>>>Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        //>>>>>>>>>>>>>>>>>>>>>>>>End Product Attributes activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     });
 });

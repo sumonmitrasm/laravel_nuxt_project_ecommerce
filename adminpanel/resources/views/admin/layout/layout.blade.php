@@ -511,6 +511,9 @@
                     $form.data({ url: $button.data('update-url'), method: 'PUT' });
                     $.each(record, function (field, value) {
                         var $field = $form.find('[name="' + field + '"]');
+                        if (!$field.length && Array.isArray(value)) {
+                            $field = $form.find('[name="' + field + '[]"]');
+                        }
                         if (!$field.length || field === 'password' || $field.is('[type="file"]')) return;
                         var fieldValue = value === null || typeof value === 'undefined' ? '' : value;
                         $field.val(field === 'status' ? (value ? '1' : '0') : fieldValue);

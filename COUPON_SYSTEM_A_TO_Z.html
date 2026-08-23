@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="bn">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Laravel Coupon System — A to Z</title>
+    <style>
+        :root{--ink:#172033;--muted:#667085;--line:#dde3ee;--brand:#4f63d9;--soft:#f5f7fc;--ok:#087a55;--warn:#a15c00}
+        *{box-sizing:border-box}body{margin:0;background:#eef1f7;color:var(--ink);font:15px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}
+        main{width:min(1120px,calc(100% - 28px));margin:28px auto;background:#fff;border-radius:18px;box-shadow:0 20px 60px #23315b18;overflow:hidden}
+        header{padding:42px;background:linear-gradient(135deg,#121a38,#4f63d9);color:#fff}header h1{margin:0 0 8px;font-size:34px}header p{margin:0;opacity:.8}
+        article{padding:34px 42px}h2{margin:38px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:24px}h3{margin:25px 0 10px;font-size:18px}
+        code{font-family:Consolas,monospace}pre{overflow:auto;margin:12px 0;padding:16px;border-radius:10px;background:#11182c;color:#e8edff;font:13px/1.55 Consolas,monospace}
+        .toc,.note,.warning,.success{padding:16px 18px;border-radius:10px}.toc{background:var(--soft)}.toc a{color:var(--brand);text-decoration:none}.note{border-left:4px solid var(--brand);background:#f2f4ff}.warning{border-left:4px solid #e39a24;background:#fff7e8}.success{border-left:4px solid #19a974;background:#ebfff7}
+        table{width:100%;border-collapse:collapse;margin:14px 0}th,td{padding:10px 12px;border:1px solid var(--line);text-align:left;vertical-align:top}th{background:var(--soft)}
+        .flow{padding:18px;border:1px dashed #aeb8d0;border-radius:10px;background:#fbfcff;font-family:Consolas,monospace;white-space:pre-wrap}.path{padding:3px 7px;border-radius:5px;background:#eef1f7;font-family:Consolas,monospace;font-size:13px}
+        ul,ol{padding-left:22px}.badge{display:inline-block;padding:3px 8px;border-radius:12px;background:#e9edff;color:#3049ba;font-size:12px;font-weight:700}
+        @media(max-width:700px){header,article{padding:24px}header h1{font-size:27px}table{display:block;overflow-x:auto}}
+    </style>
+</head>
+<body><main>
+<header><h1>Laravel Coupon System — A to Z</h1><p>Database, Model, Controller, Blade, JavaScript, Conditions এবং Checkout Integration</p></header>
+<article>
+    <div class="note"><strong>Project:</strong> Laravel admin + Nuxt 4 storefront। এই document বর্তমান implementation অনুসরণ করে লেখা। Order module এখনো নেই; তাই checkout eligibility অংশটি “পরবর্তী ধাপ” হিসেবে চিহ্নিত।</div>
+
+    <h2>সূচিপত্র</h2>
+    <div class="toc"><ol>
+        <li><a href="#architecture">Architecture</a></li><li><a href="#database">Database</a></li><li><a href="#conditions">Coupon conditions</a></li>
+        <li><a href="#model">Model</a></li><li><a href="#controller">Controller</a></li><li><a href="#blade">Blade form</a></li>
+        <li><a href="#javascript">JavaScript</a></li><li><a href="#lifecycle">Create/Edit lifecycle</a></li><li><a href="#apply">Cart/checkout apply flow</a></li>
+        <li><a href="#performance">Performance & security</a></li><li><a href="#testing">Testing checklist</a></li>
+    </ol></div>
+
+    <h2 id="architecture">1. Architecture</h2>
+    <div class="flow">Admin Form → CouponController validation → DB transaction
+     ├─ coupons (main rules)
+     ├─ coupon_products / categories / brands (product eligibility)
+     └─ coupon_users (selected customer eligibility)
+
+Future Cart API → Coupon eligibility service → carts.coupon_id
+Future confirmed Order → coupon_usages record</div>
+    <p>একটি coupon-এর মূল নিয়ম <code>coupons</code> table-এ থাকে। শুধুমাত্র selected record দরকার হলে pivot table ব্যবহৃত হয়। এতে structure standard কিন্তু unnecessary rule-engine ছাড়াই সহজ থাকে।</p>
+
+    <h3>গুরুত্বপূর্ণ ফাইল</h3>
+    <table><tr><th>কাজ</th><th>ফাইল</th></tr>
+        <tr><td>Model</td><td><span class="path">adminpanel/app/Models/Coupon.php</span></td></tr>
+        <tr><td>Admin CRUD</td><td><span class="path">adminpanel/app/Http/Controllers/CouponController.php</span></td></tr>
+        <tr><td>Form/UI/JS</td><td><span class="path">adminpanel/resources/views/admin/coupon/partials/get-coupon.blade.php</span></td></tr>
+        <tr><td>Shared modal edit</td><td><span class="path">adminpanel/resources/views/admin/layout/layout.blade.php</span></td></tr>
+        <tr><td>Routes</td><td><span class="path">adminpanel/routes/web.php</span></td></tr>
+    </table>
+
+    <h2 id="database">2. Database</h2>
+    <h3>coupons — main table</h3>
+    <table><tr><th>Column</th><th>অর্থ</th></tr>
+        <tr><td>created_by_id</td><td>কোন admin coupon তৈরি করেছে</td></tr><tr><td>name, code</td><td>Internal name এবং unique customer code</td></tr>
+        <tr><td>scope</td><td>all / products / categories / brands</td></tr><tr><td>customer_scope</td><td>all / selected / first_order / lifetime_spend</td></tr>
+        <tr><td>discount_type</td><td>fixed / percentage / free_shipping</td></tr><tr><td>discount_value</td><td>Discount amount বা percentage</td></tr>
+        <tr><td>maximum_discount</td><td>Percentage coupon-এর সর্বোচ্চ discount</td></tr><tr><td>minimum_order_amount</td><td>Current eligible cart subtotal</td></tr>
+        <tr><td>minimum_lifetime_spend</td><td>Completed historical order total; শুধু lifetime scope-এ</td></tr>
+        <tr><td>usage_limit</td><td>সবার মোট ব্যবহার সীমা; null = unlimited</td></tr><tr><td>usage_limit_per_user</td><td>প্রতি customer সীমা; null = unlimited</td></tr>
+        <tr><td>exclude_discounted_products</td><td>আগে discounted product বাদ যাবে কি না</td></tr><tr><td>starts_at, expires_at</td><td>Campaign schedule</td></tr>
+        <tr><td>is_active, deleted_at</td><td>Manual status ও soft delete</td></tr>
+    </table>
+
+    <h3>Pivot এবং operational tables</h3>
+    <table><tr><th>Table</th><th>কখন record থাকবে</th></tr>
+        <tr><td>coupon_products</td><td>scope = products</td></tr><tr><td>coupon_categories</td><td>scope = categories</td></tr>
+        <tr><td>coupon_brands</td><td>scope = brands</td></tr><tr><td>coupon_users</td><td>customer_scope = selected</td></tr>
+        <tr><td>coupon_usages</td><td>Order confirmed হলে usage audit</td></tr><tr><td>carts.coupon_id</td><td>Cart-এ বর্তমানে applied coupon</td></tr>
+    </table>
+    <div class="success">Complex <code>coupon_customer_rules</code> runtime table/model ব্যবহার করা হচ্ছে না। Lifetime amount সরাসরি coupons table-এ আছে।</div>
+
+    <h2 id="conditions">3. Conditions কীভাবে কাজ করে</h2>
+    <h3>Product Eligibility — একটি নির্বাচন</h3>
+    <table><tr><th>Scope</th><th>Eligible</th></tr><tr><td>all</td><td>সব active product</td></tr><tr><td>products</td><td>নির্বাচিত product IDs</td></tr><tr><td>categories</td><td>নির্বাচিত category-এর products</td></tr><tr><td>brands</td><td>নির্বাচিত brand-এর products</td></tr></table>
+    <h3>Customer Eligibility — একটি নির্বাচন</h3>
+    <table><tr><th>Scope</th><th>নিয়ম</th></tr><tr><td>all</td><td>সব eligible customer</td></tr><tr><td>selected</td><td>coupon_users-এ থাকা customer</td></tr><tr><td>first_order</td><td>আগে confirmed order নেই</td></tr><tr><td>lifetime_spend</td><td>Completed order total ≥ minimum_lifetime_spend</td></tr></table>
+    <p><strong>Minimum Order Amount</strong> customer scope-এর বাইরে একটি independent order condition। তাই configured থাকলে product + customer + minimum cart—সব condition পূরণ করতে হবে। OR campaign দরকার হলে দুটি আলাদা coupon বানানো সহজ ও standard।</p>
+
+    <h3>Discount calculation</h3>
+    <pre><code>// Fixed
+discount = min(discount_value, eligible_subtotal)
+
+// Percentage
+discount = eligible_subtotal * discount_value / 100
+discount = maximum_discount ? min(discount, maximum_discount) : discount
+
+// Final
+payable = max(0, cart_subtotal - discount)</code></pre>
+
+    <h2 id="model">4. Coupon Model</h2>
+    <pre><code>protected $fillable = [
+    'name', 'description', 'code', 'apply_method', 'scope', 'customer_scope',
+    'discount_type', 'discount_value', 'maximum_discount',
+    'minimum_order_amount', 'minimum_lifetime_spend',
+    'usage_limit', 'usage_limit_per_user', 'exclude_discounted_products',
+    'starts_at', 'expires_at', 'is_active',
+];
+
+public function products(): BelongsToMany
+{
+    return $this->belongsToMany(Product::class, 'coupon_products')->withTimestamps();
+}</code></pre>
+    <p>Categories, brands এবং users-এর relation একই pattern। Decimal/date/boolean fields cast করা হয়েছে, তাই controller-এ বারবার manual conversion দরকার হয় না।</p>
+
+    <h2 id="controller">5. Controller CRUD</h2>
+    <h3>Validation-এর গুরুত্বপূর্ণ অংশ</h3>
+    <pre><code>'scope' =&gt; ['required', Rule::in(['all','products','categories','brands'])],
+'customer_scope' =&gt; ['required', Rule::in([
+    'all','selected','first_order','lifetime_spend'
+])],
+'minimum_lifetime_spend' =&gt; [
+    Rule::requiredIf($request-&gt;customer_scope === 'lifetime_spend'),
+    'nullable','numeric','min:0.01'
+],
+'product_ids' =&gt; [Rule::requiredIf($request-&gt;scope === 'products'),'array'],</code></pre>
+
+    <h3>Save transaction</h3>
+    <pre><code>DB::transaction(function () use ($coupon, $data, $relations) {
+    $coupon-&gt;fill($data);
+    if (! $coupon-&gt;exists) $coupon-&gt;created_by_id = Auth::guard('admin')-&gt;id();
+    $coupon-&gt;save();
+
+    $coupon-&gt;products()-&gt;sync($coupon-&gt;scope === 'products' ? $relations['products'] : []);
+    $coupon-&gt;categories()-&gt;sync($coupon-&gt;scope === 'categories' ? $relations['categories'] : []);
+    $coupon-&gt;brands()-&gt;sync($coupon-&gt;scope === 'brands' ? $relations['brands'] : []);
+    $coupon-&gt;users()-&gt;sync($coupon-&gt;customer_scope === 'selected' ? $relations['users'] : []);
+});</code></pre>
+    <p><code>sync([])</code> পুরোনো অপ্রাসঙ্গিক selection মুছে দেয়। Transaction-এর কারণে coupon save ব্যর্থ হলে pivot tables-ও partial save হয় না।</p>
+
+    <h3>Admin routes</h3>
+    <pre><code>GET    /admin/coupons                 index
+POST   /admin/coupon                  store
+GET    /admin/coupon/{coupon}         show JSON for edit
+PUT    /admin/coupon/{coupon}         update
+PATCH  /admin/coupon/{coupon}/status  active/inactive
+DELETE /admin/coupon/{coupon}         soft delete</code></pre>
+
+    <h2 id="blade">6. Blade Form</h2>
+    <p>Form-এর প্রধান section: Basic Information, Discount Rules, Product Eligibility, Customer Eligibility, Schedule & Status। Scope cards hidden select-এর value update করে। Checkbox picker hidden multiple-select-এর সঙ্গে sync থাকে, তাই standard Laravel array request পাওয়া যায়:</p>
+    <pre><code>product_ids[]
+category_ids[]
+brand_ids[]
+user_ids[]</code></pre>
+    <p>Category picker path দেখায়: <code>Section → Parent → Child</code>, সঙ্গে Main/Child badge। Search, selected count এবং Clear all UX রয়েছে।</p>
+
+    <h2 id="javascript">7. JavaScript Flow</h2>
+    <h3>Card selection</h3>
+    <pre><code>const productChoice = event.target.closest('[data-coupon-scope-option]');
+if (productChoice) {
+    modal.querySelector('[data-coupon-scope]').value =
+        productChoice.dataset.couponScopeOption;
+    refreshCouponFields();
+}</code></pre>
+    <h3>Checkbox → hidden select</h3>
+    <pre><code>const selected = new Set(
+    Array.from(panel.querySelectorAll('[data-picker-checkbox]:checked'),
+        checkbox =&gt; checkbox.value)
+);
+Array.from(source.options).forEach(option =&gt;
+    option.selected = selected.has(option.value)
+);</code></pre>
+    <h3>Edit restore fix</h3>
+    <pre><code>var $field = $form.find('[name="' + field + '"]');
+if (!$field.length &amp;&amp; Array.isArray(value)) {
+    $field = $form.find('[name="' + field + '[]"]');
+}</code></pre>
+    <p>এই shared fix-এর ফলে Laravel JSON-এর <code>product_ids</code> array form-এর <code>product_ids[]</code> select-এ বসে এবং edit modal-এ checkbox selected দেখা যায়।</p>
+
+    <h2 id="lifecycle">8. Create/Edit Lifecycle</h2>
+    <div class="flow">CREATE
+Form reset → choose scopes → validate → transaction → sync relevant pivots → JSON success
+
+EDIT
+GET coupon JSON → fill scalar + array fields → open modal → sync checkbox UI → PUT → transaction
+
+STATUS
+PATCH → is_active toggle
+
+DELETE
+Soft delete coupon; reporting/history রাখা যায়</div>
+
+    <h2 id="apply">9. Cart/Checkout Apply Flow — পরবর্তী Laravel ধাপ</h2>
+    <div class="warning"><strong>বর্তমান অবস্থা:</strong> Admin coupon configuration তৈরি হয়েছে। Project-এ Order module নেই, তাই first-order/lifetime/usage final enforcement এখনো complete নয়। Nonexistent order columns ধরে code লেখা হয়নি।</div>
+    <h3>Recommended endpoints</h3>
+    <pre><code>GET    /api/cart/available-coupons
+POST   /api/cart/coupon          { "code": "WELCOME20" }
+DELETE /api/cart/coupon</code></pre>
+    <h3>Apply validation order</h3>
+    <ol><li>Coupon code, active status ও schedule</li><li>Cart এবং customer identity</li><li>Total/per-user usage</li><li>Customer scope</li><li>Product scope</li><li>Discounted-product exclusion</li><li>Minimum eligible subtotal</li><li>Discount calculation ও maximum cap</li><li>Cart-এ coupon attach</li></ol>
+    <pre><code>// Schedule query
+-&gt;where('is_active', true)
+-&gt;where(fn ($q) =&gt; $q-&gt;whereNull('starts_at')-&gt;orWhere('starts_at', '&lt;=', now()))
+-&gt;where(fn ($q) =&gt; $q-&gt;whereNull('expires_at')-&gt;orWhere('expires_at', '&gt;=', now()));
+
+// First order (Order module হওয়ার পরে)
+$hasOrder = Order::where('user_id', $user-&gt;id)
+    -&gt;whereIn('status', ['paid','processing','shipped','delivered'])
+    -&gt;exists();
+
+// Lifetime spend (Order module হওয়ার পরে)
+$lifetime = Order::where('user_id', $user-&gt;id)
+    -&gt;whereIn('status', ['paid','processing','shipped','delivered'])
+    -&gt;sum('grand_total');</code></pre>
+    <p>Order table-এর actual status এবং total column final হওয়ার পরে উপরের names project schema অনুযায়ী বদলাতে হবে। Checkout transaction-এর মধ্যে coupon পুনরায় validate করতে হবে; শুধু cart page-এর result বিশ্বাস করা যাবে না।</p>
+
+    <h2 id="performance">10. Performance & Security</h2>
+    <ul><li>List pagination এবং selected columns ব্যবহার করুন।</li><li>Relations eager-load করে N+1 query এড়ান।</li><li>Coupon result নয়—small static option lists প্রয়োজন হলে cache করা যায়; invalidation ছাড়া দীর্ঘ cache নয়।</li><li>Frontend price/discount কখনো trusted নয়; Laravel পুনরায় calculate করবে।</li><li>Coupon code uppercase normalize এবং unique index রাখুন।</li><li>Usage count + order creation একই DB transaction-এ করুন; race condition রোধে relevant row lock করুন।</li><li>First-order coupon-এর জন্য login/verified phone ব্যবহার করা নিরাপদ।</li><li>এক cart-এ একটি coupon; নতুনটি apply করলে আগেরটি replace হবে।</li></ul>
+
+    <h2 id="testing">11. Testing Checklist</h2>
+    <table><tr><th>Case</th><th>Expected</th></tr>
+        <tr><td>Inactive/expired coupon</td><td>Reject এবং available list-এ নেই</td></tr><tr><td>Percentage > maximum cap</td><td>Cap পর্যন্ত discount</td></tr>
+        <tr><td>Cart below minimum</td><td>Reject</td></tr><tr><td>Wrong product/category/brand</td><td>Ineligible items বাদ অথবা coupon reject—business policy অনুযায়ী</td></tr>
+        <tr><td>Selected user mismatch</td><td>Reject</td></tr><tr><td>Existing confirmed order + first_order</td><td>Reject</td></tr>
+        <tr><td>Lifetime below requirement</td><td>Reject</td></tr><tr><td>Total/per-user usage exhausted</td><td>Reject</td></tr>
+        <tr><td>Edit selected products</td><td>Saved checkboxes ও count restore</td></tr><tr><td>Scope changed</td><td>Old irrelevant pivot links removed</td></tr>
+    </table>
+
+    <h2>12. বাস্তব Campaign Examples</h2>
+    <pre><code>WELCOME20
+scope: all | customer_scope: first_order
+discount: 20% | maximum: 500 | minimum order: 1000 | per user: 1
+
+VIP15
+scope: all | customer_scope: lifetime_spend | minimum lifetime: 5000
+discount: 15% | maximum: 750
+
+HP1000
+scope: brands (HP) | customer_scope: all
+discount: fixed 1000 | minimum order: 20000</code></pre>
+    <div class="success"><strong>মূল নীতি:</strong> Product eligibility, customer eligibility, order requirement, usage এবং schedule আলাদা দায়িত্ব। এই separation বজায় রাখলে code সহজ, testable এবং অন্য project-এ reusable থাকবে।</div>
+</article></main></body></html>
