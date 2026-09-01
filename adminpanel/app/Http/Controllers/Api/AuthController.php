@@ -15,7 +15,6 @@ class AuthController extends Controller
 {
     public function register(Request $request): JsonResponse
     {
-        dd($request->all());
         $validated = $request->validate([
             'name' => [
                 'required',
@@ -130,3 +129,4 @@ class AuthController extends Controller
         ]);
     }
 }
+

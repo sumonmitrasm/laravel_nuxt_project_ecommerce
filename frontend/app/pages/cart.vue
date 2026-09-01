@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const { cart, fetchCart, updateCartItem, removeCartItem, clearCart } = useCart()
-const loading = ref(true)
+const loading = ref(!cart.value)
 const errorMessage = ref('')
 const successMessage = ref('')
 const working = ref<number[]>([])
@@ -22,7 +22,7 @@ watch([successMessage, errorMessage], ([success, error]) => {
 onBeforeUnmount(() => { if (toastTimer) clearTimeout(toastTimer) })
 
 onMounted(async () => {
-    try { await fetchCart(true) }
+    try { await fetchCart() }
     catch (error: any) { showError(error, 'Cart could not be loaded.') }
     finally { loading.value = false }
 })
@@ -207,5 +207,6 @@ function showError(error: any, fallback: string) {
 .clear-modal-enter-from .clear-modal, .clear-modal-leave-to .clear-modal { opacity: 0; transform: translateY(12px) scale(.97); }
 @media (max-width: 480px) { .clear-modal { padding: 28px 20px 20px; } .clear-modal-actions { grid-template-columns: 1fr; } }
 </style>
+
 
 
