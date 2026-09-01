@@ -44,6 +44,8 @@ type AddCartPayload = {
   quantity: number
 }
 
+let pendingCartRequest: Promise<CartResponse> | null = null
+
 export const useCart = () => {
   const config = useRuntimeConfig()
 
@@ -105,12 +107,20 @@ export const useCart = () => {
       return cart.value
     }
 
-    const response = await $fetch<CartResponse>('/cart', {
+    if (pendingCartRequest) {
+      return pendingCartRequest
+    }
+
+    pendingCartRequest = $fetch<CartResponse>('/cart', {
       baseURL: config.public.apiBase,
       headers: requestHeaders(),
-    })
+    }).then(syncCart)
 
-    return syncCart(response)
+    try {
+      return await pendingCartRequest
+    } finally {
+      pendingCartRequest = null
+    }
   }
 
   const addToCart = async (payload: AddCartPayload) => {

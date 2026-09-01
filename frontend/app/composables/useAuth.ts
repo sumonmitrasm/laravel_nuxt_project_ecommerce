@@ -59,14 +59,17 @@ export const useAuth = () => {
       )
 
       user.value = response.user
+      authLoaded.value = true
     } catch (error: any) {
-      if (error?.status === 401) {
+      const status = error?.statusCode ?? error?.status
+
+      if (status === 401) {
         user.value = null
+        authLoaded.value = true
       } else {
+        authLoaded.value = false
         throw error
       }
-    } finally {
-      authLoaded.value = true
     }
 
     return user.value
