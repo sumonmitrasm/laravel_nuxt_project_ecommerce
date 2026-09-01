@@ -13,21 +13,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->statefulApi();
 
-        // CORS Middleware যুক্ত করুন (Nuxt থেকে API কল করার জন্য)
-        // $middleware->api(prepend: [
-        //     \Illuminate\Http\Middleware\HandleCors::class,
-        // ]);
-        //admin middle ware register
         $middleware->alias([
             'admin.auth' => \App\Http\Middleware\AdminMiddleware::class,
             'admin.permission' => \App\Http\Middleware\AdminPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // CRUD forms are submitted with AJAX.  Return validation errors as JSON
-        // so the modal can display them instead of following a redirect response.
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
-    })->create();
+    })
+    ->create();

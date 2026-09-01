@@ -1,3 +1,8 @@
+<script setup lang="ts">
+definePageMeta({
+  middleware: 'auth',
+})
+</script>
 <template>
   <main class="checkout-main">
         <div class="container">
