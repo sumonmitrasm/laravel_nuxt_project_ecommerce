@@ -21,7 +21,17 @@ export const useAuth = () => {
 
   const fetchUser = async () => {
     try {
-      const response = await $fetch<AuthResponse>('/auth/user', { baseURL: config.public.apiBase, credentials: 'include' })
+      const headers = import.meta.server
+        ? {
+            ...useRequestHeaders(['cookie']),
+            referer: useRequestURL().origin,
+          }
+        : undefined
+      const response = await $fetch<AuthResponse>('/auth/user', {
+        baseURL: config.public.apiBase,
+        credentials: 'include',
+        headers,
+      })
       user.value = response.user
       authLoaded.value = true
     } catch (error: any) {
