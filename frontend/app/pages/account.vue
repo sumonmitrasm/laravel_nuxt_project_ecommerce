@@ -1,6 +1,26 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 const route = useRoute()
 const activeSection = ref('dashboard')
+const { user, logout } = useAuth()
+const isLoggingOut = ref(false)
+
+definePageMeta({ middleware: 'auth' })
+
+const displayName = computed(() => user.value?.name || 'Customer')
+const firstName = computed(() => displayName.value.trim().split(/\s+/)[0] || 'Customer')
+const initials = computed(() => user.value?.name.trim().split(/\s+/).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || 'NC')
+
+const handleLogout = async () => {
+  if (isLoggingOut.value) return
+
+  isLoggingOut.value = true
+  try {
+    await logout()
+    await navigateTo('/login')
+  } finally {
+    isLoggingOut.value = false
+  }
+}
 
 const sections = [
   { id: 'dashboard', label: 'Dashboard', icon: 'bi-grid' },
@@ -10,9 +30,9 @@ const sections = [
 ]
 
 const orders = [
-  { id: '#NC-10482', date: '12 Aug 2026', total: '৳15,480', items: '2 items', status: 'Processing', tone: 'processing' },
-  { id: '#NC-10391', date: '28 Jul 2026', total: '৳8,490', items: '1 item', status: 'Delivered', tone: 'delivered' },
-  { id: '#NC-10224', date: '05 Jul 2026', total: '৳6,990', items: '1 item', status: 'Delivered', tone: 'delivered' }
+  { id: '#NC-10482', date: '12 Aug 2026', total: 'à§³15,480', items: '2 items', status: 'Processing', tone: 'processing' },
+  { id: '#NC-10391', date: '28 Jul 2026', total: 'à§³8,490', items: '1 item', status: 'Delivered', tone: 'delivered' },
+  { id: '#NC-10224', date: '05 Jul 2026', total: 'à§³6,990', items: '1 item', status: 'Delivered', tone: 'delivered' }
 ]
 
 const profileSaved = ref(false)
@@ -27,7 +47,7 @@ useHead({
   <NuxtPage v-if="route.path.startsWith('/account/')" />
   <main v-else class="customer-account">
     <section class="account-banner">
-      <div class="container"><div><span>My account</span><h1>Welcome back, Sumon.</h1><p>Manage your orders, saved details and shopping activity.</p></div><div class="account-avatar">SR</div></div>
+      <div class="container"><div><span>My account</span><h1>Welcome back, {{ firstName }}.</h1><p>Manage your orders, saved details and shopping activity.</p></div><div class="account-avatar">{{ initials }}</div></div>
     </section>
 
     <div class="shop-breadcrumb"><div class="container"><NuxtLink to="/">Home</NuxtLink><i class="bi bi-chevron-right"></i><span>My Account</span></div></div>
@@ -39,11 +59,11 @@ useHead({
 
       <div class="account-layout">
         <aside class="account-sidebar">
-          <div class="account-user"><div>SR</div><span><strong>Sumon Rahman</strong><small>sumon@example.com</small></span></div>
+          <div class="account-user"><div>{{ initials }}</div><span><strong>{{ displayName }}</strong><small>{{ user?.email }}</small></span></div>
           <nav>
             <button v-for="section in sections" :key="section.id" type="button" :class="{ active: activeSection === section.id }" @click="activeSection = section.id"><i class="bi" :class="section.icon"></i><span>{{ section.label }}</span><i class="bi bi-chevron-right"></i></button>
             <NuxtLink to="/wishlist"><i class="bi bi-heart"></i><span>Wishlist</span><b>2</b></NuxtLink>
-            <NuxtLink to="/login" class="account-logout"><i class="bi bi-box-arrow-right"></i><span>Log out</span></NuxtLink>
+            <button type="button" class="account-logout" :disabled="isLoggingOut" @click="handleLogout"><i class="bi bi-box-arrow-right"></i><span>{{ isLoggingOut ? 'Logging out...' : 'Log out' }}</span></button>
           </nav>
           <div class="account-support"><i class="bi bi-headset"></i><div><small>Need assistance?</small><strong>We are here to help</strong><NuxtLink to="/contact">Contact support</NuxtLink></div></div>
         </aside>
@@ -74,7 +94,7 @@ useHead({
           <template v-else-if="activeSection === 'orders'">
             <div class="account-heading"><div><small>Order history</small><h2>My orders</h2><p>Track current purchases and review previous orders.</p></div><NuxtLink to="/shop">Shop products <i class="bi bi-arrow-right"></i></NuxtLink></div>
             <div class="account-panel account-all-orders">
-              <div v-for="order in orders" :key="order.id" class="account-order-card"><div><small>Order number</small><strong>{{ order.id }}</strong></div><div><small>Placed on</small><span>{{ order.date }}</span></div><div><small>Total</small><span>{{ order.total }} · {{ order.items }}</span></div><em :class="order.tone">{{ order.status }}</em><NuxtLink to="/account/order-details">View details <i class="bi bi-arrow-right"></i></NuxtLink></div>
+              <div v-for="order in orders" :key="order.id" class="account-order-card"><div><small>Order number</small><strong>{{ order.id }}</strong></div><div><small>Placed on</small><span>{{ order.date }}</span></div><div><small>Total</small><span>{{ order.total }} Â· {{ order.items }}</span></div><em :class="order.tone">{{ order.status }}</em><NuxtLink to="/account/order-details">View details <i class="bi bi-arrow-right"></i></NuxtLink></div>
             </div>
           </template>
 
@@ -104,3 +124,4 @@ useHead({
 @media(max-width:480px){.account-banner p{max-width:240px;font-size:.78rem}.account-avatar{display:none}.account-summary-grid>a,.account-summary-grid>button{padding:16px}.account-panel{padding:18px}.account-order-row{padding:15px 4px}.account-order-card{grid-template-columns:1fr}.account-order-card em{justify-self:start}.account-profile-form{padding:20px}}
 .account-order-row>a{color:var(--ink);text-align:center}.account-order-card>a{border:1px solid #dfe4e1;background:#fff;padding:9px 12px;color:var(--ink);font-size:.68rem;font-weight:700;text-align:center;text-decoration:none}@media(max-width:767px){.account-order-row>a{display:none}.account-order-card>a{grid-column:1/-1}}
 </style>
+
