@@ -1,5 +1,11 @@
 <script setup>
 const { cartCount, fetchCart } = useCart()
+const { authLoaded, isAuthenticated, fetchUser } = useAuth()
+
+if (!authLoaded.value) {
+    await fetchUser().catch(() => null)
+}
+
 onMounted(() => fetchCart().catch(error => console.error('Cart load error:', error)))
 </script>
 
@@ -14,7 +20,11 @@ onMounted(() => fetchCart().catch(error => console.error('Cart load error:', err
                     ><NuxtLink to="/wishlist"><i class="bi bi-heart"></i> Wishlist (2)</NuxtLink
                     ><NuxtLink class="topbar-link" to="/about">About us</NuxtLink
                     ><NuxtLink class="topbar-link" to="/contact">Contact us</NuxtLink
-                    ><NuxtLink to="/account"><i class="bi bi-person"></i> My Account</NuxtLink>
+                    ><NuxtLink v-if="isAuthenticated" to="/account"><i class="bi bi-person"></i> My Account</NuxtLink
+                    ><template v-else
+                        ><NuxtLink to="/login"><i class="bi bi-box-arrow-in-right"></i> Login</NuxtLink
+                        ><NuxtLink to="/register"><i class="bi bi-person-plus"></i> Register</NuxtLink
+                    ></template>
                 </div>
             </div>
         </div>

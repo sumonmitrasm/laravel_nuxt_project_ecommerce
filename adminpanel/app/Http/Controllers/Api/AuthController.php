@@ -103,7 +103,7 @@ class AuthController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Signed in successfully.',
-            'user' => $user->only(['id', 'name', 'email', 'email_verified_at']),
+            'user' => $user->only(['id', 'name', 'email', 'image', 'mobile', 'email_verified_at']),
         ]);
     }
 
@@ -111,7 +111,7 @@ class AuthController extends Controller
     {
         return response()->json([
             'status' => true,
-            'user' => $request->user()->only(['id', 'name', 'email', 'email_verified_at']),
+            'user' => $request->user()->only(['id', 'name', 'email', 'image', 'mobile', 'email_verified_at']),
         ]);
     }
 
