@@ -48,6 +48,19 @@ let pendingCartRequest: Promise<CartResponse> | null = null
 
 export const useCart = () => {
   const config = useRuntimeConfig()
+  const xsrfToken = useCookie<string | null>('XSRF-TOKEN')
+
+  const csrf = async () => {
+    await $fetch('/sanctum/csrf-cookie', {
+      baseURL: config.public.backendBase,
+      credentials: 'include',
+    })
+    refreshCookie('XSRF-TOKEN')
+  }
+
+  const csrfHeaders = (): Record<string, string> => xsrfToken.value
+    ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrfToken.value) }
+    : {}
 
   const cart = useState<CartResponse | null>(
     'shopping-cart',
@@ -113,6 +126,7 @@ export const useCart = () => {
 
     pendingCartRequest = $fetch<CartResponse>('/cart', {
       baseURL: config.public.apiBase,
+      credentials: 'include',
       headers: requestHeaders(),
     }).then(syncCart)
 
@@ -124,12 +138,14 @@ export const useCart = () => {
   }
 
   const addToCart = async (payload: AddCartPayload) => {
+    await csrf()
     const response = await $fetch<CartResponse>(
       '/cart/items',
       {
         baseURL: config.public.apiBase,
         method: 'POST',
-        headers: requestHeaders(),
+        credentials: 'include',
+        headers: { ...requestHeaders(), ...csrfHeaders() },
         body: payload,
       }
     )
@@ -141,12 +157,14 @@ export const useCart = () => {
     itemId: number,
     quantity: number
   ) => {
+    await csrf()
     const response = await $fetch<CartResponse>(
       `/cart/items/${itemId}`,
       {
         baseURL: config.public.apiBase,
         method: 'PATCH',
-        headers: requestHeaders(),
+        credentials: 'include',
+        headers: { ...requestHeaders(), ...csrfHeaders() },
         body: { quantity },
       }
     )
@@ -155,12 +173,14 @@ export const useCart = () => {
   }
 
   const removeCartItem = async (itemId: number) => {
+    await csrf()
     const response = await $fetch<CartResponse>(
       `/cart/items/${itemId}`,
       {
         baseURL: config.public.apiBase,
         method: 'DELETE',
-        headers: requestHeaders(),
+        credentials: 'include',
+        headers: { ...requestHeaders(), ...csrfHeaders() },
       }
     )
 
@@ -168,10 +188,12 @@ export const useCart = () => {
   }
 
   const clearCart = async () => {
+    await csrf()
     const response = await $fetch<CartResponse>('/cart', {
       baseURL: config.public.apiBase,
       method: 'DELETE',
-      headers: requestHeaders(),
+      credentials: 'include',
+      headers: { ...requestHeaders(), ...csrfHeaders() },
     })
 
     return syncCart(response)

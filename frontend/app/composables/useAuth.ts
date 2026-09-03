@@ -1,8 +1,11 @@
-type AuthUser = { id: number; name: string; email: string; image: string | null; mobile: string | null; email_verified_at: string | null }
+type AuthUser = { id: number; name: string; email: string; image: string | null; image_url: string | null; mobile: string | null; email_verified_at: string | null }
 type AuthResponse = { status: boolean; message?: string; user: AuthUser }
 type RegisterResponse = { status: boolean; message: string; email: string }
 type LoginPayload = { email: string; password: string; remember: boolean }
 type RegisterPayload = { name: string; email: string; password: string; password_confirmation: string }
+//update user payload
+type UpdateUserPayload = { name: string; mobile: string; image: File | null }
+type UpdateProfileResponse = { status: boolean; message: string; user: AuthUser }
 
 export const useAuth = () => {
   const config = useRuntimeConfig()
@@ -68,6 +71,31 @@ export const useAuth = () => {
     return $fetch<{ status: boolean; message: string }>('/auth/email/resend', { baseURL: config.public.apiBase, method: 'POST', credentials: 'include', headers: csrfHeaders(), body: { email } })
   }
 
+  const updateProfile = async (payload: UpdateUserPayload) => {
+    await csrf()
+
+    const formData = new FormData()
+    formData.append('_method', 'PATCH')
+    formData.append('name', payload.name)
+    formData.append('mobile', payload.mobile)
+
+    if (payload.image) {
+      formData.append('image', payload.image)
+    }
+
+    const response = await $fetch<UpdateProfileResponse>('/auth/profile', {
+      baseURL: config.public.apiBase,
+      method: 'POST',
+      credentials: 'include',
+      headers: csrfHeaders(),
+      body: formData,
+    })
+
+    user.value = response.user
+    authLoaded.value = true
+
+    return response
+  }
   const logout = async () => {
     await csrf()
     await $fetch('/auth/logout', { baseURL: config.public.apiBase, method: 'POST', credentials: 'include', headers: csrfHeaders() })
@@ -75,5 +103,5 @@ export const useAuth = () => {
     authLoaded.value = true
   }
 
-  return { user, authLoaded, isAuthenticated, fetchUser, login, register, resendVerification, logout }
+  return { user, authLoaded, isAuthenticated, fetchUser, login, register, resendVerification, updateProfile, logout }
 }

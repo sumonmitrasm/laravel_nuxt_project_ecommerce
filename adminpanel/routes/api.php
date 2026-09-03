@@ -29,6 +29,7 @@ Route::prefix('auth')->group(function () {
 
     Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/user', [AuthController::class, 'user']);
+        Route::patch('/profile', [AuthController::class, 'updateProfile']);
         Route::post('/logout', [AuthController::class, 'logout']);
     });
 });
