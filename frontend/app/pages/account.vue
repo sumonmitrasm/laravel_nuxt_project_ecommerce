@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const activeSection = ref('dashboard')
-const { user, logout } = useAuth()
+const { user, logout, updateProfile } = useAuth()
 const isLoggingOut = ref(false)
 
 definePageMeta({ middleware: 'auth' })
@@ -30,12 +30,16 @@ const sections = [
 ]
 
 const orders = [
-  { id: '#NC-10482', date: '12 Aug 2026', total: 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³15,480', items: '2 items', status: 'Processing', tone: 'processing' },
-  { id: '#NC-10391', date: '28 Jul 2026', total: 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³8,490', items: '1 item', status: 'Delivered', tone: 'delivered' },
-  { id: '#NC-10224', date: '05 Jul 2026', total: 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³6,990', items: '1 item', status: 'Delivered', tone: 'delivered' }
+  { id: '#NC-10482', date: '12 Aug 2026', total: 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³15,480', items: '2 items', status: 'Processing', tone: 'processing' },
+  { id: '#NC-10391', date: '28 Jul 2026', total: 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³8,490', items: '1 item', status: 'Delivered', tone: 'delivered' },
+  { id: '#NC-10224', date: '05 Jul 2026', total: 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³6,990', items: '1 item', status: 'Delivered', tone: 'delivered' }
 ]
 
 const profileSaved = ref(false)
+const profileSaving = ref(false)
+const profileMessage = ref('')
+const profileError = ref('')
+const profileFieldErrors = ref<Record<string, string[]>>({})
 
 useHead({
   title: 'My Account | NOVACART',
@@ -45,19 +49,19 @@ useHead({
 //auth user detailsshow
 const profileForm = reactive({
   name: user.value?.name ?? '',
-  email: user.value?.email ?? '',
   mobile: user.value?.mobile ?? '',
   image: null as File | null,
 })
 const imagePreview = ref<string | null>(null)
 const imageError = ref('')
+const profileImageInput = ref<HTMLInputElement | null>(null)
+const currentImageUrl = computed(() => imagePreview.value || user.value?.image_url || null)
 watch(
   user,
   (currentUser) => {
     if (!currentUser) return
 
     profileForm.name = currentUser.name
-    profileForm.email = currentUser.email
     profileForm.mobile = currentUser.mobile ?? ''
   },
   { immediate: true }
@@ -86,6 +90,48 @@ const handleImageChange = (event: Event) => {
   imagePreview.value = URL.createObjectURL(file)
 }
 
+const submitProfile = async () => {
+  if (profileSaving.value) return
+
+  profileSaving.value = true
+  profileSaved.value = false
+  profileMessage.value = ''
+  profileError.value = ''
+  profileFieldErrors.value = {}
+
+  try {
+    const response = await updateProfile({
+      name: profileForm.name.trim(),
+      mobile: profileForm.mobile.trim(),
+      image: profileForm.image,
+    })
+
+    profileSaved.value = true
+    profileMessage.value = response.message
+    profileForm.image = null
+
+    if (imagePreview.value) {
+      URL.revokeObjectURL(imagePreview.value)
+      imagePreview.value = null
+    }
+
+    if (profileImageInput.value) {
+      profileImageInput.value.value = ''
+    }
+
+  } catch (error: any) {
+    const status = error?.statusCode ?? error?.status
+
+    if (status === 422) {
+      profileFieldErrors.value = error?.data?.errors ?? {}
+      profileError.value = 'Please correct the highlighted fields.'
+    } else {
+      profileError.value = error?.data?.message ?? 'We could not update your profile. Please try again.'
+    }
+  } finally {
+    profileSaving.value = false
+  }
+}
 onBeforeUnmount(() => {
   if (imagePreview.value) URL.revokeObjectURL(imagePreview.value)
 })
@@ -204,7 +250,7 @@ onBeforeUnmount(() => {
               <div v-for="order in orders" :key="order.id" class="account-order-card">
                 <div><small>Order number</small><strong>{{ order.id }}</strong></div>
                 <div><small>Placed on</small><span>{{ order.date }}</span></div>
-                <div><small>Total</small><span>{{ order.total }} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {{ order.items }}</span></div><em
+                <div><small>Total</small><span>{{ order.total }} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {{ order.items }}</span></div><em
                   :class="order.tone">{{ order.status }}</em>
                 <NuxtLink to="/account/order-details">View details <i class="bi bi-arrow-right"></i></NuxtLink>
               </div>
@@ -236,13 +282,13 @@ onBeforeUnmount(() => {
                 <p>Keep your contact information accurate and up to date.</p>
               </div>
             </div>
-            <form class="account-profile-form" @submit.prevent="profileSaved = true">
+            <form class="account-profile-form" @submit.prevent="submitProfile">
               <div>
                   <div class="profile-photo-field full">
                     <div class="profile-photo-editor">
                       <div class="profile-photo-avatar">
                         <div class="profile-photo-preview">
-                          <img v-if="imagePreview" :src="imagePreview" alt="Selected profile photo preview">
+                          <img v-if="currentImageUrl" :src="currentImageUrl" alt="Selected profile photo preview">
                           <span v-else>{{ initials }}</span>
                         </div>
                         <label for="profile-image" class="profile-photo-camera" aria-label="Upload profile photo"><i class="bi bi-camera-fill"></i></label>
@@ -252,26 +298,33 @@ onBeforeUnmount(() => {
                         <strong>Make your account recognizably yours</strong>
                         <small>JPG, PNG or WebP / Maximum 2 MB</small>
                         <label for="profile-image" class="profile-photo-button"><i class="bi bi-cloud-arrow-up"></i> Upload new photo</label>
-                        <input id="profile-image" class="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp" @change="handleImageChange">
+                        <input ref="profileImageInput" id="profile-image" class="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp" @change="handleImageChange">
                         <em v-if="profileForm.image" class="profile-photo-name"><i class="bi bi-check-circle-fill"></i> {{ profileForm.image.name }}</em>
-                        <em v-if="imageError" class="profile-photo-error">{{ imageError }}</em>
+                        <em v-if="imageError || profileFieldErrors.image" class="profile-photo-error">{{ imageError || profileFieldErrors.image?.[0] }}</em>
                       </div>
                     </div>
                   </div>
                   <label><span>Full Name</span>
-                  <input v-model.trim="profileForm.name" type="text" autocomplete="name" required>
+                  <input v-model.trim="profileForm.name" type="text" autocomplete="name" :class="{ invalid: profileFieldErrors.name }" required>
+                  <small v-if="profileFieldErrors.name" class="field-error">{{ profileFieldErrors.name[0] }}</small>
                     </label>
                     <label><span>Email</span>
-                      <input v-model.trim="profileForm.email" type="email" autocomplete="email" required>
+                      <input :value="user?.email ?? ''" type="email" autocomplete="email" readonly aria-readonly="true">
+                      <small class="field-hint"><i class="bi bi-lock"></i> Email address cannot be changed.</small>
                   </label>
                   <label class="full"><span>Mobile number</span>
-                    <input type="tel" v-model.trim="profileForm.mobile"  autocomplete="tel">
+                    <input v-model.trim="profileForm.mobile" type="tel" autocomplete="tel" :class="{ invalid: profileFieldErrors.mobile }">
+                    <small v-if="profileFieldErrors.mobile" class="field-error">{{ profileFieldErrors.mobile[0] }}</small>
                   </label>
 
                 </div>
-                <button type="submit">Save changes <i class="bi bi-arrow-right"></i></button>
-              <p v-if="profileSaved" class="account-saved"><i class="bi bi-check-circle-fill"></i> Your account details
-                have been saved.</p>
+              <p v-if="profileError" class="account-error"><i class="bi bi-exclamation-circle-fill"></i> {{ profileError }}</p>
+              <button type="submit" :disabled="profileSaving">
+                <span v-if="profileSaving" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                {{ profileSaving ? 'Saving...' : 'Save changes' }}
+                <i v-if="!profileSaving" class="bi bi-arrow-right"></i>
+              </button>
+              <p v-if="profileSaved && profileMessage" class="account-saved"><i class="bi bi-check-circle-fill"></i> {{ profileMessage }}</p>
             </form>
           </template>
         </div>
@@ -1031,6 +1084,34 @@ onBeforeUnmount(() => {
   text-transform: uppercase
 }
 
+.account-profile-form input.invalid {
+  border-color: #d94b3d;
+  box-shadow: 0 0 0 3px rgba(217, 75, 61, .08)
+}
+
+.field-error {
+  display: block;
+  margin-top: 6px;
+  color: #c43d31!important;
+  font-size: .68rem
+}
+
+.account-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  border-left: 3px solid #d94b3d;
+  background: #fff0ee;
+  padding: 11px 13px;
+  color: #a93226;
+  font-size: .75rem
+}
+
+.account-profile-form>button:disabled {
+  cursor: not-allowed;
+  opacity: .68
+}
 .account-saved {
   margin: 16px 0 0;
   color: #267647;
