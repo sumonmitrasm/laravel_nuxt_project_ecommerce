@@ -1,4 +1,4 @@
-type AuthUser = { id: number; name: string; email: string; email_verified_at: string | null }
+type AuthUser = { id: number; name: string; email: string; image: string | null; mobile: string | null; email_verified_at: string | null }
 type AuthResponse = { status: boolean; message?: string; user: AuthUser }
 type RegisterResponse = { status: boolean; message: string; email: string }
 type LoginPayload = { email: string; password: string; remember: boolean }
