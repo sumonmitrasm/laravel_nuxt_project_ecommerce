@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PageSeoData } from '~/composables/usePageSeo'
 type AttributeValue = {
     id: number
     attribute_id: number
@@ -18,6 +19,7 @@ type ProductVariant = {
 
 type ProductDetailResponse = {
     status: boolean
+    seo: PageSeoData
     product: Record<string, any> & {
         variants?: ProductVariant[]
     }
@@ -52,6 +54,9 @@ const { data, status, error } = await useAsyncData<ProductDetailResponse>(
 )
 
 const product = computed<any>(() => data.value?.product ?? null)
+const pageSeo = computed(() => data.value?.seo)
+
+usePageSeo(pageSeo)
 const variants = computed<ProductVariant[]>(() => product.value?.variants ?? [])
 const hasVariants = computed(() => variants.value.length > 0)
 
@@ -171,7 +176,7 @@ const submitCart = async (buyNow = false) => {
             product_variant_id: selectedVariant.value?.id ?? null,
             quantity: quantity.value
         })
-        cartMessage.value = response.message
+        cartMessage.value = response.message ?? 'Product added to cart.'
         if (buyNow) await navigateTo('/checkout')
     } catch (requestError: any) {
         const errors = requestError?.data?.errors

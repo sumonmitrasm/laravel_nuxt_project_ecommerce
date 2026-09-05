@@ -1,4 +1,5 @@
 <script setup lang="ts">
+useSeoMeta({ robots: 'noindex, nofollow' })
 const { cart, fetchCart, updateCartItem, removeCartItem, clearCart } = useCart()
 const loading = ref(!cart.value)
 const errorMessage = ref('')

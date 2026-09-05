@@ -1,3 +1,6 @@
+<script setup lang="ts">
+useSeoMeta({ robots: 'noindex, nofollow' })
+</script>
 <template>
   <main>
         <section class="shop-hero wishlist-hero">

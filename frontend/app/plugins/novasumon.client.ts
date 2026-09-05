@@ -15,7 +15,7 @@ function loadScript(src: string) {
 
     const script = document.createElement('script')
     script.src = src
-    script.dataset.mollaScript = 'true'
+    script.dataset.novacartScript = 'true'
     script.addEventListener('load', () => {
       script.dataset.loaded = 'true'
       resolve()

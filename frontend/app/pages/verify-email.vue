@@ -1,4 +1,5 @@
 <script setup lang="ts">
+useSeoMeta({ robots: 'noindex, nofollow' })
 const route = useRoute()
 const { resendVerification } = useAuth()
 const email = computed(() => typeof route.query.email === 'string' ? route.query.email : '')

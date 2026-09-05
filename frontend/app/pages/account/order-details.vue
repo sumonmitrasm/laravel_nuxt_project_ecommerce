@@ -1,4 +1,5 @@
 <script setup lang="ts">
+useSeoMeta({ robots: 'noindex, nofollow' })
 useHead({ title: 'Order #NC-10482 | NOVACART' })
 
 const products = [

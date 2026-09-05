@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use App\Models\Section;
+use App\Support\PageSeo;
 use App\Support\ShopFilterCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\DB;
 
 class FrontController extends Controller
 {
+    public function __construct(private readonly PageSeo $seo) {}
+
     public function menu(): JsonResponse
     {
         $sections = Cache::remember(
@@ -28,6 +31,7 @@ class FrontController extends Controller
         return response()->json([
             'status' => true,
             'categories' => $sections,
+            'seo' => $this->seo->home(),
         ], 200);
     }
 
@@ -49,10 +53,10 @@ class FrontController extends Controller
         $sort = $this->selectedSort($request);
 
         $products = Product::with([
-                'brand:id,name',
-                'category:id,category_name,category_discount',
-                'variants' => fn ($query) => $query->where('status', true)->select('id', 'product_id', 'price', 'stock'),
-            ])
+            'brand:id,name',
+            'category:id,category_name,category_discount',
+            'variants' => fn ($query) => $query->where('status', true)->select('id', 'product_id', 'price', 'stock'),
+        ])
             ->whereIn('category_id', $categoryDetails['catIds'])
             ->where('status', true)
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
@@ -73,6 +77,7 @@ class FrontController extends Controller
 
         return response()->json([
             'status' => true,
+            'seo' => $this->seo->category($categoryDetails['category']),
             'categoryDetails' => $categoryDetails['categoryDetails'],
             'breadcrumbs' => $categoryDetails['breadcrumbs'],
             'filters' => [
@@ -92,10 +97,10 @@ class FrontController extends Controller
         $sort = $this->selectedSort($request);
 
         $products = Product::with([
-                'brand:id,name',
-                'category:id,category_name,category_discount',
-                'variants' => fn ($query) => $query->where('status', true)->select('id', 'product_id', 'price', 'stock'),
-            ])
+            'brand:id,name',
+            'category:id,category_name,category_discount',
+            'variants' => fn ($query) => $query->where('status', true)->select('id', 'product_id', 'price', 'stock'),
+        ])
             ->where('status', true)
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
             ->when($priceRange !== [], fn ($query) => $this->applyPriceFilter($query, $priceRange))
@@ -106,6 +111,7 @@ class FrontController extends Controller
 
         return response()->json([
             'status' => true,
+            'seo' => $this->seo->shop(),
             'categoryDetails' => null,
             'breadcrumbs' => [],
             'filters' => [
@@ -163,6 +169,7 @@ class FrontController extends Controller
     {
         if ($sort === 'newest') {
             $query->latest('products.id');
+
             return;
         }
 
@@ -174,6 +181,7 @@ class FrontController extends Controller
 
             $query->orderByRaw("{$effectivePrice} {$direction}")
                 ->orderByDesc('products.id');
+
             return;
         }
 
@@ -332,6 +340,7 @@ class FrontController extends Controller
                 ->map(function ($matches) {
                     $row = $matches->first();
                     $row->product_count = $matches->pluck('product_id')->unique()->count();
+
                     return $row;
                 })->sortBy(fn ($row) => sprintf('%010d-%s-%010d-%s', $row->attribute_position, $row->attribute_name, $row->value_position, $row->value));
 
@@ -405,18 +414,18 @@ class FrontController extends Controller
     public function details(int $id): JsonResponse
     {
         $product = Product::with([
-                'section:id,name',
-                'category:id,category_name,url,category_discount',
-                'brand:id,name',
-                'attributeValues:id,attribute_id,value,color_code',
-                'attributeValues.attribute:id,name,slug,type',
-                'images' => fn ($query) => $query->where('status', true)
-                    ->select('id', 'product_id', 'image'),
-                'variants' => fn ($query) => $query->where('status', true)
-                    ->select('id', 'product_id', 'sku', 'price', 'stock', 'status'),
-                'variants.values:id,attribute_id,value,color_code',
-                'variants.values.attribute:id,name,slug,type',
-            ])
+            'section:id,name',
+            'category:id,category_name,url,category_discount',
+            'brand:id,name',
+            'attributeValues:id,attribute_id,value,color_code',
+            'attributeValues.attribute:id,name,slug,type',
+            'images' => fn ($query) => $query->where('status', true)
+                ->select('id', 'product_id', 'image'),
+            'variants' => fn ($query) => $query->where('status', true)
+                ->select('id', 'product_id', 'sku', 'price', 'stock', 'status'),
+            'variants.values:id,attribute_id,value,color_code',
+            'variants.values.attribute:id,name,slug,type',
+        ])
             ->whereKey($id)
             ->where('status', true)
             ->first();
@@ -458,6 +467,7 @@ class FrontController extends Controller
         return response()->json([
             'status' => true,
             'product' => $productData,
+            'seo' => $this->seo->product($product),
         ], 200);
     }
 }
