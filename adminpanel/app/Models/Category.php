@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
@@ -33,6 +33,7 @@ class Category extends Model
         'category_discount',
         'status',
     ];
+
     protected $casts = [
         'status' => 'boolean',
         'parent_id' => 'integer',
@@ -40,14 +41,17 @@ class Category extends Model
         'position' => 'integer',
         'category_discount' => 'decimal:2',
     ];
+
     public function section(): BelongsTo
     {
-        return $this->belongsTo(Section::class, 'section_id')->select('id','name');
+        return $this->belongsTo(Section::class, 'section_id')->select('id', 'name');
     }
+
     public function parentcategory(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'parent_id')->withDefault(['category_name' => 'Root / Main Category']);
     }
+
     public function subcategories(): HasMany
     {
         return $this->hasMany(Category::class, 'parent_id')
@@ -112,6 +116,7 @@ class Category extends Model
 
         return [
             'catIds' => array_values(array_unique($catIds)),
+            'category' => $category,
             'categoryDetails' => $categoryDetails,
             'breadcrumbs' => $breadcrumbs,
         ];

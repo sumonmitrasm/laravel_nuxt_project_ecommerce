@@ -1,4 +1,5 @@
 <script setup lang="ts">
+useSeoMeta({ robots: 'noindex, nofollow' })
 const route = useRoute()
 const activeSection = ref('dashboard')
 const { user, logout, updateProfile } = useAuth()

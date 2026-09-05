@@ -6,6 +6,9 @@ definePageMeta({
 const activeDealFilter = ref('all')
 const activeTrendingFilter = ref('all')
 const { data, pending, error } = await useCatalogMenu()
+const pageSeo = computed(() => data.value?.seo)
+
+usePageSeo(pageSeo)
 
 const sections = computed(() => data.value?.categories ?? [])
 const activeSectionId = ref(sections.value[0]?.id ?? null)

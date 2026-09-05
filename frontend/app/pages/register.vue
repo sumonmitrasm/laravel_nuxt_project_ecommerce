@@ -1,4 +1,5 @@
 <script setup lang="ts">
+useSeoMeta({ robots: 'noindex, nofollow' })
 const route = useRoute()
 const { register, isAuthenticated } = useAuth()
 const form = reactive({ name: '', email: '', password: '', password_confirmation: '', terms: false })

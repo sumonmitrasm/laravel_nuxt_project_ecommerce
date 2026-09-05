@@ -6,6 +6,7 @@ use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+
 class SettingController extends Controller
 {
     public function settings(Request $request)
@@ -23,6 +24,7 @@ class SettingController extends Controller
             ->cursorPaginate($this->perPage($request))
             ->withQueryString()
             ->through(fn (Setting $setting) => $setting->only(['id', 'side_name', 'email', 'phone', 'perronal_phone', 'status']));
+
         return view('admin.setting.setting', compact('getSettings', 'title'));
     }
 
@@ -41,6 +43,7 @@ class SettingController extends Controller
     {
         Setting::create($this->validatedData($request));
         $this->clearSettingCache();
+
         return response()->json(['message' => 'Setting saved successfully.'], 201);
     }
 
@@ -71,6 +74,7 @@ class SettingController extends Controller
     {
         $setting->update($this->validatedData($request, $setting));
         $this->clearSettingCache();
+
         return response()->json(['message' => 'Setting updated successfully.']);
     }
 
@@ -83,12 +87,15 @@ class SettingController extends Controller
         $this->deleteImage($setting->favicon);
         $setting->delete();
         $this->clearSettingCache();
+
         return response()->json(['message' => 'Setting deleted successfully.']);
     }
 
-    public function updateStatus(Request $request, Setting $setting){
+    public function updateStatus(Request $request, Setting $setting)
+    {
         $setting->update(['status' => ! $setting->status]);
         $this->clearSettingCache();
+
         return response()->json(['message' => 'Setting status updated successfully.']);
     }
 
@@ -124,9 +131,12 @@ class SettingController extends Controller
         foreach (['image', 'favicon'] as $field) {
             if ($request->hasFile($field)) {
                 $data[$field] = $this->storeImage($request->file($field), $field);
-                if ($setting) $this->deleteImage($setting->{$field});
+                if ($setting) {
+                    $this->deleteImage($setting->{$field});
+                }
             }
         }
+
         return $data;
     }
 
@@ -137,26 +147,27 @@ class SettingController extends Controller
             mkdir($directory, 0777, true);
         }
 
-        $name = $prefix . '_' . now()->format('YmdHis') . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+        $name = $prefix.'_'.now()->format('YmdHis').'_'.Str::random(10).'.'.$file->getClientOriginalExtension();
         $file->move($directory, $name);
+
         return $name;
     }
 
     private function deleteImage(?string $path): void
     {
-        if ($path && file_exists($file = public_path('admin/site_settings/' . basename($path)))) {
+        if ($path && file_exists($file = public_path('admin/site_settings/'.basename($path)))) {
             @unlink($file);
         }
     }
 
     private function imageUrl(?string $path): ?string
     {
-        return $path ? asset('admin/site_settings/' . basename($path)) : null;
+        return $path ? asset('admin/site_settings/'.basename($path)) : null;
     }
 
     private function clearSettingCache(): void
     {
         Cache::forget('general_setting');
+        Cache::forget('api.general-setting.seo.v1');
     }
-
 }

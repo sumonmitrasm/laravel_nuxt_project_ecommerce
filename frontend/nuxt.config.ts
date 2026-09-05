@@ -13,16 +13,9 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'Bootstrap eCommerce Template',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, shrink-to-fit=no' },
-        { name: 'keywords', content: 'HTML5 Template' },
-        { name: 'description', content: 'NovaCart — Bootstrap 5 Store' },
-        { name: 'author', content: 'p-themes' },
-        { name: 'apple-mobile-web-app-title', content: 'Molla' },
-        { name: 'application-name', content: 'Molla' },
-        { name: 'msapplication-TileColor', content: '#cc9966' },
         { name: 'theme-color', content: '#ffffff' }
       ],
       link: [

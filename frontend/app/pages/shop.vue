@@ -90,6 +90,10 @@ const {
     }
 )
 
+const pageSeo = computed(() => data.value?.seo)
+
+usePageSeo(pageSeo)
+
 const products = computed(() =>
     data.value?.products ?? []
 )
