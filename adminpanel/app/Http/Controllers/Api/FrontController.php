@@ -31,6 +31,7 @@ class FrontController extends Controller
         return response()->json([
             'status' => true,
             'categories' => $sections,
+            'site' => $this->seo->site(),
             'seo' => $this->seo->home(),
         ], 200);
     }

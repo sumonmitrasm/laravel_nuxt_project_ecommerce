@@ -13,8 +13,7 @@ onMounted(() => fetchCart().catch(error => console.error('Cart load error:', err
     </div>
     <nav class="navbar navbar-expand-lg bg-white py-3 sticky-top shadow-sm">
         <div class="container"><button class="navbar-toggler border-0" data-bs-toggle="offcanvas"
-                data-bs-target="#menu"><span class="navbar-toggler-icon"></span></button><NuxtLink class="navbar-brand fs-3"
-                to="/">NOVA<span class="brand-dot">CART</span></NuxtLink>
+                data-bs-target="#menu"><span class="navbar-toggler-icon"></span></button><SiteLogo class="navbar-brand fs-3" />
             <form class="d-none d-lg-flex flex-grow-1 mx-5">
                 <div class="input-group"><select class="form-select flex-grow-0" style="width:150px">
                         <option value="">All categories</option>
