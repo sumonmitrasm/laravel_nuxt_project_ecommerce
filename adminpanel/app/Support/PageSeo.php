@@ -79,6 +79,7 @@ class PageSeo
                 $this->frontendUrl(),
             ),
             'image' => $image ?: $this->settingImage($setting),
+            'favicon' => $this->settingFavicon($setting),
             'type' => $type,
             'schema' => $schema ?: ($setting['schema_markup'] ?? null),
         ];
@@ -146,5 +147,12 @@ class PageSeo
         }
 
         return Str::of($value)->stripTags()->squish()->limit(200)->toString();
+    }
+
+    private function settingFavicon(?array $setting): ?string
+    {
+        $filename = $setting['favicon'] ?? null;
+
+        return $filename ? asset('admin/site_settings/'.basename($filename)): null;
     }
 }
