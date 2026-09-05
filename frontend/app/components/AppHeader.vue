@@ -39,7 +39,7 @@ onMounted(() => fetchCart().catch(error => console.error('Cart load error:', err
                     aria-label="Open navigation menu"
                 >
                     <span class="navbar-toggler-icon"></span></button
-                ><NuxtLink class="navbar-brand fs-3" to="/">NOVA<span class="brand-dot">CART</span></NuxtLink>
+                ><SiteLogo class="navbar-brand fs-3" />
                 <div class="shop-main-nav d-none d-lg-flex">
                     <NuxtLink to="/">Home</NuxtLink><NuxtLink to="/shop">Shop</NuxtLink
                     ><NuxtLink to="/product">Product</NuxtLink

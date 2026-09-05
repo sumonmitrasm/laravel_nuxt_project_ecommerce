@@ -10,6 +10,16 @@ use Illuminate\Support\Str;
 
 class PageSeo
 {
+    public function site(): array
+    {
+        $setting = $this->setting();
+
+        return [
+            'name' => trim((string) (($setting['side_name'] ?? null) ?: 'NovaCart')),
+            'logo' => $this->settingLogo($setting),
+        ];
+    }
+
     public function home(): array
     {
         return $this->build();
@@ -127,6 +137,13 @@ class PageSeo
     private function settingImage(?array $setting): ?string
     {
         $filename = ($setting['meta_image'] ?? null) ?: ($setting['image'] ?? null);
+
+        return $filename ? asset('admin/site_settings/'.basename($filename)) : null;
+    }
+
+    private function settingLogo(?array $setting): ?string
+    {
+        $filename = $setting['image'] ?? null;
 
         return $filename ? asset('admin/site_settings/'.basename($filename)) : null;
     }
