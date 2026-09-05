@@ -7,6 +7,7 @@ export type PageSeoData = {
   robots: string
   canonical: string | null
   image: string | null
+  favicon: string | null
   type: 'website' | 'product'
   schema: string | Record<string, unknown> | null
 }
@@ -47,14 +48,20 @@ export const usePageSeo = (seo: Ref<PageSeoData | null | undefined>) => {
     meta: seo.value?.keywords
       ? [{ name: 'keywords', content: seo.value.keywords }]
       : [],
-    link: seo.value?.canonical
-      ? [{ rel: 'canonical', href: seo.value.canonical }]
-      : [],
+    link: [
+      ...(seo.value?.canonical
+        ? [{
+            key: 'page-canonical',
+            rel: 'canonical' as const,
+            href: seo.value.canonical,
+          }]
+        : []),
+    ],
     script: schema.value
       ? [{
           key: 'page-schema',
           type: 'application/ld+json',
-          textContent: JSON.stringify(schema.value).replaceAll('<', '\\u003C'),
+          textContent: JSON.stringify(schema.value).replaceAll('<', '\u003C'),
         }]
       : [],
   }))
