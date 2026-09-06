@@ -18,6 +18,7 @@ use App\Observers\ProductObserver;
 use App\Observers\ProductAttributeObserver;
 use App\Observers\SectionObserver;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,6 +43,12 @@ class AppServiceProvider extends ServiceProvider
         Section::observe(SectionObserver::class);
 
         Paginator::useBootstrap();
-        View::share('generalSetting', Setting::first());
+        $generalSetting = Cache::remember(
+            'general_setting.v2',
+            now()->addHours(6),
+            fn () => Setting::query()->where('status', true)->latest('id')->first()?->toArray(),
+        );
+
+        View::share('generalSetting', $generalSetting ? (object) $generalSetting : null);
     }
 }
