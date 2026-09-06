@@ -168,6 +168,7 @@ class SettingController extends Controller
     private function clearSettingCache(): void
     {
         Cache::forget('general_setting');
+        Cache::forget('general_setting.v2');
         Cache::forget('api.general-setting.seo.v1');
     }
 }

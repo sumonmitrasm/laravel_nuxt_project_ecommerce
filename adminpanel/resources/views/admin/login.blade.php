@@ -212,9 +212,7 @@
                         </div>
                     `);
 
-                                setTimeout(function () {
-                                    window.location.href = response.redirect_url;
-                                }, 1000);
+                                window.location.replace(response.redirect_url);
                             } else {
                                 $("#alertContainer").html(`
                         <div class="alert alert-danger alert-dismissible fade show">
