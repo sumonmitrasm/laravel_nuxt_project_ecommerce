@@ -31,5 +31,11 @@ Route::prefix('auth')->group(function () {
         Route::get('/user', [AuthController::class, 'user']);
         Route::patch('/profile', [AuthController::class, 'updateProfile']);
         Route::post('/logout', [AuthController::class, 'logout']);
+        //delivery address
+        Route::get('/addresses', [UserAddressController::class, 'index']);
+        Route::post('/addresses', [UserAddressController::class, 'store']);
+        Route::patch('/addresses/{address}', [UserAddressController::class, 'update']);
+        Route::delete('/addresses/{address}', [UserAddressController::class, 'destroy']);
+        Route::patch('/addresses/{address}/default',[UserAddressController::class, 'makeDefault']);
     });
 });
