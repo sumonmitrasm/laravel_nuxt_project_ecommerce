@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\FrontController;
+use App\Http\Controllers\Api\UserAddressController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/menu', [FrontController::class, 'menu'])->name('api.menu');

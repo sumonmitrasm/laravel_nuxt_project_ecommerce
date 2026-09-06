@@ -1,7 +1,100 @@
 <script setup lang="ts">
 useSeoMeta({ robots: 'noindex, nofollow' })
-definePageMeta({
-  middleware: 'auth',
+definePageMeta({ middleware: 'auth' })
+
+const { user } = useAuth()
+const { addresses, defaultAddress, fetchAddresses, createAddress, updateAddress, removeAddress, makeDefaultAddress } = useAddresses()
+const { success: showSuccessToast, error: showErrorToast } = useToast()
+const selectedAddressId = ref<number | null>(null)
+const addressLoading = ref(true)
+const addressSaving = ref(false)
+const addressDeletingId = ref<number | null>(null)
+const pendingDeleteAddress = ref<UserAddress | null>(null)
+const addressMessage = ref('')
+const addressError = ref('')
+const addressErrors = ref<Record<string, string[]>>({})
+const delivery = reactive({ recipient_name: '', address_line: '', area: '', upazila: '', district: '', division: '', postal_code: '', phone: '' })
+const selectedAddress = computed(() => addresses.value.find(address => address.id === selectedAddressId.value) ?? null)
+
+const clearDelivery = () => Object.assign(delivery, { recipient_name: user.value?.name ?? '', address_line: '', area: '', upazila: '', district: '', division: '', postal_code: '', phone: '' })
+const clearAddressFeedback = () => { addressMessage.value = ''; addressError.value = ''; addressErrors.value = {} }
+
+const selectSavedAddress = (address: UserAddress) => {
+  selectedAddressId.value = address.id
+  clearAddressFeedback()
+  Object.assign(delivery, {
+    recipient_name: address.recipient_name, address_line: address.address_line,
+    area: address.area ?? '', upazila: address.upazila, district: address.district,
+    division: address.division, postal_code: address.postal_code ?? '', phone: address.phone,
+  })
+}
+
+const startNewAddress = () => {
+  selectedAddressId.value = null
+  clearAddressFeedback()
+  clearDelivery()
+}
+
+const saveDeliveryAddress = async () => {
+  if (addressSaving.value) return
+  addressSaving.value = true
+  clearAddressFeedback()
+
+  const current = selectedAddress.value
+  const payload = {
+    label: current?.label ?? (addresses.value.length ? 'Other' : 'Home'),
+    recipient_name: delivery.recipient_name.trim(), phone: delivery.phone.trim(),
+    alternative_phone: current?.alternative_phone ?? '', division: delivery.division.trim(),
+    district: delivery.district.trim(), upazila: delivery.upazila.trim(), area: delivery.area.trim(),
+    postal_code: delivery.postal_code.trim(), address_line: delivery.address_line.trim(),
+    is_default: current?.is_default ?? addresses.value.length === 0,
+  }
+
+  try {
+    const response = current ? await updateAddress(current.id, payload) : await createAddress(payload)
+    if (response.address) selectSavedAddress(response.address)
+    addressMessage.value = response.message
+  } catch (error: any) {
+    if ((error?.statusCode ?? error?.status) === 422) {
+      addressErrors.value = error?.data?.errors ?? {}
+      addressError.value = 'Please correct the highlighted address fields.'
+    } else addressError.value = error?.data?.message ?? 'The delivery address could not be saved.'
+  } finally { addressSaving.value = false }
+}
+
+const requestDeleteAddress = (address: UserAddress) => {
+  pendingDeleteAddress.value = address
+}
+
+const deleteSavedAddress = async () => {
+  const address = pendingDeleteAddress.value
+  if (!address) return
+  addressDeletingId.value = address.id
+  clearAddressFeedback()
+  try {
+    const response = await removeAddress(address.id)
+    pendingDeleteAddress.value = null
+    const next = defaultAddress.value ?? addresses.value[0]
+    if (next) selectSavedAddress(next); else startNewAddress()
+    addressMessage.value = response.message
+    showSuccessToast('Address removed', response.message)
+  } catch (error: any) {
+    addressError.value = error?.data?.message ?? 'The address could not be removed.'
+    showErrorToast('Address not removed', addressError.value)
+  }
+  finally { addressDeletingId.value = null }
+}
+
+const setCheckoutDefault = async (address: UserAddress) => {
+  clearAddressFeedback()
+  try { const response = await makeDefaultAddress(address.id); selectSavedAddress(addresses.value.find(item => item.id === address.id) ?? address); addressMessage.value = response.message }
+  catch (error: any) { addressError.value = error?.data?.message ?? 'The default address could not be changed.' }
+}
+
+
+onMounted(async () => {
+  try { await fetchAddresses(); const initial = defaultAddress.value ?? addresses.value[0]; if (initial) selectSavedAddress(initial); else clearDelivery() }
+  finally { addressLoading.value = false }
 })
 </script>
 <template>
@@ -15,66 +108,60 @@ definePageMeta({
                         <section class="checkout-section">
                             <div class="checkout-section-head"><span>1</span>
                                 <div>
-                                    <h1>Contact information</h1>
-                                    <p>We’ll send your receipt and delivery updates here.</p>
-                                </div><a href="login.html">Already have an account? Log in</a>
-                            </div>
-                            <div class="field-grid"><label class="field full"><span>Email address</span><input
-                                        type="email" name="email" placeholder="you@example.com" required><i
-                                        class="bi bi-envelope"></i></label><label class="checkout-check full"><input
-                                        type="checkbox" checked> Email me with news and offers</label></div>
-                        </section>
-                        <section class="checkout-section">
-                            <div class="checkout-section-head"><span>2</span>
-                                <div>
                                     <h2>Delivery address</h2>
                                     <p>Enter the address where you want your order delivered.</p>
                                 </div>
                             </div>
-                            <div class="field-grid"><label class="field"><span>First name</span><input name="firstName"
-                                        autocomplete="given-name" required></label><label class="field"><span>Last
-                                        name</span><input name="lastName" autocomplete="family-name"
-                                        required></label><label class="field full"><span>Address</span><input
-                                        name="address" placeholder="House number and street name"
-                                        autocomplete="street-address" required><i
-                                        class="bi bi-geo-alt"></i></label><label class="field full"><span>Apartment,
-                                        suite, etc. <small>(optional)</small></span><input
-                                        name="apartment"></label><label class="field"><span>City</span><input
-                                        name="city" value="Dhaka" required></label><label
-                                    class="field"><span>District</span><select name="district">
-                                        <option>Dhaka</option>
-                                        <option>Chattogram</option>
-                                        <option>Sylhet</option>
-                                        <option>Rajshahi</option>
-                                        <option>Khulna</option>
-                                    </select></label><label class="field"><span>Postal code</span><input name="postcode"
-                                        inputmode="numeric" required></label><label
-                                    class="field"><span>Phone</span><input name="phone" type="tel"
-                                        placeholder="+880 1XXX-XXXXXX" required></label><label
-                                    class="checkout-check full"><input type="checkbox"> Save this information for next
-                                    time</label></div>
+                            <div v-if="addressLoading" class="saved-address-loading"><span class="spinner-border spinner-border-sm"></span> Loading saved addresses...</div>
+                            <div v-else-if="addresses.length" class="saved-addresses">
+                                <article v-for="address in addresses" :key="address.id" :class="{ selected: selectedAddressId === address.id }" @click="selectSavedAddress(address)">
+                                    <span><strong>{{ address.label }}</strong><small v-if="address.is_default">Default</small></span>
+                                    <em>{{ address.recipient_name }} · {{ address.phone }}</em>
+                                    <p>{{ address.address_line }}, {{ address.upazila }}, {{ address.district }}</p>
+                                    <div class="saved-address-actions">
+                                        <button type="button" @click.stop="selectSavedAddress(address)"><i class="bi bi-pencil"></i> Edit</button>
+                                        <button v-if="!address.is_default" type="button" @click.stop="setCheckoutDefault(address)">Make default</button>
+                                        <button type="button" class="danger" :disabled="addressDeletingId === address.id" @click.stop="requestDeleteAddress(address)">{{ addressDeletingId === address.id ? 'Deleting...' : 'Delete' }}</button>
+                                    </div>
+                                </article>
+                            </div>
+                            <button v-if="addresses.length && selectedAddressId !== null" class="new-address-button" type="button" @click="startNewAddress"><i class="bi bi-plus-lg"></i> Add another address</button>
+                            <div class="field-grid">
+                                <label class="field"><span>Recipient name</span><input v-model.trim="delivery.recipient_name" name="recipientName" autocomplete="name" required></label>
+                                <label class="field"><span>Phone</span><input v-model.trim="delivery.phone" name="phone" type="tel" placeholder="01XXXXXXXXX" required></label>
+                                <label class="field"><span>Division</span><input v-model.trim="delivery.division" name="division" required></label>
+                                <label class="field"><span>District</span><input v-model.trim="delivery.district" name="district" required></label>
+                                <label class="field"><span>Upazila / Thana</span><input v-model.trim="delivery.upazila" name="upazila" required></label>
+                                <label class="field"><span>Area</span><input v-model.trim="delivery.area" name="area"></label>
+                                <label class="field"><span>Postal code <small>(optional)</small></span><input v-model.trim="delivery.postal_code" name="postcode"></label>
+                                <label class="field full"><span>Full address</span><input v-model.trim="delivery.address_line" name="address" placeholder="House number, road and block" autocomplete="street-address" required><i class="bi bi-geo-alt"></i></label>
+                            </div>
+                            <p v-if="addressError" class="checkout-address-message error">{{ addressError }}</p>
+                            <p v-if="addressMessage" class="checkout-address-message success"><i class="bi bi-check-circle-fill"></i> {{ addressMessage }}</p>
+                            <button class="save-address-button" type="button" :disabled="addressSaving" @click="saveDeliveryAddress">
+                                <span v-if="addressSaving" class="spinner-border spinner-border-sm"></span>
+                                <i v-else class="bi bi-bookmark-check"></i> {{ addressSaving ? 'Saving...' : (selectedAddressId ? 'Update selected address' : 'Save new address') }}
+                            </button>
                         </section>
                         <section class="checkout-section">
-                            <div class="checkout-section-head"><span>3</span>
+                            <div class="checkout-section-head"><span>2</span>
                                 <div>
                                     <h2>Shipping method</h2>
-                                    <p>Choose how quickly you’d like to receive your order.</p>
+                                    <p>Choose how quickly you'd like to receive your order.</p>
                                 </div>
                             </div>
                             <div class="checkout-options"><label class="selected"><input type="radio"
                                         name="checkoutShipping" value="0" checked><i
-                                        class="bi bi-truck"></i><span><strong>Free delivery</strong><small>4–6 business
-                                            days</small></span><b>Free</b></label><label><input type="radio"
+                                        class="bi bi-truck"></i><span><strong>Free delivery</strong><small>4-6 business days</small></span><b>Free</b></label><label><input type="radio"
                                         name="checkoutShipping" value="120"><i
-                                        class="bi bi-box-seam"></i><span><strong>Standard delivery</strong><small>2–4
-                                            business days</small></span><b>৳120</b></label><label><input type="radio"
+                                        class="bi bi-box-seam"></i><span><strong>Standard delivery</strong><small>2-4 business days</small></span><b>৳120</b></label><label><input type="radio"
                                         name="checkoutShipping" value="350"><i
                                         class="bi bi-lightning-charge"></i><span><strong>Express
                                             delivery</strong><small>Next business day</small></span><b>৳350</b></label>
                             </div>
                         </section>
                         <section class="checkout-section">
-                            <div class="checkout-section-head"><span>4</span>
+                            <div class="checkout-section-head"><span>3</span>
                                 <div>
                                     <h2>Payment</h2>
                                     <p>All transactions are secure and encrypted.</p>
@@ -152,4 +239,39 @@ definePageMeta({
                 shopping</a>
         </div>
     </div>
+
+    <ConfirmDialog
+      :open="Boolean(pendingDeleteAddress)"
+      eyebrow="REMOVE SAVED ADDRESS"
+      :title="`Delete ${pendingDeleteAddress?.label ?? ''} address?`"
+      message="This address will be permanently removed from your saved delivery locations."
+      confirm-label="Delete address"
+      :loading="addressDeletingId !== null"
+      @cancel="pendingDeleteAddress = null"
+      @confirm="deleteSavedAddress"
+    />
 </template>
+<style scoped>
+.saved-address-loading { margin-bottom: 20px; border: 1px solid #e1e7e3; border-radius: 8px; background: #f8faf9; padding: 16px; color: #748079; font-size: .76rem; }
+.saved-addresses { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+.saved-addresses article { position: relative; min-height: 108px; border: 1px solid #dfe5e1; border-radius: 8px; background: #fff; padding: 11px 14px; cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .2s; }
+.saved-addresses article:hover { border-color: #ff9f91; transform: translateY(-1px); }
+.saved-addresses article.selected { border-color: #ff5941; box-shadow: 0 0 0 3px rgba(255, 89, 65, .09); }
+.saved-addresses article > span { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.saved-addresses strong { color: #15251e; font-size: .82rem; }
+.saved-addresses small { border-radius: 999px; background: #e8f7ed; padding: 4px 8px; color: #267647; font-size: .58rem; font-weight: 800; }
+.saved-addresses em { display: block; margin-top: 5px; color: #35423c; font-size: .7rem; font-style: normal; }
+.saved-addresses p { margin: 4px 0 0; color: #7b8580; font-size: .68rem; line-height: 1.55; }
+.saved-address-actions { display: flex; align-items: center; gap: 10px; margin-top: 7px; border-top: 1px solid #edf0ee; padding-top: 6px; }
+.saved-addresses .saved-address-actions button { border: 0; background: transparent; padding: 0; color: #e6513d; font-size: .65rem; font-weight: 700; }
+.saved-addresses .saved-address-actions button.danger { margin-left: auto; color: #b5362c; }
+.saved-addresses .saved-address-actions button:disabled { opacity: .55; }
+.new-address-button { margin: 0 0 20px; border: 1px dashed #bfcac4; border-radius: 6px; background: #fafcfb; padding: 11px 14px; color: #26342e; font-size: .7rem; font-weight: 750; }
+.checkout-signed-in { color: #267647; font-size: .72rem; font-weight: 700; }
+.save-address-button { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; border: 0; border-radius: 4px; background: #15251e; padding: 13px 18px; color: #fff; font-size: .72rem; font-weight: 800; text-transform: uppercase; }
+.save-address-button:disabled { opacity: .65; }
+.checkout-address-message { margin: 14px 0 0; padding: 11px 13px; font-size: .72rem; }
+.checkout-address-message.error { border-left: 3px solid #d94b3d; background: #fff0ee; color: #a93226; }
+.checkout-address-message.success { border-left: 3px solid #27804b; background: #edf8f1; color: #21653e; }
+@media (max-width: 575px) { .saved-addresses { grid-template-columns: 1fr; } }
+</style>

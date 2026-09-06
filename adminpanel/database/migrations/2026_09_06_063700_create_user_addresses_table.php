@@ -19,9 +19,9 @@ return new class extends Migration
             $table->string('recipient_name', 100);
             $table->string('phone', 20);
             $table->string('alternative_phone', 20)->nullable();
-            $table->string('division', 100);
-            $table->string('district', 100);
-            $table->string('upazila', 100);
+            $table->integer('division', 100);
+            $table->integer('district', 100);
+            $table->integer('upazila', 100);
             $table->string('area', 150)->nullable();
             $table->string('postal_code', 20)->nullable();
             $table->text('address_line');
