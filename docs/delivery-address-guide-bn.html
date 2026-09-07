@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Delivery Address System — A to Z বাংলা গাইড</title>
+  <style>
+    body{margin:0;background:#f4f7f5;color:#17241e;font:16px/1.7 system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:36px 22px}h1,h2,h3{line-height:1.25}h1{font-size:2.2rem}h2{margin-top:38px;border-bottom:2px solid #ff5a45;padding-bottom:8px}code,pre{font-family:Consolas,monospace}code{background:#e8eeeb;padding:2px 5px;border-radius:4px}pre{overflow:auto;background:#10241b;color:#eaf7f0;padding:18px;border-radius:10px;white-space:pre-wrap}.note{border-left:4px solid #ff5a45;background:#fff;padding:14px 18px}.flow{background:#fff;border:1px solid #d8e1dc;padding:18px;border-radius:10px}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border:1px solid #d8e1dc;text-align:left;vertical-align:top}th{background:#eaf0ed}a{color:#c73826}
+  </style>
+</head>
+<body><main>
+  <h1>Delivery Address System — সম্পূর্ণ বাংলা গাইড</h1>
+  <p>এই document-এ database, Laravel model/controller/API, Nuxt composable, checkout এবং account page—সব file link, ID এবং data flow আলাদা করে দেখানো হয়েছে। Project root ধরে path দেওয়া হয়েছে।</p>
+
+  <h2>১. সম্পূর্ণ flow</h2>
+  <div class="flow"><b>Page load</b> → divisions API → Division select → selected division ID দিয়ে districts API → District select → selected district ID দিয়ে upazilas API → form submit → তিনটি numeric ID validation → <code>user_addresses</code> table-এ save → API response-এ ID-এর সঙ্গে readable name → checkout/account card-এ display।</div>
+
+  <h2>২. কোন file কী কাজ করে</h2>
+  <table><tr><th>File</th><th>কাজ</th></tr>
+    <tr><td><code>adminpanel/database/migrations/2026_09_06_063700_create_user_addresses_table.php</code></td><td>Address table এবং columns</td></tr>
+    <tr><td><code>adminpanel/app/Models/UserAddress.php</code></td><td>Fillable, cast, location relations এবং name accessors</td></tr>
+    <tr><td><code>adminpanel/app/Models/Division.php</code>, <code>District.php</code>, <code>Upazila.php</code></td><td>Location tables-এর relationship</td></tr>
+    <tr><td><code>adminpanel/app/Http/Controllers/Api/LocationController.php</code></td><td>Cascading dropdown data দেয়</td></tr>
+    <tr><td><code>adminpanel/app/Http/Controllers/Api/UserAddressController.php</code></td><td>Address list/create/update/delete/default এবং ownership validation</td></tr>
+    <tr><td><code>adminpanel/routes/api.php</code></td><td>সব endpoint link</td></tr>
+    <tr><td><code>frontend/app/composables/useLocations.ts</code></td><td>Location API call</td></tr>
+    <tr><td><code>frontend/app/composables/useAddresses.ts</code></td><td>Address state এবং CRUD API call</td></tr>
+    <tr><td><code>frontend/app/pages/checkout.vue</code></td><td>Checkout address select/form</td></tr>
+    <tr><td><code>frontend/app/components/AccountAddressManager.vue</code></td><td>Account page address manager</td></tr>
+  </table>
+
+  <h2>৩. Database ID design</h2>
+  <pre><code>$table->foreignId('user_id')->constrained()->cascadeOnDelete();
+$table->integer('division');
+$table->integer('district');
+$table->integer('upazila');
+$table->boolean('is_default')->default(false);
+$table->softDeletes();</code></pre>
+  <p><code>division=4</code> অর্থ divisions table-এর <code>id=4</code> record। একইভাবে district/upazila-তেও ID save হয়। <b>Khulna</b> text integer column-এ পাঠালে “Incorrect integer value” error হবে।</p>
+  <div class="note">আরও শক্ত database integrity চাইলে existing data পরিষ্কার করে future migration-এ columns-কে <code>foreignId(...)-&gt;constrained(...)</code> করা যায়। বর্তমান code application validation দিয়ে সম্পর্ক যাচাই করে।</div>
+
+  <h2>৪. Location relationships</h2>
+  <pre><code>// Division.php
+return $this->hasMany(District::class);
+
+// District.php
+return $this->belongsTo(Division::class);
+return $this->hasMany(Upazila::class);
+
+// Upazila.php
+return $this->belongsTo(District::class);</code></pre>
+  <p>এই relationship-এর কারণে <code>$division-&gt;districts()</code> শুধুমাত্র ঐ division-এর district এবং <code>$district-&gt;upazilas()</code> শুধুমাত্র ঐ district-এর upazila দেয়।</p>
+
+  <h2>৫. Location API route ও URL</h2>
+  <pre><code>GET /api/locations/divisions
+GET /api/locations/divisions/{division}/districts
+GET /api/locations/districts/{district}/upazilas</code></pre>
+  <p>উদাহরণ: division ID <code>4</code> select হলে URL হবে <code>/api/locations/divisions/4/districts</code>। Laravel route model binding-এর মাধ্যমে <code>{division}=4</code> থেকে <code>Division $division</code> model খুঁজে দেয়। District ID <code>35</code> হলে upazila URL হয় <code>/api/locations/districts/35/upazilas</code>। <code>whereNumber()</code> text parameter আটকায়।</p>
+  <pre><code>public function districts(Division $division): JsonResponse
+{
+    $districts = $division->districts()
+        ->orderBy('name')->get(['id','name','bn_name'])->toArray();
+    return response()->json(['status' => true, 'locations' => $districts]);
+}</code></pre>
+
+  <h2>৬. Nuxt cascading dropdown</h2>
+  <pre><code>const selectedDivisionId = ref&lt;number | null&gt;(null)
+const selectedDistrictId = ref&lt;number | null&gt;(null)
+const selectedUpazilaId = ref&lt;number | null&gt;(null)
+
+const onDivisionChange = async () =&gt; {
+  selectedDistrictId.value = null
+  selectedUpazilaId.value = null
+  districts.value = selectedDivisionId.value
+    ? await fetchDistricts(selectedDivisionId.value) : []
+  upazilas.value = []
+}
+
+const onDistrictChange = async () =&gt; {
+  selectedUpazilaId.value = null
+  upazilas.value = selectedDistrictId.value
+    ? await fetchUpazilas(selectedDistrictId.value) : []
+}</code></pre>
+  <pre><code>&lt;select v-model="selectedDivisionId" @change="onDivisionChange"&gt;
+  &lt;option v-for="division in divisions" :key="division.id" :value="division.id"&gt;
+    {{ division.name }}
+  &lt;/option&gt;
+&lt;/select&gt;</code></pre>
+  <p><code>:value="division.id"</code> সবচেয়ে গুরুত্বপূর্ণ: screen-এ name দেখা যায়, কিন্তু variable-এ numeric ID থাকে। <code>:key</code> Vue rendering identity; এটি database-এ যায় না।</p>
+
+  <h2>৭. Address API endpoints</h2>
+  <table><tr><th>Method</th><th>URL</th><th>কাজ</th></tr>
+    <tr><td>GET</td><td><code>/api/auth/addresses</code></td><td>Login user-এর address list</td></tr>
+    <tr><td>POST</td><td><code>/api/auth/addresses</code></td><td>নতুন address</td></tr>
+    <tr><td>PATCH</td><td><code>/api/auth/addresses/{address}</code></td><td>নিজের নির্দিষ্ট address update</td></tr>
+    <tr><td>DELETE</td><td><code>/api/auth/addresses/{address}</code></td><td>Soft delete</td></tr>
+    <tr><td>PATCH</td><td><code>/api/auth/addresses/{address}/default</code></td><td>Default address</td></tr>
+  </table>
+  <p>সব address route <code>auth:sanctum</code> এবং <code>verified</code> middleware-এর ভিতরে। Controller-এর <code>ownedAddress()</code> user-এর relation থেকে ID খোঁজে, তাই অন্য user-এর address ID দিয়ে edit/delete করা যায় না।</p>
+
+  <h2>৮. Submit payload ও validation</h2>
+  <pre><code>const payload = {
+  recipient_name: delivery.recipient_name.trim(),
+  phone: delivery.phone.trim(),
+  division: selectedDivisionId.value ?? 0,
+  district: selectedDistrictId.value ?? 0,
+  upazila: selectedUpazilaId.value ?? 0,
+  area: delivery.area.trim(),
+  postal_code: delivery.postal_code.trim(),
+  address_line: delivery.address_line.trim(),
+  is_default: false
+}</code></pre>
+  <p>Laravel প্রথমে IDs সংশ্লিষ্ট table-এ আছে কি না দেখে। এরপর district-এর <code>division_id</code> submitted division-এর সমান এবং upazila-এর <code>district_id</code> submitted district-এর সমান কি না দেখে। তাই DevTools দিয়ে ভুল ID পাঠালেও 422 validation error হবে।</p>
+
+  <h2>৯. ID save হলেও name কীভাবে আসে</h2>
+  <pre><code>public function locationDivision(): BelongsTo
+{
+    return $this->belongsTo(Division::class, 'division');
+}
+
+public function getDivisionNameAttribute(): ?string
+{
+    return $this->locationDivision?-&gt;name;
+}</code></pre>
+  <p><code>$appends</code>-এ <code>division_name</code>, <code>district_name</code>, <code>upazila_name</code> থাকায় JSON-এ numeric IDs এবং readable names—দুটিই আসে। UI তাই <code>address.division_name</code> দেখাতে পারে।</p>
+
+  <h2>১০. CSRF ও CRUD composable</h2>
+  <p><code>GET</code>-এ CSRF প্রয়োজন নেই। POST/PATCH/DELETE-এর আগে <code>/sanctum/csrf-cookie</code> call করে <code>X-XSRF-TOKEN</code> header পাঠানো হয়। <code>credentials:'include'</code> Laravel session cookie পাঠায়। Mutation সফল হলে <code>fetchAddresses(true)</code> নতুন list reload করে।</p>
+
+  <h2>১১. অন্য page-এ ব্যবহার</h2>
+  <pre><code>const { addresses, fetchAddresses, createAddress } = useAddresses()
+const { divisions, fetchDivisions, fetchDistricts, fetchUpazilas } = useLocations()
+
+onMounted(async () =&gt; {
+  await Promise.all([fetchAddresses(), fetchDivisions()])
+})</code></pre>
+  <p>তারপর একই তিনটি selected ID ref, change handlers এবং numeric payload ব্যবহার করুন। Address card select করার সময় saved IDs দিয়ে district/upazila lists পুনরায় fetch করতে হবে—checkout-এর <code>syncLocationSelection()</code> এই কাজ করে।</p>
+
+  <h2>১২. গুরুত্বপূর্ণ rules</h2>
+  <ul><li>Database integer field-এ location name পাঠাবেন না।</li><li>Frontend validation-কে security মনে করবেন না; backend relation validation অবশ্যই থাকবে।</li><li>Address update/delete সবসময় authenticated user relation দিয়ে করবেন।</li><li>এক user-এর একটিই default রাখতে transaction ব্যবহার করুন।</li><li>Location cache-এ Eloquent object নয়, <code>toArray()</code> result রাখা হয়েছে।</li></ul>
+</main></body></html>
