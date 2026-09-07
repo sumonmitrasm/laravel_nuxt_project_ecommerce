@@ -3,17 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\District;
+use App\Models\Upazila;
 use App\Models\UserAddress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class UserAddressController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
         $addresses = $request->user()->addresses()
+            ->with(['locationDivision:id,name', 'locationDistrict:id,name', 'locationUpazila:id,name'])
             ->where('status', true)
             ->orderByDesc('is_default')
             ->latest('id')
@@ -45,7 +49,7 @@ class UserAddressController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Address saved successfully.',
-            'address' => $address,
+            'address' => $address->load(['locationDivision:id,name', 'locationDistrict:id,name', 'locationUpazila:id,name']),
         ], 201);
     }
 
@@ -69,7 +73,7 @@ class UserAddressController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Address updated successfully.',
-            'address' => $userAddress->fresh(),
+            'address' => $userAddress->fresh()->load(['locationDivision:id,name', 'locationDistrict:id,name', 'locationUpazila:id,name']),
         ]);
     }
 
@@ -104,7 +108,7 @@ class UserAddressController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Default address updated.',
-            'address' => $userAddress->fresh(),
+            'address' => $userAddress->fresh()->load(['locationDivision:id,name', 'locationDistrict:id,name', 'locationUpazila:id,name']),
         ]);
     }
 
@@ -115,14 +119,14 @@ class UserAddressController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'label' => ['required', 'string', 'min:2', 'max:30', Rule::notIn(['default'])],
             'recipient_name' => ['required', 'string', 'min:2', 'max:100', "regex:/^[\\pL\\pM .'-]+$/u"],
             'phone' => ['required', 'string', 'max:20', 'regex:/^(?:\\+?88)?01[3-9]\\d{8}$/'],
             'alternative_phone' => ['nullable', 'string', 'max:20', 'different:phone', 'regex:/^(?:\\+?88)?01[3-9]\\d{8}$/'],
-            'division' => ['required', 'string', 'min:2', 'max:100'],
-            'district' => ['required', 'string', 'min:2', 'max:100'],
-            'upazila' => ['required', 'string', 'min:2', 'max:100'],
+            'division' => ['required', 'integer', Rule::exists('divisions', 'id')],
+            'district' => ['required', 'integer', Rule::exists('districts', 'id')],
+            'upazila' => ['required', 'integer', Rule::exists('upazilas', 'id')],
             'area' => ['nullable', 'string', 'max:150'],
             'postal_code' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9 -]+$/'],
             'address_line' => ['required', 'string', 'min:5', 'max:500'],
@@ -132,5 +136,27 @@ class UserAddressController extends Controller
             'alternative_phone.regex' => 'Enter a valid alternative Bangladeshi mobile number.',
             'recipient_name.regex' => 'Recipient name may contain letters, spaces, apostrophes, dots and hyphens only.',
         ]);
+
+        $districtBelongsToDivision = District::query()
+            ->whereKey($data['district'])
+            ->where('division_id', $data['division'])
+            ->exists();
+        $upazilaBelongsToDistrict = Upazila::query()
+            ->whereKey($data['upazila'])
+            ->where('district_id', $data['district'])
+            ->exists();
+        $locationErrors = [];
+
+        if (! $districtBelongsToDivision) {
+            $locationErrors['district'] = ['The selected district does not belong to this division.'];
+        }
+        if (! $upazilaBelongsToDistrict) {
+            $locationErrors['upazila'] = ['The selected upazila does not belong to this district.'];
+        }
+        if ($locationErrors !== []) {
+            throw ValidationException::withMessages($locationErrors);
+        }
+
+        return $data;
     }
 }

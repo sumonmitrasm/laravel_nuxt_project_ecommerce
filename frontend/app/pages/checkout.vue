@@ -1,10 +1,18 @@
 <script setup lang="ts">
+import type { LocationOption } from '~/composables/useLocations'
 useSeoMeta({ robots: 'noindex, nofollow' })
 definePageMeta({ middleware: 'auth' })
 
 const { user } = useAuth()
 const { addresses, defaultAddress, fetchAddresses, createAddress, updateAddress, removeAddress, makeDefaultAddress } = useAddresses()
 const { success: showSuccessToast, error: showErrorToast } = useToast()
+const { divisions, fetchDivisions, fetchDistricts, fetchUpazilas } = useLocations()
+const districts = ref<LocationOption[]>([])
+const upazilas = ref<LocationOption[]>([])
+const selectedDivisionId = ref<number | null>(null)
+const selectedDistrictId = ref<number | null>(null)
+const selectedUpazilaId = ref<number | null>(null)
+const locationsLoading = ref(false)
 const selectedAddressId = ref<number | null>(null)
 const addressLoading = ref(true)
 const addressSaving = ref(false)
@@ -16,23 +24,69 @@ const addressErrors = ref<Record<string, string[]>>({})
 const delivery = reactive({ recipient_name: '', address_line: '', area: '', upazila: '', district: '', division: '', postal_code: '', phone: '' })
 const selectedAddress = computed(() => addresses.value.find(address => address.id === selectedAddressId.value) ?? null)
 
+const resetLocationSelection = () => {
+  selectedDivisionId.value = null
+  selectedDistrictId.value = null
+  selectedUpazilaId.value = null
+  districts.value = []
+  upazilas.value = []
+}
+
+const syncLocationSelection = async (divisionId: number, districtId: number, upazilaId: number) => {
+  resetLocationSelection()
+  const division = divisions.value.find(item => item.id === divisionId)
+  if (!division) return
+  selectedDivisionId.value = division.id
+  districts.value = await fetchDistricts(division.id)
+  const district = districts.value.find(item => item.id === districtId)
+  if (!district) return
+  selectedDistrictId.value = district.id
+  upazilas.value = await fetchUpazilas(district.id)
+  selectedUpazilaId.value = upazilas.value.find(item => item.id === upazilaId)?.id ?? null
+}
+
+const onDivisionChange = async () => {
+  delivery.division = divisions.value.find(item => item.id === selectedDivisionId.value)?.name ?? ''
+  delivery.district = ''
+  delivery.upazila = ''
+  selectedDistrictId.value = null
+  selectedUpazilaId.value = null
+  districts.value = []
+  upazilas.value = []
+  if (selectedDivisionId.value) districts.value = await fetchDistricts(selectedDivisionId.value)
+}
+
+const onDistrictChange = async () => {
+  delivery.district = districts.value.find(item => item.id === selectedDistrictId.value)?.name ?? ''
+  delivery.upazila = ''
+  selectedUpazilaId.value = null
+  upazilas.value = []
+  if (selectedDistrictId.value) upazilas.value = await fetchUpazilas(selectedDistrictId.value)
+}
+
+const onUpazilaChange = () => {
+  delivery.upazila = upazilas.value.find(item => item.id === selectedUpazilaId.value)?.name ?? ''
+}
+
 const clearDelivery = () => Object.assign(delivery, { recipient_name: user.value?.name ?? '', address_line: '', area: '', upazila: '', district: '', division: '', postal_code: '', phone: '' })
 const clearAddressFeedback = () => { addressMessage.value = ''; addressError.value = ''; addressErrors.value = {} }
 
-const selectSavedAddress = (address: UserAddress) => {
+const selectSavedAddress = async (address: UserAddress) => {
   selectedAddressId.value = address.id
   clearAddressFeedback()
   Object.assign(delivery, {
     recipient_name: address.recipient_name, address_line: address.address_line,
-    area: address.area ?? '', upazila: address.upazila, district: address.district,
-    division: address.division, postal_code: address.postal_code ?? '', phone: address.phone,
+    area: address.area ?? '', upazila: address.upazila_name ?? '', district: address.district_name ?? '',
+    division: address.division_name ?? '', postal_code: address.postal_code ?? '', phone: address.phone,
   })
+  await syncLocationSelection(address.division, address.district, address.upazila)
 }
 
 const startNewAddress = () => {
   selectedAddressId.value = null
   clearAddressFeedback()
   clearDelivery()
+  resetLocationSelection()
 }
 
 const saveDeliveryAddress = async () => {
@@ -44,15 +98,15 @@ const saveDeliveryAddress = async () => {
   const payload = {
     label: current?.label ?? (addresses.value.length ? 'Other' : 'Home'),
     recipient_name: delivery.recipient_name.trim(), phone: delivery.phone.trim(),
-    alternative_phone: current?.alternative_phone ?? '', division: delivery.division.trim(),
-    district: delivery.district.trim(), upazila: delivery.upazila.trim(), area: delivery.area.trim(),
+    alternative_phone: current?.alternative_phone ?? '', division: selectedDivisionId.value ?? 0,
+    district: selectedDistrictId.value ?? 0, upazila: selectedUpazilaId.value ?? 0, area: delivery.area.trim(),
     postal_code: delivery.postal_code.trim(), address_line: delivery.address_line.trim(),
     is_default: current?.is_default ?? addresses.value.length === 0,
   }
 
   try {
     const response = current ? await updateAddress(current.id, payload) : await createAddress(payload)
-    if (response.address) selectSavedAddress(response.address)
+    if (response.address) await selectSavedAddress(response.address)
     addressMessage.value = response.message
   } catch (error: any) {
     if ((error?.statusCode ?? error?.status) === 422) {
@@ -75,7 +129,7 @@ const deleteSavedAddress = async () => {
     const response = await removeAddress(address.id)
     pendingDeleteAddress.value = null
     const next = defaultAddress.value ?? addresses.value[0]
-    if (next) selectSavedAddress(next); else startNewAddress()
+    if (next) await selectSavedAddress(next); else startNewAddress()
     addressMessage.value = response.message
     showSuccessToast('Address removed', response.message)
   } catch (error: any) {
@@ -87,14 +141,21 @@ const deleteSavedAddress = async () => {
 
 const setCheckoutDefault = async (address: UserAddress) => {
   clearAddressFeedback()
-  try { const response = await makeDefaultAddress(address.id); selectSavedAddress(addresses.value.find(item => item.id === address.id) ?? address); addressMessage.value = response.message }
+  try { const response = await makeDefaultAddress(address.id); await selectSavedAddress(addresses.value.find(item => item.id === address.id) ?? address); addressMessage.value = response.message }
   catch (error: any) { addressError.value = error?.data?.message ?? 'The default address could not be changed.' }
 }
 
 
 onMounted(async () => {
-  try { await fetchAddresses(); const initial = defaultAddress.value ?? addresses.value[0]; if (initial) selectSavedAddress(initial); else clearDelivery() }
-  finally { addressLoading.value = false }
+  locationsLoading.value = true
+  try {
+    await Promise.all([fetchAddresses(), fetchDivisions()])
+    const initial = defaultAddress.value ?? addresses.value[0]
+    if (initial) await selectSavedAddress(initial); else { clearDelivery(); resetLocationSelection() }
+  } finally {
+    addressLoading.value = false
+    locationsLoading.value = false
+  }
 })
 </script>
 <template>
@@ -117,7 +178,7 @@ onMounted(async () => {
                                 <article v-for="address in addresses" :key="address.id" :class="{ selected: selectedAddressId === address.id }" @click="selectSavedAddress(address)">
                                     <span><strong>{{ address.label }}</strong><small v-if="address.is_default">Default</small></span>
                                     <em>{{ address.recipient_name }} · {{ address.phone }}</em>
-                                    <p>{{ address.address_line }}, {{ address.upazila }}, {{ address.district }}</p>
+                                    <p>{{ address.address_line }}, {{ address.upazila_name }}, {{ address.district_name }}</p>
                                     <div class="saved-address-actions">
                                         <button type="button" @click.stop="selectSavedAddress(address)"><i class="bi bi-pencil"></i> Edit</button>
                                         <button v-if="!address.is_default" type="button" @click.stop="setCheckoutDefault(address)">Make default</button>
@@ -129,9 +190,9 @@ onMounted(async () => {
                             <div class="field-grid">
                                 <label class="field"><span>Recipient name</span><input v-model.trim="delivery.recipient_name" name="recipientName" autocomplete="name" required></label>
                                 <label class="field"><span>Phone</span><input v-model.trim="delivery.phone" name="phone" type="tel" placeholder="01XXXXXXXXX" required></label>
-                                <label class="field"><span>Division</span><input v-model.trim="delivery.division" name="division" required></label>
-                                <label class="field"><span>District</span><input v-model.trim="delivery.district" name="district" required></label>
-                                <label class="field"><span>Upazila / Thana</span><input v-model.trim="delivery.upazila" name="upazila" required></label>
+                                <label class="field"><span>Division</span><select v-model="selectedDivisionId" name="division" :disabled="locationsLoading" required @change="onDivisionChange"><option :value="null" disabled>Select division</option><option v-for="division in divisions" :key="division.id" :value="division.id">{{ division.name }}</option></select></label>
+                                <label class="field"><span>District</span><select v-model="selectedDistrictId" name="district" :disabled="!selectedDivisionId" required @change="onDistrictChange"><option :value="null" disabled>Select district</option><option v-for="district in districts" :key="district.id" :value="district.id">{{ district.name }}</option></select></label>
+                                <label class="field"><span>Upazila / Thana</span><select v-model="selectedUpazilaId" name="upazila" :disabled="!selectedDistrictId" required @change="onUpazilaChange"><option :value="null" disabled>Select upazila / thana</option><option v-for="upazila in upazilas" :key="upazila.id" :value="upazila.id">{{ upazila.name }}</option></select></label>
                                 <label class="field"><span>Area</span><input v-model.trim="delivery.area" name="area"></label>
                                 <label class="field"><span>Postal code <small>(optional)</small></span><input v-model.trim="delivery.postal_code" name="postcode"></label>
                                 <label class="field full"><span>Full address</span><input v-model.trim="delivery.address_line" name="address" placeholder="House number, road and block" autocomplete="street-address" required><i class="bi bi-geo-alt"></i></label>

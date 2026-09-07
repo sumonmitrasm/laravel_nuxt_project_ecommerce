@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import type { AddressPayload, UserAddress } from '~/composables/useAddresses'
+import type { LocationOption } from '~/composables/useLocations'
 
 const { addresses, addressesLoaded, fetchAddresses, createAddress, updateAddress, removeAddress, makeDefaultAddress } = useAddresses()
 const { success: showSuccessToast, error: showErrorToast } = useToast()
+const { divisions, fetchDivisions, fetchDistricts, fetchUpazilas } = useLocations()
+const districts = ref<LocationOption[]>([])
+const upazilas = ref<LocationOption[]>([])
+const selectedDivisionId = ref<number | null>(null)
+const selectedDistrictId = ref<number | null>(null)
+const selectedUpazilaId = ref<number | null>(null)
+const locationsLoading = ref(false)
 
 const emptyForm = (): AddressPayload => ({
-  label: 'Home', recipient_name: '', phone: '', alternative_phone: '', division: '', district: '',
-  upazila: '', area: '', postal_code: '', address_line: '', is_default: false,
+  label: 'Home', recipient_name: '', phone: '', alternative_phone: '', division: 0, district: 0,
+  upazila: 0, area: '', postal_code: '', address_line: '', is_default: false,
 })
 
 const form = reactive<AddressPayload>(emptyForm())
@@ -20,11 +28,56 @@ const message = ref('')
 const errorMessage = ref('')
 const errors = ref<Record<string, string[]>>({})
 
+const resetLocationSelection = () => {
+  selectedDivisionId.value = null
+  selectedDistrictId.value = null
+  selectedUpazilaId.value = null
+  districts.value = []
+  upazilas.value = []
+}
+
+const syncLocationSelection = async (divisionId: number, districtId: number, upazilaId: number) => {
+  resetLocationSelection()
+  const division = divisions.value.find(item => item.id === divisionId)
+  if (!division) return
+  selectedDivisionId.value = division.id
+  districts.value = await fetchDistricts(division.id)
+  const district = districts.value.find(item => item.id === districtId)
+  if (!district) return
+  selectedDistrictId.value = district.id
+  upazilas.value = await fetchUpazilas(district.id)
+  selectedUpazilaId.value = upazilas.value.find(item => item.id === upazilaId)?.id ?? null
+}
+
+const onDivisionChange = async () => {
+  form.division = selectedDivisionId.value ?? 0
+  form.district = 0
+  form.upazila = 0
+  selectedDistrictId.value = null
+  selectedUpazilaId.value = null
+  districts.value = []
+  upazilas.value = []
+  if (selectedDivisionId.value) districts.value = await fetchDistricts(selectedDivisionId.value)
+}
+
+const onDistrictChange = async () => {
+  form.district = selectedDistrictId.value ?? 0
+  form.upazila = 0
+  selectedUpazilaId.value = null
+  upazilas.value = []
+  if (selectedDistrictId.value) upazilas.value = await fetchUpazilas(selectedDistrictId.value)
+}
+
+const onUpazilaChange = () => {
+  form.upazila = selectedUpazilaId.value ?? 0
+}
+
 const resetForm = () => {
   Object.assign(form, emptyForm())
   editingId.value = null
   errors.value = {}
   errorMessage.value = ''
+  resetLocationSelection()
 }
 
 const openCreate = () => {
@@ -33,7 +86,7 @@ const openCreate = () => {
   showForm.value = true
 }
 
-const openEdit = (address: UserAddress) => {
+const openEdit = async (address: UserAddress) => {
   Object.assign(form, {
     label: address.label, recipient_name: address.recipient_name, phone: address.phone,
     alternative_phone: address.alternative_phone ?? '', division: address.division,
@@ -44,6 +97,7 @@ const openEdit = (address: UserAddress) => {
   editingId.value = address.id
   errors.value = {}
   errorMessage.value = ''
+  await syncLocationSelection(address.division, address.district, address.upazila)
   showForm.value = true
 }
 
@@ -111,9 +165,10 @@ const setDefault = async (address: UserAddress) => {
 
 onMounted(async () => {
   loading.value = true
-  try { await fetchAddresses() }
+  locationsLoading.value = true
+  try { await Promise.all([fetchAddresses(), fetchDivisions()]) }
   catch (error: any) { errorMessage.value = error?.data?.message ?? 'Saved addresses could not be loaded.' }
-  finally { loading.value = false }
+  finally { loading.value = false; locationsLoading.value = false }
 })
 </script>
 
@@ -136,9 +191,9 @@ onMounted(async () => {
         <label><span>Recipient name</span><input v-model.trim="form.recipient_name" maxlength="100" autocomplete="name" required><em v-if="errors.recipient_name">{{ errors.recipient_name[0] }}</em></label>
         <label><span>Mobile number</span><input v-model.trim="form.phone" type="tel" maxlength="20" placeholder="01XXXXXXXXX" required><em v-if="errors.phone">{{ errors.phone[0] }}</em></label>
         <label><span>Alternative mobile <small>(optional)</small></span><input v-model.trim="form.alternative_phone" type="tel" maxlength="20"><em v-if="errors.alternative_phone">{{ errors.alternative_phone[0] }}</em></label>
-        <label><span>Division</span><input v-model.trim="form.division" maxlength="100" required><em v-if="errors.division">{{ errors.division[0] }}</em></label>
-        <label><span>District</span><input v-model.trim="form.district" maxlength="100" required><em v-if="errors.district">{{ errors.district[0] }}</em></label>
-        <label><span>Upazila / Thana</span><input v-model.trim="form.upazila" maxlength="100" required><em v-if="errors.upazila">{{ errors.upazila[0] }}</em></label>
+        <label><span>Division</span><select v-model="selectedDivisionId" :disabled="locationsLoading" required @change="onDivisionChange"><option :value="null" disabled>Select division</option><option v-for="division in divisions" :key="division.id" :value="division.id">{{ division.name }}</option></select><em v-if="errors.division">{{ errors.division[0] }}</em></label>
+        <label><span>District</span><select v-model="selectedDistrictId" :disabled="!selectedDivisionId" required @change="onDistrictChange"><option :value="null" disabled>Select district</option><option v-for="district in districts" :key="district.id" :value="district.id">{{ district.name }}</option></select><em v-if="errors.district">{{ errors.district[0] }}</em></label>
+        <label><span>Upazila / Thana</span><select v-model="selectedUpazilaId" :disabled="!selectedDistrictId" required @change="onUpazilaChange"><option :value="null" disabled>Select upazila / thana</option><option v-for="upazila in upazilas" :key="upazila.id" :value="upazila.id">{{ upazila.name }}</option></select><em v-if="errors.upazila">{{ errors.upazila[0] }}</em></label>
         <label><span>Area <small>(optional)</small></span><input v-model.trim="form.area" maxlength="150"></label>
         <label><span>Postal code <small>(optional)</small></span><input v-model.trim="form.postal_code" maxlength="20"><em v-if="errors.postal_code">{{ errors.postal_code[0] }}</em></label>
         <label class="full"><span>Full address</span><textarea v-model.trim="form.address_line" maxlength="500" rows="3" placeholder="House, road, block and nearby landmark" required></textarea><em v-if="errors.address_line">{{ errors.address_line[0] }}</em></label>
@@ -153,7 +208,7 @@ onMounted(async () => {
       <article v-for="address in addresses" :key="address.id" :class="{ selected: address.is_default }">
         <div class="card-head"><span class="address-icon"><i :class="address.label.toLowerCase().includes('office') ? 'bi bi-building' : 'bi bi-house'"></i></span><span v-if="address.is_default" class="default-badge">Default</span></div>
         <h3>{{ address.label }}</h3><strong>{{ address.recipient_name }}</strong>
-        <p>{{ address.address_line }}<br><span v-if="address.area">{{ address.area }}, </span>{{ address.upazila }}, {{ address.district }}<span v-if="address.postal_code"> {{ address.postal_code }}</span><br>{{ address.division }}<br>{{ address.phone }}<span v-if="address.alternative_phone"><br>{{ address.alternative_phone }}</span></p>
+        <p>{{ address.address_line }}<br><span v-if="address.area">{{ address.area }}, </span>{{ address.upazila_name }}, {{ address.district_name }}<span v-if="address.postal_code"> {{ address.postal_code }}</span><br>{{ address.division_name }}<br>{{ address.phone }}<span v-if="address.alternative_phone"><br>{{ address.alternative_phone }}</span></p>
         <div class="card-actions"><button type="button" @click="openEdit(address)"><i class="bi bi-pencil"></i> Edit</button><button v-if="!address.is_default" type="button" @click="setDefault(address)">Make default</button><button type="button" class="danger" :disabled="deletingId === address.id" @click="requestRemove(address)">{{ deletingId === address.id ? 'Removing...' : 'Remove' }}</button></div>
       </article>
     </div>
@@ -170,5 +225,5 @@ onMounted(async () => {
   /></template>
 
 <style scoped>
-.address-toolbar,.form-title,.form-actions,.card-head,.card-actions{display:flex;align-items:center;justify-content:space-between;gap:16px}.address-toolbar{margin-bottom:24px}.address-toolbar small,.form-title small{color:var(--brand);font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.address-toolbar h2{margin:5px 0;font-size:2rem}.address-toolbar p{margin:0;color:#77817c}.primary{border:0;background:var(--brand);padding:13px 19px;color:#fff;font-size:.72rem;font-weight:800;text-transform:uppercase}.primary:disabled{opacity:.65}.notice{margin:0 0 18px;padding:12px 14px;font-size:.76rem}.notice.success{border-left:3px solid #27804b;background:#edf8f1;color:#21653e}.notice.error{border-left:3px solid #d94b3d;background:#fff0ee;color:#a93226}.address-loading,.address-empty{border:1px dashed #d9dfdb;background:#fff;padding:45px;text-align:center;color:#748079}.address-empty i{font-size:2rem;color:var(--brand)}.address-empty h3{margin:12px 0 5px;color:var(--ink)}.address-empty p{margin:0 0 18px}.address-form{margin-bottom:24px;border:1px solid #dfe5e1;background:#fff;padding:26px}.form-title{margin-bottom:20px}.form-title h3{margin:4px 0 0}.form-title>button{border:0;background:transparent}.fields{display:grid;grid-template-columns:repeat(2,1fr);gap:17px}.fields label,.fields span{display:block}.fields label>span{margin-bottom:7px;font-size:.74rem;font-weight:700}.fields label>span small{color:#929b96;font-weight:400}.fields input,.fields textarea{width:100%;border:1px solid #dce2de;background:#fbfcfb;padding:12px 13px;outline:0}.fields input:focus,.fields textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(255,89,65,.08)}.fields textarea{resize:vertical}.fields .full{grid-column:1/-1}.fields em{display:block;margin-top:5px;color:#bf392d;font-size:.68rem;font-style:normal}.default-check{display:flex;align-items:center;gap:8px;margin-top:17px;font-size:.75rem}.form-actions{justify-content:flex-end;margin-top:20px}.secondary{border:1px solid #d9dfdb;background:#fff;padding:12px 18px;font-size:.72rem;font-weight:700}.address-grid-real{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}.address-grid-real article{border:1px solid #e0e5e2;background:#fff;padding:24px;box-shadow:0 8px 24px rgba(20,36,29,.03)}.address-grid-real article.selected{border-color:#ffb4a8;box-shadow:inset 0 3px 0 var(--brand)}.address-icon{display:grid;width:42px;height:42px;place-items:center;background:#fff0ec;color:var(--brand);font-size:1.1rem}.default-badge{background:#e8f7ed;padding:5px 9px;color:#267647;font-size:.63rem;font-weight:800}.address-grid-real h3{margin:17px 0 8px}.address-grid-real strong{font-size:.82rem}.address-grid-real p{min-height:115px;margin:7px 0 17px;color:#75807b;font-size:.75rem;line-height:1.75}.card-actions{justify-content:flex-start;flex-wrap:wrap;border-top:1px solid #edf0ee;padding-top:14px}.card-actions button{border:0;background:transparent;padding:0;color:var(--brand);font-size:.7rem;font-weight:700}.card-actions .danger{margin-left:auto;color:#b83c31}@media(max-width:767px){.address-toolbar{align-items:flex-start;flex-direction:column}.fields,.address-grid-real{grid-template-columns:1fr}.fields .full{grid-column:auto}.address-form{padding:20px}.card-actions .danger{margin-left:0}}
+.address-toolbar,.form-title,.form-actions,.card-head,.card-actions{display:flex;align-items:center;justify-content:space-between;gap:16px}.address-toolbar{margin-bottom:24px}.address-toolbar small,.form-title small{color:var(--brand);font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.address-toolbar h2{margin:5px 0;font-size:2rem}.address-toolbar p{margin:0;color:#77817c}.primary{border:0;background:var(--brand);padding:13px 19px;color:#fff;font-size:.72rem;font-weight:800;text-transform:uppercase}.primary:disabled{opacity:.65}.notice{margin:0 0 18px;padding:12px 14px;font-size:.76rem}.notice.success{border-left:3px solid #27804b;background:#edf8f1;color:#21653e}.notice.error{border-left:3px solid #d94b3d;background:#fff0ee;color:#a93226}.address-loading,.address-empty{border:1px dashed #d9dfdb;background:#fff;padding:45px;text-align:center;color:#748079}.address-empty i{font-size:2rem;color:var(--brand)}.address-empty h3{margin:12px 0 5px;color:var(--ink)}.address-empty p{margin:0 0 18px}.address-form{margin-bottom:24px;border:1px solid #dfe5e1;background:#fff;padding:26px}.form-title{margin-bottom:20px}.form-title h3{margin:4px 0 0}.form-title>button{border:0;background:transparent}.fields{display:grid;grid-template-columns:repeat(2,1fr);gap:17px}.fields label,.fields span{display:block}.fields label>span{margin-bottom:7px;font-size:.74rem;font-weight:700}.fields label>span small{color:#929b96;font-weight:400}.fields input,.fields select,.fields textarea{width:100%;border:1px solid #dce2de;background:#fbfcfb;padding:12px 13px;outline:0}.fields input:focus,.fields select:focus,.fields textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(255,89,65,.08)}.fields textarea{resize:vertical}.fields .full{grid-column:1/-1}.fields em{display:block;margin-top:5px;color:#bf392d;font-size:.68rem;font-style:normal}.default-check{display:flex;align-items:center;gap:8px;margin-top:17px;font-size:.75rem}.form-actions{justify-content:flex-end;margin-top:20px}.secondary{border:1px solid #d9dfdb;background:#fff;padding:12px 18px;font-size:.72rem;font-weight:700}.address-grid-real{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}.address-grid-real article{border:1px solid #e0e5e2;background:#fff;padding:24px;box-shadow:0 8px 24px rgba(20,36,29,.03)}.address-grid-real article.selected{border-color:#ffb4a8;box-shadow:inset 0 3px 0 var(--brand)}.address-icon{display:grid;width:42px;height:42px;place-items:center;background:#fff0ec;color:var(--brand);font-size:1.1rem}.default-badge{background:#e8f7ed;padding:5px 9px;color:#267647;font-size:.63rem;font-weight:800}.address-grid-real h3{margin:17px 0 8px}.address-grid-real strong{font-size:.82rem}.address-grid-real p{min-height:115px;margin:7px 0 17px;color:#75807b;font-size:.75rem;line-height:1.75}.card-actions{justify-content:flex-start;flex-wrap:wrap;border-top:1px solid #edf0ee;padding-top:14px}.card-actions button{border:0;background:transparent;padding:0;color:var(--brand);font-size:.7rem;font-weight:700}.card-actions .danger{margin-left:auto;color:#b83c31}@media(max-width:767px){.address-toolbar{align-items:flex-start;flex-direction:column}.fields,.address-grid-real{grid-template-columns:1fr}.fields .full{grid-column:auto}.address-form{padding:20px}.card-actions .danger{margin-left:0}}
 </style>
