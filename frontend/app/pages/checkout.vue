@@ -15,6 +15,10 @@ const selectedShippingMethod = computed(() => shippingMethods.value.find(method 
 const shippingCharge = computed(() => Number(selectedShippingMethod.value?.charge ?? 0))
 const checkoutSubtotal = computed(() => Number(cart.value?.summary.subtotal ?? 0))
 const checkoutTotal = computed(() => checkoutSubtotal.value + shippingCharge.value)
+const checkoutItems = computed(() => cart.value?.items ?? [])
+const checkoutItemCount = computed(() => Number(cart.value?.cart_count ?? 0))
+const cartLoadedForCheckout = computed(() => cart.value !== null)
+const itemOptions = (options: Array<{ name: string | null; value: string }>) => options.map(option => option.value).filter(Boolean).join(' · ')
 const money = (value: number) => `৳${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 2 }).format(value)}`
 const districts = ref<LocationOption[]>([])
 const upazilas = ref<LocationOption[]>([])
@@ -255,24 +259,18 @@ onMounted(async () => {
                 </div>
                 <div class="col-lg-5">
                     <aside class="checkout-summary">
-                        <h2>Order summary <span>3 items</span></h2>
-                        <div class="checkout-products">
-                            <div class="checkout-product"><span class="checkout-product-image"
-                                    style="--x:2;--y:0"><b>1</b></span>
-                                <div><a href="product.html">Pulse Wireless Headphones</a><small>Midnight</small></div>
-                                <strong>৳8,490</strong>
-                            </div>
-                            <div class="checkout-product"><span class="checkout-product-image"
-                                    style="--x:3;--y:0"><b>1</b></span>
-                                <div><a href="product.html">Orbit Smart Watch S2</a><small>Graphite</small></div>
-                                <strong>৳6,990</strong>
-                            </div>
-                            <div class="checkout-product"><span class="checkout-product-image"
-                                    style="--x:2;--y:2"><b>1</b></span>
-                                <div><a href="product.html">Aero Cycling Helmet</a><small>Medium</small></div>
-                                <strong>৳3,750</strong>
+                        <h2>Order summary <span>{{ checkoutItemCount }} {{ checkoutItemCount === 1 ? 'item' : 'items' }}</span></h2>
+                        <div v-if="!cartLoadedForCheckout" class="checkout-products checkout-products-state"><span class="spinner-border spinner-border-sm"></span> Loading your cart...</div>
+                        <div v-else-if="checkoutItems.length" class="checkout-products">
+                            <div v-for="item in checkoutItems" :key="item.id" class="checkout-product">
+                                <NuxtLink :to="{ path: '/product', query: { id: item.product_id } }" class="checkout-product-image dynamic-image">
+                                    <img v-if="item.image_url" :src="item.image_url" :alt="item.name"><i v-else class="bi bi-image"></i><b>{{ item.quantity }}</b>
+                                </NuxtLink>
+                                <div><NuxtLink :to="{ path: '/product', query: { id: item.product_id } }">{{ item.name }}</NuxtLink><small v-if="item.options.length">{{ itemOptions(item.options) }}</small><small v-else-if="item.sku">SKU: {{ item.sku }}</small><small v-else>{{ item.code }}</small></div>
+                                <strong>{{ money(item.line_total) }}</strong>
                             </div>
                         </div>
+                        <div v-else class="checkout-products checkout-products-empty"><i class="bi bi-cart-x"></i><div><strong>Your cart is empty</strong><small>Add products before continuing to checkout.</small></div><NuxtLink to="/shop">Shop now</NuxtLink></div>
                         <form class="checkout-coupon" data-checkout-coupon=""><input name="checkoutCoupon"
                                 placeholder="Gift card or discount code"><button>Apply</button></form>
                         <div class="checkout-discount" data-checkout-discount=""></div>
@@ -337,4 +335,15 @@ onMounted(async () => {
 .checkout-address-message.error { border-left: 3px solid #d94b3d; background: #fff0ee; color: #a93226; }
 .checkout-address-message.success { border-left: 3px solid #27804b; background: #edf8f1; color: #21653e; }
 @media (max-width: 575px) { .saved-addresses { grid-template-columns: 1fr; } }
+.checkout-product-image.dynamic-image { display:flex; position:relative; align-items:center; justify-content:center; overflow:visible; background:#f4f6f5; background-image:none; }
+.checkout-product-image.dynamic-image img { width:100%; height:100%; object-fit:contain; }
+.checkout-product-image.dynamic-image > i { color:#98a39d; font-size:1.3rem; }
+.checkout-product-image.dynamic-image b { position:absolute; top:-7px; right:-7px; z-index:2; display:grid; width:21px; height:21px; place-items:center; border-radius:50%; background:#75827b; color:#fff; font-size:.65rem; }
+.checkout-products-state { display:flex; align-items:center; gap:8px; padding:25px 0; color:#748079; font-size:.75rem; }
+.checkout-products-empty { display:grid; grid-template-columns:auto 1fr; gap:11px; align-items:center; padding:24px 0; }
+.checkout-products-empty > i { color:#8d9892; font-size:1.7rem; }
+.checkout-products-empty div { display:flex; flex-direction:column; }
+.checkout-products-empty div > strong { color:#17241e; font-size:.82rem; }
+.checkout-products-empty small { color:#7b8580; font-size:.68rem; }
+.checkout-products-empty > a { grid-column:2; color:#e6513d; font-size:.7rem; font-weight:700; }
 </style>
