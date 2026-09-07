@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Shipping Method System — A to Z বাংলা গাইড</title>
+  <style>body{margin:0;background:#f4f7f5;color:#17241e;font:16px/1.7 system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:36px 22px}h1,h2,h3{line-height:1.25}h1{font-size:2.2rem}h2{margin-top:38px;border-bottom:2px solid #ff5a45;padding-bottom:8px}code,pre{font-family:Consolas,monospace}code{background:#e8eeeb;padding:2px 5px;border-radius:4px}pre{overflow:auto;background:#10241b;color:#eaf7f0;padding:18px;border-radius:10px;white-space:pre-wrap}.note{border-left:4px solid #ff5a45;background:#fff;padding:14px 18px}.flow{background:#fff;border:1px solid #d8e1dc;padding:18px;border-radius:10px}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border:1px solid #d8e1dc;text-align:left;vertical-align:top}th{background:#eaf0ed}</style>
+</head><body><main>
+  <h1>Shipping Method System — সম্পূর্ণ বাংলা গাইড</h1>
+  <p>Admin CRUD থেকে checkout radio selection এবং total পর্যন্ত shipping method-এর সম্পূর্ণ implementation এখানে ব্যাখ্যা করা হয়েছে।</p>
+
+  <h2>১. সম্পূর্ণ flow</h2>
+  <div class="flow">Admin shipping method তৈরি/সম্পাদনা করে → Laravel database-এ save → API cache clear → public API শুধু active methods দেয় → Nuxt composable list রাখে → checkout radio-তে method ID bind হয় → selected ID দিয়ে সম্পূর্ণ method find হয় → charge subtotal-এর সঙ্গে যোগ হয়।</div>
+
+  <h2>২. File map</h2>
+  <table><tr><th>File</th><th>কাজ</th></tr>
+    <tr><td><code>adminpanel/database/migrations/2026_09_07_000001_create_shipping_methods_table.php</code></td><td>Table structure</td></tr>
+    <tr><td><code>adminpanel/database/seeders/ShippingMethodSeeder.php</code></td><td>Free/standard/express initial rows</td></tr>
+    <tr><td><code>adminpanel/app/Models/ShippingMethod.php</code></td><td>Model, fillable, casts</td></tr>
+    <tr><td><code>adminpanel/app/Http/Controllers/ShippingMethodController.php</code></td><td>Admin CRUD এবং cache clear</td></tr>
+    <tr><td><code>adminpanel/resources/views/admin/shipping-method/index.blade.php</code></td><td>Admin management UI</td></tr>
+    <tr><td><code>adminpanel/routes/web.php</code></td><td>Admin routes</td></tr>
+    <tr><td><code>adminpanel/app/Http/Middleware/AdminPermissionMiddleware.php</code></td><td>view/add/edit/delete permission mapping</td></tr>
+    <tr><td><code>adminpanel/app/Http/Controllers/Api/ShippingMethodController.php</code></td><td>Active methods public API</td></tr>
+    <tr><td><code>frontend/app/composables/useShippingMethods.ts</code></td><td>API fetch ও shared state</td></tr>
+    <tr><td><code>frontend/app/pages/checkout.vue</code></td><td>Selection, display এবং charge calculation</td></tr>
+  </table>
+
+  <h2>৩. Database fields</h2>
+  <pre><code>$table->id();
+$table->string('name', 100);
+$table->string('code', 50)->unique();
+$table->string('description')->nullable();
+$table->decimal('charge', 10, 2)->default(0);
+$table->string('delivery_time', 100)->nullable();
+$table->string('icon', 100)->nullable();
+$table->unsignedInteger('position')->default(0);
+$table->boolean('status')->default(true);</code></pre>
+  <table><tr><th>Field</th><th>অর্থ</th></tr><tr><td><code>id</code></td><td>Database primary key; checkout selection value</td></tr><tr><td><code>name</code></td><td>যেমন Free delivery</td></tr><tr><td><code>code</code></td><td>Stable unique machine name, যেমন <code>free</code></td></tr><tr><td><code>charge</code></td><td>Shipping fee; decimal string হিসেবে API-তে আসতে পারে</td></tr><tr><td><code>delivery_time</code></td><td>যেমন 4–6 business days</td></tr><tr><td><code>position</code></td><td>Checkout list order</td></tr><tr><td><code>status</code></td><td>শুধু true method public API-তে আসে</td></tr></table>
+  <div class="note"><code>minimum_days</code> ও <code>maximum_days</code> রাখা হয়নি। বর্তমান design-এ admin-friendly <code>delivery_time</code> text যথেষ্ট। ভবিষ্যতে delivery date calculation দরকার হলে তখন numeric day fields যুক্ত করবেন।</div>
+
+  <h2>৪. Admin CRUD route links</h2>
+  <table><tr><th>Method</th><th>URL</th><th>Route name / কাজ</th></tr>
+    <tr><td>GET</td><td><code>/admin/shipping-methods</code></td><td><code>shipping-methods</code> — list</td></tr>
+    <tr><td>POST</td><td><code>/admin/shipping-methods</code></td><td><code>admin-shipping-method.store</code></td></tr>
+    <tr><td>GET</td><td><code>/admin/shipping-methods/{shippingMethod}</code></td><td><code>admin-shipping-method.show</code></td></tr>
+    <tr><td>PUT</td><td><code>/admin/shipping-methods/{shippingMethod}</code></td><td><code>admin-shipping-method.update</code></td></tr>
+    <tr><td>PATCH</td><td><code>/admin/shipping-methods/{shippingMethod}/status</code></td><td><code>admin-shipping-method.status</code></td></tr>
+    <tr><td>DELETE</td><td><code>/admin/shipping-methods/{shippingMethod}</code></td><td><code>admin-shipping-method.delete</code></td></tr>
+  </table>
+  <p><code>{shippingMethod}</code>-এ ID যায়। Laravel route model binding সেই ID দিয়ে <code>ShippingMethod $shippingMethod</code> object তৈরি করে controller-এ দেয়।</p>
+
+  <h2>৫. Permission flow</h2>
+  <pre><code>'shipping-methods', 'admin-shipping-method.show' =&gt; ['shipping_method','view'],
+'admin-shipping-method.store' =&gt; ['shipping_method','add'],
+'admin-shipping-method.update', 'admin-shipping-method.status' =&gt; ['shipping_method','edit'],
+'admin-shipping-method.delete' =&gt; ['shipping_method','delete'],</code></pre>
+  <p>Sidebar link দেখা এবং route ব্যবহার করা এক জিনিস নয়। Middleware server-side permission enforce করে; তাই URL manually লিখলেও permission ছাড়া action হবে না।</p>
+
+  <h2>৬. Public API</h2>
+  <pre><code>GET /api/shipping-methods</code></pre>
+  <pre><code>$methods = Cache::remember('api.shipping-methods.v1', now()-&gt;addHours(6), fn () =&gt;
+    ShippingMethod::query()-&gt;where('status', true)
+      -&gt;orderBy('position')-&gt;orderBy('id')
+      -&gt;get(['id','name','code','description','charge','delivery_time','icon'])
+      -&gt;toArray()
+);</code></pre>
+  <p>এটি public read-only endpoint। Admin create/update/status/delete হলে <code>Cache::forget('api.shipping-methods.v1')</code> হয়, ফলে checkout পরের request-এই নতুন data পায়; ৬ ঘণ্টা অপেক্ষা করতে হয় না।</p>
+
+  <h2>৭. Nuxt composable</h2>
+  <pre><code>export type ShippingMethod = {
+  id: number
+  name: string
+  code: string
+  description: string | null
+  charge: string
+  delivery_time: string | null
+  icon: string | null
+}
+
+const shippingMethods = useState&lt;ShippingMethod[]&gt;('shipping-methods', () =&gt; [])
+
+const fetchShippingMethods = async () =&gt; {
+  const response = await $fetch('/shipping-methods', {
+    baseURL: config.public.apiBase
+  })
+  shippingMethods.value = response.shipping_methods
+}</code></pre>
+  <p><code>baseURL</code> যদি <code>http://localhost:8000/api</code> হয়, final link হয় <code>http://localhost:8000/api/shipping-methods</code>।</p>
+
+  <h2>৮. Checkout ID selection</h2>
+  <pre><code>const selectedShippingMethodId = ref&lt;number | null&gt;(null)
+
+const selectedShippingMethod = computed(() =&gt;
+  shippingMethods.value.find(
+    method =&gt; method.id === selectedShippingMethodId.value
+  ) ?? null
+)</code></pre>
+  <pre><code>&lt;label v-for="method in shippingMethods" :key="method.id"&gt;
+  &lt;input
+    v-model="selectedShippingMethodId"
+    type="radio"
+    name="checkoutShipping"
+    :value="method.id"
+  &gt;
+  {{ method.name }}
+&lt;/label&gt;</code></pre>
+  <p>User radio select করলে <code>selectedShippingMethodId</code>-তে method-এর numeric ID যায়। <code>find()</code> সেই ID match করে full object বের করে। <code>:key</code> Vue list rendering-এর জন্য, আর <code>:value</code> selected ID-এর জন্য।</p>
+
+  <h2>৯. Charge এবং total</h2>
+  <pre><code>const shippingCharge = computed(() =&gt;
+  Number(selectedShippingMethod.value?.charge ?? 0)
+)
+
+const checkoutSubtotal = computed(() =&gt;
+  Number(cart.value?.summary.subtotal ?? 0)
+)
+
+const checkoutTotal = computed(() =&gt;
+  checkoutSubtotal.value + shippingCharge.value
+)</code></pre>
+  <p>Laravel decimal সাধারণত JSON-এ string হতে পারে, তাই <code>Number()</code> দিয়ে arithmetic-এর আগে number করা হয়েছে। Method বদলালে computed values automatic update হয়।</p>
+
+  <h2>১০. প্রথম method default select</h2>
+  <pre><code>await fetchShippingMethods()
+const firstShippingMethod = shippingMethods.value[0]
+if (!selectedShippingMethodId.value &amp;&amp; firstShippingMethod) {
+  selectedShippingMethodId.value = firstShippingMethod.id
+}</code></pre>
+  <p>API <code>position</code> অনুযায়ী sort করে, তাই সবচেয়ে কম position-এর active method শুরুতে select হয়। Array খালি হতে পারে বলে আগে <code>firstShippingMethod</code> check করা হয়েছে।</p>
+
+  <h2>১১. Order submit-এর সময় অবশ্যই যা করবেন</h2>
+  <div class="note">বর্তমান UI selection/summary dynamic। Order API তৈরি করার সময় frontend থেকে শুধু <code>shipping_method_id</code> পাঠাবেন। Backend আবার active method database থেকে load করে charge নেবে। Frontend পাঠানো charge কখনও বিশ্বাস করবেন না—user DevTools দিয়ে তা বদলাতে পারে।</div>
+  <pre><code>// frontend request
+{ shipping_method_id: selectedShippingMethodId.value }
+
+// backend principle
+$method = ShippingMethod::where('status', true)
+    -&gt;findOrFail($request-&gt;integer('shipping_method_id'));
+$shippingCharge = $method-&gt;charge;
+$total = $subtotal + $shippingCharge;</code></pre>
+
+  <h2>১২. অন্য page/project-এ প্রয়োগ</h2>
+  <ol><li>Migration এবং model তৈরি করুন।</li><li>Admin CRUD validation ও permission দিন।</li><li>Active-only public endpoint দিন।</li><li>Mutation-এর পরে API cache forget করুন।</li><li>Nuxt composable-এ typed state রাখুন।</li><li>Radio value-তে method ID bind করুন।</li><li>UI preview-এর জন্য computed total করুন।</li><li>Final order total backend-এ পুনরায় হিসাব করুন এবং order row-তে method name/code/charge snapshot সংরক্ষণ করুন।</li></ol>
+</main></body></html>
