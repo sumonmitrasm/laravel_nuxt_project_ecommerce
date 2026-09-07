@@ -2,6 +2,8 @@
 const route = useRoute()
 const router = useRouter()
 const config = useRuntimeConfig()
+const { data: catalogData } = await useCatalogMenu()
+const siteName = computed(() => catalogData.value?.site?.name || 'NovaCart')
 
 const categoryUrl = computed(() => {
     const value = route.query.category
@@ -101,6 +103,54 @@ const products = computed(() =>
 const category = computed(() =>
     data.value?.categoryDetails ?? null
 )
+
+const catalogSections = computed(() => catalogData.value?.categories ?? [])
+const rootCategories = computed(() => catalogSections.value.flatMap(section => section.categories ?? []))
+
+const categoryProductCount = item => Number(item.products_count ?? 0)
+    + (item.subcategories ?? []).reduce((total, child) => total + categoryProductCount(child), 0)
+
+const treeContainsUrl = (items, url) => items.some(item => item.url === url || treeContainsUrl(item.subcategories ?? [], url))
+const activeSection = computed(() => catalogSections.value.find(section => treeContainsUrl(section.categories ?? [], categoryUrl.value)) ?? null)
+const filterCategories = computed(() => activeSection.value?.categories ?? rootCategories.value)
+
+const findCategoryContext = (items, url, parent = null) => {
+    for (const item of items) {
+        if (item.url === url) return { item, parent }
+        const found = findCategoryContext(item.subcategories ?? [], url, item)
+        if (found) return found
+    }
+    return null
+}
+
+const selectedCategoryContext = computed(() => findCategoryContext(filterCategories.value, categoryUrl.value))
+const subcategories = computed(() => {
+    const context = selectedCategoryContext.value
+    if (context?.item?.subcategories?.length) return context.item.subcategories
+    if (context?.parent?.subcategories?.length) return context.parent.subcategories
+    return []
+})
+
+const showAllCategories = ref(false)
+const showAllSubcategories = ref(false)
+const visibleCategories = computed(() => showAllCategories.value ? filterCategories.value : filterCategories.value.slice(0, 5))
+const visibleSubcategories = computed(() => showAllSubcategories.value ? subcategories.value : subcategories.value.slice(0, 5))
+const hiddenCategoryCount = computed(() => Math.max(0, filterCategories.value.length - 5))
+const hiddenSubcategoryCount = computed(() => Math.max(0, subcategories.value.length - 5))
+
+watch(categoryUrl, () => {
+    showAllCategories.value = false
+    showAllSubcategories.value = false
+})
+
+const isCategorySelected = url => categoryUrl.value === url
+const selectCategory = async url => {
+    await replaceFilterQuery({ category: isCategorySelected(url) ? undefined : url, page: undefined })
+}
+const heroTitle = computed(() => category.value?.category_name ?? 'Explore the Collection')
+const heroSubtitle = computed(() => category.value
+    ? `Discover products selected from ${category.value.category_name}`
+    : 'Fresh finds, thoughtful choices and something new for every day')
 
 const breadcrumbs = computed(() =>
     data.value?.breadcrumbs ?? []
@@ -291,11 +341,15 @@ const productBadge = product => {
 </script>
 <template>
     <main>
-        <section class="shop-hero">
-            <div class="container text-center">
-                <h1>Grid 4 Columns</h1>
-                <p>Shop</p>
+        <section class="shop-hero ocean-hero">
+            <div class="ocean-glow ocean-glow-one"></div><div class="ocean-glow ocean-glow-two"></div>
+            <div class="ocean-bubble bubble-one"></div><div class="ocean-bubble bubble-two"></div><div class="ocean-bubble bubble-three"></div>
+            <div class="container text-center ocean-content">
+                <span class="ocean-kicker">{{ siteName }} COLLECTION</span>
+                <h1>{{ heroTitle }}</h1>
+                <p>{{ heroSubtitle }}</p>
             </div>
+            <div class="ocean-wave wave-back"></div><div class="ocean-wave wave-front"></div>
         </section>
         <div class="shop-breadcrumb">
             <div class="container">
@@ -318,29 +372,27 @@ const productBadge = product => {
                             @click="clearFilters">Clean
                             All</button></div>
                     <div class="shop-filter-group">
-                        <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#filterCategory"
-                            aria-expanded="true">
-                            Category <i class="bi bi-chevron-down"></i>
-                        </button>
+                        <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#filterCategory" aria-expanded="true">Category <i class="bi bi-chevron-down"></i></button>
                         <div class="collapse show" id="filterCategory">
-                            <label><input type="checkbox" /> Electronics <span>24</span></label><label><input
-                                    type="checkbox" />
-                                Fashion <span>18</span></label><label><input type="checkbox" />
-                                Home &amp; Living <span>12</span></label><label><input type="checkbox" /> Accessories
-                                <span>9</span></label><label><input type="checkbox" /> Sports <span>7</span></label>
+                            <label v-for="item in visibleCategories" :key="`desktop-category-${item.id}`">
+                                <input type="checkbox" :checked="isCategorySelected(item.url)" @change="selectCategory(item.url)"> {{ item.category_name }}
+                                <span>{{ categoryProductCount(item) }}</span>
+                            </label>
+                            <small v-if="!filterCategories.length" class="filter-empty">No category available</small>
+                    <button v-if="hiddenCategoryCount" type="button" class="filter-more" @click="showAllCategories = !showAllCategories">{{ showAllCategories ? 'Show less' : `+ ${hiddenCategoryCount} more` }}</button>
+                            <button v-if="hiddenCategoryCount" type="button" class="filter-more" @click="showAllCategories = !showAllCategories">{{ showAllCategories ? 'Show less' : `+ ${hiddenCategoryCount} more` }}</button>
                         </div>
                     </div>
                     <div class="shop-filter-group">
-                        <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#filterSubcategory"
-                            aria-expanded="true">
-                            Subcategory <i class="bi bi-chevron-down"></i>
-                        </button>
+                        <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#filterSubcategory" aria-expanded="true">Subcategory <i class="bi bi-chevron-down"></i></button>
                         <div class="collapse show" id="filterSubcategory">
-                            <label><input type="checkbox" /> Smartphones <span>8</span></label><label><input
-                                    type="checkbox" />
-                                Computers <span>6</span></label><label><input type="checkbox" />
-                                Audio <span>5</span></label><label><input type="checkbox" /> Cameras
-                                <span>4</span></label><label><input type="checkbox" /> Wearables <span>6</span></label>
+                            <label v-for="item in visibleSubcategories" :key="`desktop-subcategory-${item.id}`">
+                                <input type="checkbox" :checked="isCategorySelected(item.url)" @change="selectCategory(item.url)"> {{ item.category_name }}
+                                <span>{{ categoryProductCount(item) }}</span>
+                            </label>
+                            <small v-if="!subcategories.length" class="filter-empty">No subcategory available</small>
+                    <button v-if="hiddenSubcategoryCount" type="button" class="filter-more" @click="showAllSubcategories = !showAllSubcategories">{{ showAllSubcategories ? 'Show less' : `+ ${hiddenSubcategoryCount} more` }}</button>
+                            <button v-if="hiddenSubcategoryCount" type="button" class="filter-more" @click="showAllSubcategories = !showAllSubcategories">{{ showAllSubcategories ? 'Show less' : `+ ${hiddenSubcategoryCount} more` }}</button>
                         </div>
                     </div>
                     <div class="shop-filter-group">
@@ -488,27 +540,19 @@ const productBadge = product => {
         <div class="offcanvas-body">
             <div class="shop-filter-head"><strong>Filters</strong><button type="reset">Clean All</button></div>
             <div class="shop-filter-group">
-                <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#mobileFilterPanel0"
-                    aria-expanded="true">
-                    Category <i class="bi bi-chevron-down"></i>
-                </button>
+                <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#mobileFilterPanel0" aria-expanded="true">Category <i class="bi bi-chevron-down"></i></button>
                 <div class="collapse show" id="mobileFilterPanel0">
-                    <label><input type="checkbox" /> Electronics <span>24</span></label><label><input type="checkbox" />
-                        Fashion <span>18</span></label><label><input type="checkbox" /> Home &amp; Living
-                        <span>12</span></label><label><input type="checkbox" /> Accessories
-                        <span>9</span></label><label><input type="checkbox" /> Sports <span>7</span></label>
+                    <label v-for="item in visibleCategories" :key="`mobile-category-${item.id}`"><input type="checkbox" :checked="isCategorySelected(item.url)" @change="selectCategory(item.url)"> {{ item.category_name }} <span>{{ categoryProductCount(item) }}</span></label>
+                    <small v-if="!filterCategories.length" class="filter-empty">No category available</small>
+                    <button v-if="hiddenCategoryCount" type="button" class="filter-more" @click="showAllCategories = !showAllCategories">{{ showAllCategories ? 'Show less' : `+ ${hiddenCategoryCount} more` }}</button>
                 </div>
             </div>
             <div class="shop-filter-group">
-                <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#mobileFilterPanel1"
-                    aria-expanded="true">
-                    Subcategory <i class="bi bi-chevron-down"></i>
-                </button>
+                <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#mobileFilterPanel1" aria-expanded="true">Subcategory <i class="bi bi-chevron-down"></i></button>
                 <div class="collapse show" id="mobileFilterPanel1">
-                    <label><input type="checkbox" /> Smartphones <span>8</span></label><label><input type="checkbox" />
-                        Computers <span>6</span></label><label><input type="checkbox" /> Audio
-                        <span>5</span></label><label><input type="checkbox" /> Cameras
-                        <span>4</span></label><label><input type="checkbox" /> Wearables <span>6</span></label>
+                    <label v-for="item in visibleSubcategories" :key="`mobile-subcategory-${item.id}`"><input type="checkbox" :checked="isCategorySelected(item.url)" @change="selectCategory(item.url)"> {{ item.category_name }} <span>{{ categoryProductCount(item) }}</span></label>
+                    <small v-if="!subcategories.length" class="filter-empty">No subcategory available</small>
+                    <button v-if="hiddenSubcategoryCount" type="button" class="filter-more" @click="showAllSubcategories = !showAllSubcategories">{{ showAllSubcategories ? 'Show less' : `+ ${hiddenSubcategoryCount} more` }}</button>
                 </div>
             </div>
             <div class="shop-filter-group">
@@ -573,3 +617,30 @@ const productBadge = product => {
         </div>
     </div>
 </template>
+<style scoped>
+.ocean-hero { position:relative; min-height:250px; padding:0; overflow:hidden; display:grid; place-items:center; isolation:isolate; background:linear-gradient(118deg,#041f32 0%,#064d68 36%,#0787a6 69%,#45c4ce 100%); box-shadow:inset 0 -1px rgba(255,255,255,.25); }
+.ocean-hero::before { content:""; position:absolute; z-index:0; inset:-45% -10%; opacity:.2; background:repeating-radial-gradient(ellipse at 50% 100%,transparent 0 24px,rgba(170,244,255,.35) 26px 27px,transparent 29px 54px); transform:perspective(500px) rotateX(58deg) scale(1.15); animation:waterCaustics 12s linear infinite; }
+.ocean-hero::after { content:""; position:absolute; z-index:1; inset:0; pointer-events:none; background:linear-gradient(90deg,rgba(1,18,31,.28),transparent 32%,transparent 68%,rgba(7,106,124,.05)),linear-gradient(180deg,rgba(255,255,255,.08),transparent 40%); }
+.ocean-content { position:relative; z-index:5; width:min(720px,calc(100% - 40px)); padding:42px 30px 78px; color:#fff; }
+.ocean-content::before { content:""; position:absolute; z-index:-1; inset:25px 0 58px; border:1px solid rgba(255,255,255,.13); border-radius:22px; background:linear-gradient(135deg,rgba(255,255,255,.09),rgba(255,255,255,.025)); box-shadow:0 22px 60px rgba(0,24,38,.14); backdrop-filter:blur(2px); }
+.ocean-kicker { display:inline-flex; align-items:center; gap:8px; margin-bottom:10px; border:1px solid rgba(202,250,255,.25); border-radius:999px; background:rgba(4,46,65,.22); padding:6px 12px; letter-spacing:.22em; font-size:.62rem; font-weight:800; color:#c9f8ff; }
+.ocean-kicker::before { content:""; width:5px; height:5px; border-radius:50%; background:#7cf0e6; box-shadow:0 0 0 5px rgba(124,240,230,.12); }
+.ocean-hero h1 { margin:0; color:#fff; font-size:clamp(2.15rem,4vw,3.6rem); font-weight:760; letter-spacing:-.035em; text-shadow:0 9px 30px rgba(0,20,34,.3); }
+.ocean-hero p { max-width:600px; margin:9px auto 0; color:rgba(235,253,255,.82); font-size:.88rem; letter-spacing:.01em; }
+.ocean-glow { position:absolute; z-index:1; border-radius:50%; filter:blur(1px); background:radial-gradient(circle,rgba(171,248,255,.32),rgba(116,232,245,.08) 38%,transparent 70%); animation:oceanFloat 8s ease-in-out infinite; }
+.ocean-glow-one { width:430px; height:430px; left:-80px; top:-290px; }.ocean-glow-two { width:370px; height:370px; right:-40px; bottom:-245px; animation-delay:-3s; }
+.ocean-wave { position:absolute; left:-15%; width:130%; transform-origin:center bottom; will-change:transform; }
+.wave-back { z-index:3; bottom:-91px; height:122px; border-radius:47% 54% 0 0 / 43% 51% 0 0; background:linear-gradient(90deg,rgba(147,230,239,.3),rgba(180,246,247,.48)); animation:oceanWaveBack 8s ease-in-out infinite alternate; }
+.wave-front { z-index:4; bottom:-112px; height:128px; border-radius:52% 43% 0 0 / 45% 48% 0 0; background:#f7f9f8; box-shadow:0 -8px 28px rgba(147,240,242,.12); animation:oceanWaveFront 6s ease-in-out -2s infinite alternate; }
+.ocean-bubble { position:absolute; z-index:2; border:1px solid rgba(218,252,255,.38); border-radius:50%; box-shadow:inset 2px 2px 4px rgba(255,255,255,.15); animation:bubbleRise 9s linear infinite; }
+.bubble-one{width:12px;height:12px;left:19%;bottom:-20px}.bubble-two{width:7px;height:7px;left:74%;bottom:-20px;animation-delay:-4s}.bubble-three{width:17px;height:17px;left:89%;bottom:-20px;animation-delay:-6s}.filter-empty { display:block; padding:8px 0; color:#88938d; font-size:.7rem; }
+.filter-more { width:100%; margin-top:7px; border:1px dashed #b9c8c1; border-radius:5px; background:#f7faf8; padding:8px 10px; color:#e6513d; font-size:.69rem; font-weight:750; text-align:left; transition:.2s ease; }
+.filter-more:hover { border-color:#ff7967; background:#fff3f0; }
+@keyframes oceanWaveBack { from{transform:translateX(-6%) scaleY(.94)} to{transform:translateX(6%) scaleY(1.05)} }
+@keyframes oceanWaveFront { from{transform:translateX(6%) scaleY(.96)} to{transform:translateX(-6%) scaleY(1.04)} }
+@keyframes waterCaustics { from{transform:perspective(500px) rotateX(58deg) translateX(-18px) scale(1.15)} to{transform:perspective(500px) rotateX(58deg) translateX(36px) scale(1.15)} }
+@keyframes oceanFloat { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(18px) scale(1.08)} }
+@keyframes bubbleRise { 0%{transform:translateY(0);opacity:0} 15%{opacity:.7} 100%{transform:translateY(-270px);opacity:0} }
+@media (prefers-reduced-motion:reduce){.ocean-wave,.ocean-glow,.ocean-bubble{animation:none}}
+@media(max-width:575px){.ocean-hero{min-height:210px;padding:0}.ocean-content{width:calc(100% - 24px);padding:34px 18px 65px}.ocean-content::before{inset:19px 0 49px;border-radius:16px}.ocean-kicker{font-size:.55rem}.ocean-hero p{font-size:.76rem;padding:0 10px}}
+</style>
