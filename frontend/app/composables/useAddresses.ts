@@ -4,9 +4,12 @@ export type UserAddress = {
   recipient_name: string
   phone: string
   alternative_phone: string | null
-  division: string
-  district: string
-  upazila: string
+  division: number
+  division_name: string | null
+  district: number
+  district_name: string | null
+  upazila: number
+  upazila_name: string | null
   area: string | null
   postal_code: string | null
   address_line: string
@@ -14,7 +17,7 @@ export type UserAddress = {
   status: boolean
 }
 
-export type AddressPayload = Omit<UserAddress, 'id' | 'status'>
+export type AddressPayload = Omit<UserAddress, 'id' | 'status' | 'division_name' | 'district_name' | 'upazila_name'>
 
 type AddressListResponse = { status: boolean; addresses: UserAddress[] }
 type AddressMutationResponse = { status: boolean; message: string; address?: UserAddress }

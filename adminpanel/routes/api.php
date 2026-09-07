@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\FrontController;
+use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\UserAddressController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +11,12 @@ Route::get('/menu', [FrontController::class, 'menu'])->name('api.menu');
 Route::get('/products', [FrontController::class, 'products'])->name('api.products');
 Route::get('/listing/{url}', [FrontController::class, 'listing'])->name('api.listing');
 Route::get('/detail/{id}', [FrontController::class, 'details'])->whereNumber('id')->name('api.detail');
+
+Route::prefix('locations')->group(function () {
+    Route::get('/divisions', [LocationController::class, 'divisions']);
+    Route::get('/divisions/{division}/districts', [LocationController::class, 'districts'])->whereNumber('division');
+    Route::get('/districts/{district}/upazilas', [LocationController::class, 'upazilas'])->whereNumber('district');
+});
 
 Route::prefix('cart')->group(function () {
     Route::get('/', [CartController::class, 'index'])->name('api.cart.index');
