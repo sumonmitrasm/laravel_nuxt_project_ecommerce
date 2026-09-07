@@ -77,6 +77,11 @@ class AdminPermissionMiddleware
             'admin-coupon.store' => ['coupon', 'add'],
             'admin-coupon.update', 'admin-coupon.status' => ['coupon', 'edit'],
             'admin-coupon.delete' => ['coupon', 'delete'],
+
+            'shipping-methods', 'admin-shipping-method.show' => ['shipping_method', 'view'],
+            'admin-shipping-method.store' => ['shipping_method', 'add'],
+            'admin-shipping-method.update', 'admin-shipping-method.status' => ['shipping_method', 'edit'],
+            'admin-shipping-method.delete' => ['shipping_method', 'delete'],
             default => null,
         };
     }

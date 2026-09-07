@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { LocationOption } from '~/composables/useLocations'
+import type { UserAddress } from '~/composables/useAddresses'
 useSeoMeta({ robots: 'noindex, nofollow' })
 definePageMeta({ middleware: 'auth' })
 
@@ -7,6 +8,14 @@ const { user } = useAuth()
 const { addresses, defaultAddress, fetchAddresses, createAddress, updateAddress, removeAddress, makeDefaultAddress } = useAddresses()
 const { success: showSuccessToast, error: showErrorToast } = useToast()
 const { divisions, fetchDivisions, fetchDistricts, fetchUpazilas } = useLocations()
+const { shippingMethods, fetchShippingMethods } = useShippingMethods()
+const { cart, fetchCart } = useCart()
+const selectedShippingMethodId = ref<number | null>(null)
+const selectedShippingMethod = computed(() => shippingMethods.value.find(method => method.id === selectedShippingMethodId.value) ?? null)
+const shippingCharge = computed(() => Number(selectedShippingMethod.value?.charge ?? 0))
+const checkoutSubtotal = computed(() => Number(cart.value?.summary.subtotal ?? 0))
+const checkoutTotal = computed(() => checkoutSubtotal.value + shippingCharge.value)
+const money = (value: number) => `৳${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 2 }).format(value)}`
 const districts = ref<LocationOption[]>([])
 const upazilas = ref<LocationOption[]>([])
 const selectedDivisionId = ref<number | null>(null)
@@ -149,7 +158,11 @@ const setCheckoutDefault = async (address: UserAddress) => {
 onMounted(async () => {
   locationsLoading.value = true
   try {
-    await Promise.all([fetchAddresses(), fetchDivisions()])
+    await Promise.all([fetchAddresses(), fetchDivisions(), fetchShippingMethods(), fetchCart()])
+    const firstShippingMethod = shippingMethods.value[0]
+    if (!selectedShippingMethodId.value && firstShippingMethod) {
+      selectedShippingMethodId.value = firstShippingMethod.id
+    }
     const initial = defaultAddress.value ?? addresses.value[0]
     if (initial) await selectSavedAddress(initial); else { clearDelivery(); resetLocationSelection() }
   } finally {
@@ -211,15 +224,15 @@ onMounted(async () => {
                                     <p>Choose how quickly you'd like to receive your order.</p>
                                 </div>
                             </div>
-                            <div class="checkout-options"><label class="selected"><input type="radio"
-                                        name="checkoutShipping" value="0" checked><i
-                                        class="bi bi-truck"></i><span><strong>Free delivery</strong><small>4-6 business days</small></span><b>Free</b></label><label><input type="radio"
-                                        name="checkoutShipping" value="120"><i
-                                        class="bi bi-box-seam"></i><span><strong>Standard delivery</strong><small>2-4 business days</small></span><b>৳120</b></label><label><input type="radio"
-                                        name="checkoutShipping" value="350"><i
-                                        class="bi bi-lightning-charge"></i><span><strong>Express
-                                            delivery</strong><small>Next business day</small></span><b>৳350</b></label>
+                            <div v-if="shippingMethods.length" class="checkout-options">
+                                <label v-for="method in shippingMethods" :key="method.id" :class="{ selected: selectedShippingMethodId === method.id }">
+                                    <input v-model="selectedShippingMethodId" type="radio" name="checkoutShipping" :value="method.id">
+                                    <i :class="method.icon || 'bi bi-truck'"></i>
+                                    <span><strong>{{ method.name }}</strong><small v-if="method.delivery_time">{{ method.delivery_time }}</small><small v-else-if="method.description">{{ method.description }}</small></span>
+                                    <b>{{ Number(method.charge) === 0 ? 'Free' : money(Number(method.charge)) }}</b>
+                                </label>
                             </div>
+                            <p v-else class="checkout-address-message error">No shipping method is currently available.</p>
                         </section>
                         <section class="checkout-section">
                             <div class="checkout-section-head"><span>3</span>
@@ -248,7 +261,7 @@ onMounted(async () => {
                             </div>
                         </section>
                         <button class="place-order-mobile d-lg-none" type="submit"><i class="bi bi-lock"></i> Place
-                            order · <span data-checkout-mobile-total="">৳19,230</span></button>
+                            order · <span data-checkout-mobile-total="">{{ money(checkoutTotal) }}</span></button>
                     </form>
                 </div>
                 <div class="col-lg-5">
@@ -275,10 +288,10 @@ onMounted(async () => {
                                 placeholder="Gift card or discount code"><button>Apply</button></form>
                         <div class="checkout-discount" data-checkout-discount=""></div>
                         <div class="checkout-totals">
-                            <div><span>Subtotal</span><strong>৳19,230</strong></div>
-                            <div><span>Shipping</span><strong data-checkout-shipping="">Free</strong></div>
+                            <div><span>Subtotal</span><strong>{{ money(checkoutSubtotal) }}</strong></div>
+                            <div><span>Shipping</span><strong>{{ shippingCharge === 0 ? 'Free' : money(shippingCharge) }}</strong></div>
                             <div class="checkout-grand-total"><span>Total <small>BDT</small></span><strong
-                                    data-checkout-total="">৳19,230</strong></div>
+                                    data-checkout-total="">{{ money(checkoutTotal) }}</strong></div>
                         </div><button class="place-order d-none d-lg-flex" type="submit" form="checkoutForm"
                             data-place-order=""><i class="bi bi-lock"></i> Place order</button>
                         <p class="checkout-terms">By placing your order, you agree to our <a href="#">Terms</a> and <a

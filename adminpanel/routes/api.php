@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\FrontController;
 use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\ShippingMethodController;
 use App\Http\Controllers\Api\UserAddressController;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +12,7 @@ Route::get('/menu', [FrontController::class, 'menu'])->name('api.menu');
 Route::get('/products', [FrontController::class, 'products'])->name('api.products');
 Route::get('/listing/{url}', [FrontController::class, 'listing'])->name('api.listing');
 Route::get('/detail/{id}', [FrontController::class, 'details'])->whereNumber('id')->name('api.detail');
+Route::get('/shipping-methods', [ShippingMethodController::class, 'index'])->name('api.shipping-methods');
 
 Route::prefix('locations')->group(function () {
     Route::get('/divisions', [LocationController::class, 'divisions']);
