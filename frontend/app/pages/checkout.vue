@@ -242,22 +242,11 @@ onMounted(async () => {
                                 </div>
                                 <div class="payment-logos"><b>VISA</b><b>MC</b></div>
                             </div>
-                            <div class="checkout-options payment-methods"><label class="selected"><input type="radio"
-                                        name="payment" value="card" checked><i
-                                        class="bi bi-credit-card"></i><span><strong>Credit or debit
-                                            card</strong><small>Visa, Mastercard</small></span></label>
-                                <div class="card-fields"><label class="field full"><span>Card number</span><input
-                                            inputmode="numeric" placeholder="0000 0000 0000 0000"><i
-                                            class="bi bi-lock"></i></label><label class="field"><span>Expiry
-                                            date</span><input placeholder="MM / YY"></label><label
-                                        class="field"><span>Security code</span><input inputmode="numeric"
-                                            placeholder="CVV"><i class="bi bi-question-circle"></i></label><label
-                                        class="field full"><span>Name on card</span><input></label></div><label><input
-                                        type="radio" name="payment" value="mobile"><i
-                                        class="bi bi-phone"></i><span><strong>Mobile banking</strong><small>bKash or
-                                            Nagad</small></span></label><label><input type="radio" name="payment"
-                                        value="cod"><i class="bi bi-cash-stack"></i><span><strong>Cash on
-                                            delivery</strong><small>Pay when your order arrives</small></span></label>
+                            <div class="checkout-options payment-methods">
+                                <label class="selected"><input type="radio" name="payment" value="mobile">
+                                  <i class="bi bi-phone"></i><span><strong>SSLCommerze</strong><small>Bank/bKash/Nagad</small></span></label>
+                                <label><input type="radio" name="payment" value="cod">
+                                  <i class="bi bi-cash-stack"></i><span><strong>Cash on delivery</strong><small>Pay when your order arrives</small></span></label>
                             </div>
                         </section>
                         <button class="place-order-mobile d-lg-none" type="submit"><i class="bi bi-lock"></i> Place
