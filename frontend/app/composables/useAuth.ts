@@ -10,6 +10,7 @@ type UpdateProfileResponse = { status: boolean; message: string; user: AuthUser 
 export const useAuth = () => {
   const config = useRuntimeConfig()
   const xsrfToken = useCookie<string | null>('XSRF-TOKEN')
+  const guestCartToken = useCookie<string | null>('guest_cart_token')
   const user = useState<AuthUser | null>('auth-user', () => null)
   const authLoaded = useState<boolean>('auth-loaded', () => false)
   const isAuthenticated = computed(() => user.value !== null)
@@ -21,6 +22,13 @@ export const useAuth = () => {
   const csrfHeaders = (): Record<string, string> => xsrfToken.value
     ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrfToken.value) }
     : {}
+  const loginHeaders = (): Record<string, string> => ({
+    ...csrfHeaders(),
+    ...(guestCartToken.value ? { 'X-Guest-Cart-Token': guestCartToken.value } : {}),
+  })
+  const refreshShoppingCart = async () => {
+    await useCart().fetchCart(true)
+  }
 
   const fetchUser = async () => {
     try {
@@ -52,9 +60,10 @@ export const useAuth = () => {
 
   const login = async (payload: LoginPayload) => {
     await csrf()
-    const response = await $fetch<AuthResponse>('/auth/login', { baseURL: config.public.apiBase, method: 'POST', credentials: 'include', headers: csrfHeaders(), body: payload })
+    const response = await $fetch<AuthResponse>('/auth/login', { baseURL: config.public.apiBase, method: 'POST', credentials: 'include', headers: loginHeaders(), body: payload })
     user.value = response.user
     authLoaded.value = true
+    await refreshShoppingCart()
     return response
   }
 
@@ -99,8 +108,16 @@ export const useAuth = () => {
   const logout = async () => {
     await csrf()
     await $fetch('/auth/logout', { baseURL: config.public.apiBase, method: 'POST', credentials: 'include', headers: csrfHeaders() })
+
+    // Keep the authenticated cart token in the database, but start a new guest
+    // cart token in this browser after logout.
+    if (import.meta.client) {
+      guestCartToken.value = crypto.randomUUID()
+    }
+
     user.value = null
     authLoaded.value = true
+    await refreshShoppingCart()
   }
 
   return { user, authLoaded, isAuthenticated, fetchUser, login, register, resendVerification, updateProfile, logout }

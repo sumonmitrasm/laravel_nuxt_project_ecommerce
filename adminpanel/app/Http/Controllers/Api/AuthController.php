@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\RegisterRequest;
 use App\Models\User;
+use App\Services\CartManager;
 use App\Support\ImageOptimizer;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,10 @@ use Throwable;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly ImageOptimizer $images) {}
+    public function __construct(
+        private readonly ImageOptimizer $images,
+        private readonly CartManager $carts,
+    ) {}
 
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -104,6 +108,11 @@ class AuthController extends Controller
 
         Auth::guard('web')->login($user, (bool) ($validated['remember'] ?? false));
         $request->session()->regenerate();
+
+        $this->carts->mergeForUser(
+            $user,
+            $request->header('X-Guest-Cart-Token'),
+        );
 
         return response()->json([
             'status' => true,

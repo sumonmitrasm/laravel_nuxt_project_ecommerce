@@ -5,34 +5,31 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\CartManager;
+use App\Services\CouponService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CartController extends Controller
 {
     private const MAX_ITEM_QUANTITY = 3;
 
+    public function __construct(
+        private readonly CartManager $carts,
+        private readonly CouponService $coupons,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
-        $guestToken = $this->validGuestToken($request, false);
+        $cart = $this->carts->resolve($request, false);
 
-        if (! $guestToken) {
-            return response()->json($this->emptyCartPayload());
-        }
-
-        $cart = Cart::query()
-            ->whereNull('user_id')
-            ->where('guest_token', $guestToken)
-            ->first();
-
-        return response()->json($this->cartPayload($cart));
+        return response()->json($this->cartPayload($cart, $request));
     }
-
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -54,7 +51,7 @@ class CartController extends Controller
             ],
         ]);
 
-        $guestToken = $this->validGuestToken($request);
+        $cart = $this->carts->resolve($request, true);
 
         $product = Product::query()
             ->whereKey($validated['product_id'])
@@ -72,15 +69,11 @@ class CartController extends Controller
         );
 
         $cart = DB::transaction(function () use (
-            $guestToken,
+            $cart,
             $product,
             $variant,
             $validated
         ) {
-            $cart = Cart::query()->firstOrCreate([
-                'user_id' => null,
-                'guest_token' => $guestToken,
-            ]);
 
             $cartItem = CartItem::query()
                 ->where('cart_id', $cart->id)
@@ -114,7 +107,7 @@ class CartController extends Controller
         });
 
         return response()->json([
-            ...$this->cartPayload($cart->fresh()),
+            ...$this->cartPayload($cart->fresh(), $request),
             'message' => 'Product added to cart.',
         ], 201);
     }
@@ -132,8 +125,7 @@ class CartController extends Controller
             ],
         ]);
 
-        $guestToken = $this->validGuestToken($request);
-        $cart = $this->guestCart($guestToken);
+        $cart = $this->carts->resolve($request, true);
 
         $this->ensureItemBelongsToCart($item, $cart);
 
@@ -166,7 +158,7 @@ class CartController extends Controller
         ]);
 
         return response()->json([
-            ...$this->cartPayload($cart->fresh()),
+            ...$this->cartPayload($cart->fresh(), $request),
             'message' => 'Cart updated successfully.',
         ]);
     }
@@ -175,8 +167,7 @@ class CartController extends Controller
         Request $request,
         CartItem $item
     ): JsonResponse {
-        $guestToken = $this->validGuestToken($request);
-        $cart = $this->guestCart($guestToken);
+        $cart = $this->carts->resolve($request, true);
 
         $this->ensureItemBelongsToCart($item, $cart);
 
@@ -192,15 +183,14 @@ class CartController extends Controller
         }
 
         return response()->json([
-            ...$this->cartPayload($cart->fresh()),
+            ...$this->cartPayload($cart->fresh(), $request),
             'message' => 'Product removed from cart.',
         ]);
     }
 
     public function clear(Request $request): JsonResponse
     {
-        $guestToken = $this->validGuestToken($request);
-        $cart = $this->guestCart($guestToken, false);
+        $cart = $this->carts->resolve($request, false);
 
         if ($cart) {
             DB::transaction(function () use ($cart) {
@@ -212,6 +202,60 @@ class CartController extends Controller
         return response()->json([
             ...$this->emptyCartPayload(),
             'message' => 'Cart cleared successfully.',
+        ]);
+    }
+
+    public function applyCoupon(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:100'],
+        ]);
+
+        $cart = $this->carts->resolve($request, true);
+        $coupon = Coupon::query()
+            ->where('code', strtoupper(trim($validated['code'])))
+            ->first();
+
+        if (! $coupon) {
+            throw ValidationException::withMessages([
+                'coupon' => 'The coupon code is invalid.',
+            ]);
+        }
+
+        $cart->forceFill([
+            'coupon_id' => $coupon->id,
+            'coupon_applied_at' => now(),
+        ])->save();
+
+        try {
+            $payload = $this->cartPayload($cart->fresh(), $request, true);
+        } catch (ValidationException $exception) {
+            $cart->forceFill([
+                'coupon_id' => null,
+                'coupon_applied_at' => null,
+            ])->save();
+
+            throw $exception;
+        }
+
+        return response()->json([
+            ...$payload,
+            'message' => 'Coupon applied successfully.',
+        ]);
+    }
+
+    public function removeCoupon(Request $request): JsonResponse
+    {
+        $cart = $this->carts->resolve($request, true);
+
+        $cart->forceFill([
+            'coupon_id' => null,
+            'coupon_applied_at' => null,
+        ])->save();
+
+        return response()->json([
+            ...$this->cartPayload($cart->fresh(), $request),
+            'message' => 'Coupon removed successfully.',
         ]);
     }
 
@@ -259,43 +303,6 @@ class CartController extends Controller
         }
     }
 
-    private function validGuestToken(
-        Request $request,
-        bool $required = true
-    ): ?string {
-        $guestToken = $request->header('X-Guest-Cart-Token');
-
-        if (! $guestToken && ! $required) {
-            return null;
-        }
-
-        if (! $guestToken || ! Str::isUuid($guestToken)) {
-            throw ValidationException::withMessages([
-                'guest_token' => 'A valid guest cart token is required.',
-            ]);
-        }
-
-        return $guestToken;
-    }
-
-    private function guestCart(
-        string $guestToken,
-        bool $required = true
-    ): ?Cart {
-        $cart = Cart::query()
-            ->whereNull('user_id')
-            ->where('guest_token', $guestToken)
-            ->first();
-
-        if (! $cart && $required) {
-            throw ValidationException::withMessages([
-                'cart' => 'Cart could not be found.',
-            ]);
-        }
-
-        return $cart;
-    }
-
     private function ensureItemBelongsToCart(
         CartItem $item,
         Cart $cart
@@ -305,7 +312,7 @@ class CartController extends Controller
         }
     }
 
-    private function cartPayload(?Cart $cart): array
+    private function cartPayload(?Cart $cart, Request $request, bool $strictCoupon = false): array
     {
         if (! $cart) {
             return $this->emptyCartPayload();
@@ -313,7 +320,8 @@ class CartController extends Controller
 
         $cart->load([
             'items' => fn ($query) => $query->latest('id'),
-            'items.product:id,category_id,product_name,product_code,product_price,product_discount,product_image,status',
+            'coupon',
+            'items.product:id,category_id,brand_id,product_name,product_code,product_price,product_discount,product_image,status',
             'items.product.category:id,category_discount',
             'items.variant:id,product_id,sku,price,stock,status',
             'items.variant.values:id,attribute_id,value,color_code',
@@ -337,6 +345,8 @@ class CartController extends Controller
                 return [
                     'id' => $item->id,
                     'product_id' => $product->id,
+                    'category_id' => $product->category_id,
+                    'brand_id' => $product->brand_id,
                     'product_variant_id' => $variant?->id,
                     'name' => $product->product_name,
                     'code' => $product->product_code,
@@ -370,17 +380,52 @@ class CartController extends Controller
             2
         );
 
+        $couponData = null;
+        $discount = 0.0;
+        $freeShipping = false;
+
+        if ($cart->coupon) {
+            try {
+                $calculation = $this->coupons->calculate(
+                    $cart->coupon,
+                    $items,
+                    $subtotal,
+                    $request->user(),
+                    (string) $cart->guest_token,
+                );
+                $discount = $calculation['discount'];
+                $freeShipping = $calculation['free_shipping'];
+                $couponData = [
+                    'id' => $cart->coupon->id,
+                    'code' => $cart->coupon->code,
+                    'name' => $cart->coupon->name,
+                    'discount_type' => $cart->coupon->discount_type,
+                    'discount_value' => (float) $cart->coupon->discount_value,
+                    'discount_amount' => $discount,
+                    'free_shipping' => $freeShipping,
+                ];
+            } catch (ValidationException $exception) {
+                if ($strictCoupon) {
+                    throw $exception;
+                }
+
+                $cart->forceFill(['coupon_id' => null, 'coupon_applied_at' => null])->save();
+            }
+        }
+
         return [
             'status' => true,
             'cart_id' => $cart->id,
             'cart_count' => (int) $items->sum('quantity'),
             'items_count' => $items->count(),
             'items' => $items,
+            'coupon' => $couponData,
             'summary' => [
                 'subtotal' => $subtotal,
-                'discount' => 0,
+                'discount' => $discount,
                 'shipping' => 0,
-                'total' => $subtotal,
+                'free_shipping' => $freeShipping,
+                'total' => round(max(0, $subtotal - $discount), 2),
             ],
         ];
     }
@@ -393,10 +438,12 @@ class CartController extends Controller
             'cart_count' => 0,
             'items_count' => 0,
             'items' => [],
+            'coupon' => null,
             'summary' => [
                 'subtotal' => 0,
                 'discount' => 0,
                 'shipping' => 0,
+                'free_shipping' => false,
                 'total' => 0,
             ],
         ];

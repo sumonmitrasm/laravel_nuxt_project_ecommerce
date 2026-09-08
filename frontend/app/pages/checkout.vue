@@ -9,15 +9,21 @@ const { addresses, defaultAddress, fetchAddresses, createAddress, updateAddress,
 const { success: showSuccessToast, error: showErrorToast } = useToast()
 const { divisions, fetchDivisions, fetchDistricts, fetchUpazilas } = useLocations()
 const { shippingMethods, fetchShippingMethods } = useShippingMethods()
-const { cart, fetchCart } = useCart()
+const { cart, fetchCart, applyCoupon, removeCoupon } = useCart()
 const selectedShippingMethodId = ref<number | null>(null)
 const selectedShippingMethod = computed(() => shippingMethods.value.find(method => method.id === selectedShippingMethodId.value) ?? null)
 const shippingCharge = computed(() => Number(selectedShippingMethod.value?.charge ?? 0))
 const checkoutSubtotal = computed(() => Number(cart.value?.summary.subtotal ?? 0))
-const checkoutTotal = computed(() => checkoutSubtotal.value + shippingCharge.value)
+const couponDiscount = computed(() => Number(cart.value?.summary.discount ?? 0))
+const hasFreeShippingCoupon = computed(() => Boolean(cart.value?.summary.free_shipping))
+const checkoutShipping = computed(() => hasFreeShippingCoupon.value ? 0 : shippingCharge.value)
+const checkoutTotal = computed(() => Math.max(0, checkoutSubtotal.value - couponDiscount.value + checkoutShipping.value))
 const checkoutItems = computed(() => cart.value?.items ?? [])
 const checkoutItemCount = computed(() => Number(cart.value?.cart_count ?? 0))
 const cartLoadedForCheckout = computed(() => cart.value !== null)
+const couponCode = ref('')
+const couponLoading = ref(false)
+const couponError = ref('')
 const itemOptions = (options: Array<{ name: string | null; value: string }>) => options.map(option => option.value).filter(Boolean).join(' · ')
 const money = (value: number) => `৳${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 2 }).format(value)}`
 const districts = ref<LocationOption[]>([])
@@ -159,6 +165,37 @@ const setCheckoutDefault = async (address: UserAddress) => {
 }
 
 
+const submitCoupon = async () => {
+  const code = couponCode.value.trim()
+  if (!code || couponLoading.value) return
+  couponLoading.value = true
+  couponError.value = ''
+  try {
+    const response = await applyCoupon(code)
+    couponCode.value = ''
+    showSuccessToast('Coupon applied', response.message ?? 'Your discount has been applied.')
+  } catch (error: any) {
+    couponError.value = error?.data?.errors?.coupon?.[0] ?? error?.data?.message ?? 'This coupon could not be applied.'
+    showErrorToast('Coupon not applied', couponError.value)
+  } finally {
+    couponLoading.value = false
+  }
+}
+
+const clearCoupon = async () => {
+  if (couponLoading.value) return
+  couponLoading.value = true
+  couponError.value = ''
+  try {
+    const response = await removeCoupon()
+    showSuccessToast('Coupon removed', response.message ?? 'The coupon has been removed.')
+  } catch (error: any) {
+    couponError.value = error?.data?.message ?? 'The coupon could not be removed.'
+    showErrorToast('Coupon not removed', couponError.value)
+  } finally {
+    couponLoading.value = false
+  }
+}
 onMounted(async () => {
   locationsLoading.value = true
   try {
@@ -271,12 +308,26 @@ onMounted(async () => {
                             </div>
                         </div>
                         <div v-else class="checkout-products checkout-products-empty"><i class="bi bi-cart-x"></i><div><strong>Your cart is empty</strong><small>Add products before continuing to checkout.</small></div><NuxtLink to="/shop">Shop now</NuxtLink></div>
-                        <form class="checkout-coupon" data-checkout-coupon=""><input name="checkoutCoupon"
-                                placeholder="Gift card or discount code"><button>Apply</button></form>
-                        <div class="checkout-discount" data-checkout-discount=""></div>
+                        <form v-if="!cart?.coupon" class="checkout-coupon" @submit.prevent="submitCoupon">
+                            <input v-model="couponCode" name="checkoutCoupon" autocomplete="off" placeholder="Discount code">
+                            <button type="submit" :disabled="couponLoading || !couponCode.trim()">
+                                <span v-if="couponLoading" class="spinner-border spinner-border-sm"></span>
+                                <span v-else>Apply</span>
+                            </button>
+                        </form>
+                        <div v-else class="applied-coupon">
+                            <div><i class="bi bi-ticket-perforated"></i><span><strong>{{ cart.coupon.code }}</strong><small>{{ cart.coupon.name }}</small></span></div>
+                            <button type="button" :disabled="couponLoading" @click="clearCoupon">Remove</button>
+                        </div>
+                        <p v-if="couponError" class="coupon-error">{{ couponError }}</p>
+                        <p v-if="cart?.coupon" class="coupon-saving">
+                            <i class="bi bi-check-circle-fill"></i>
+                            {{ cart.coupon.free_shipping ? 'Free shipping applied.' : `You saved ${money(couponDiscount)}.` }}
+                        </p>
                         <div class="checkout-totals">
                             <div><span>Subtotal</span><strong>{{ money(checkoutSubtotal) }}</strong></div>
-                            <div><span>Shipping</span><strong>{{ shippingCharge === 0 ? 'Free' : money(shippingCharge) }}</strong></div>
+                            <div v-if="couponDiscount > 0" class="coupon-total-row"><span>Coupon discount</span><strong>−{{ money(couponDiscount) }}</strong></div>
+                            <div><span>Shipping</span><strong>{{ checkoutShipping === 0 ? 'Free' : money(checkoutShipping) }}</strong></div>
                             <div class="checkout-grand-total"><span>Total <small>BDT</small></span><strong
                                     data-checkout-total="">{{ money(checkoutTotal) }}</strong></div>
                         </div><button class="place-order d-none d-lg-flex" type="submit" form="checkoutForm"
@@ -346,4 +397,15 @@ onMounted(async () => {
 .checkout-products-empty div > strong { color:#17241e; font-size:.82rem; }
 .checkout-products-empty small { color:#7b8580; font-size:.68rem; }
 .checkout-products-empty > a { grid-column:2; color:#e6513d; font-size:.7rem; font-weight:700; }
-</style>
+
+.checkout-coupon button:disabled { cursor: not-allowed; opacity: .6; }
+.applied-coupon { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; border:1px solid #b9dfc7; background:#f1faf4; padding:11px 13px; }
+.applied-coupon > div { display:flex; align-items:center; gap:10px; }
+.applied-coupon i { color:#267647; font-size:1.1rem; }
+.applied-coupon span { display:flex; flex-direction:column; }
+.applied-coupon strong { color:#183d27; font-size:.76rem; letter-spacing:.04em; }
+.applied-coupon small { color:#6a7b70; font-size:.63rem; }
+.applied-coupon button { border:0; background:transparent; color:#d84b39; font-size:.68rem; font-weight:750; }
+.coupon-error { margin:9px 0 0; color:#b5362c; font-size:.68rem; line-height:1.45; }
+.coupon-saving { display:flex; align-items:center; gap:6px; margin:9px 0 0; color:#267647; font-size:.68rem; font-weight:700; }
+.coupon-total-row strong { color:#267647 !important; }</style>

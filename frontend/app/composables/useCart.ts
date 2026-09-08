@@ -29,10 +29,20 @@ export type CartResponse = {
   cart_count: number
   items_count: number
   items: CartItem[]
+  coupon: {
+    id: number
+    code: string
+    name: string
+    discount_type: 'fixed' | 'percentage' | 'free_shipping'
+    discount_value: number
+    discount_amount: number
+    free_shipping: boolean
+  } | null
   summary: {
     subtotal: number
     discount: number
     shipping: number
+    free_shipping: boolean
     total: number
   }
   message?: string
@@ -187,6 +197,30 @@ export const useCart = () => {
     return syncCart(response)
   }
 
+  const applyCoupon = async (code: string) => {
+    await csrf()
+    const response = await $fetch<CartResponse>('/cart/coupon', {
+      baseURL: config.public.apiBase,
+      method: 'POST',
+      credentials: 'include',
+      headers: { ...requestHeaders(), ...csrfHeaders() },
+      body: { code },
+    })
+
+    return syncCart(response)
+  }
+
+  const removeCoupon = async () => {
+    await csrf()
+    const response = await $fetch<CartResponse>('/cart/coupon', {
+      baseURL: config.public.apiBase,
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { ...requestHeaders(), ...csrfHeaders() },
+    })
+
+    return syncCart(response)
+  }
   const clearCart = async () => {
     await csrf()
     const response = await $fetch<CartResponse>('/cart', {
@@ -207,6 +241,8 @@ export const useCart = () => {
     addToCart,
     updateCartItem,
     removeCartItem,
+    applyCoupon,
+    removeCoupon,
     clearCart,
   }
 }

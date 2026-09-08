@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Laravel + Nuxt Coupon System — A to Z বাংলা গাইড</title>
+  <style>
+    :root{--ink:#17211d;--muted:#607069;--brand:#ff5948;--green:#0d6145;--paper:#fff;--soft:#f4f7f5;--line:#dce5e0;--code:#101a17}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--soft);color:var(--ink);font:16px/1.75 system-ui,"Noto Sans Bengali",sans-serif}
+    header{padding:55px 24px;background:linear-gradient(130deg,#092d24,#13765b);color:#fff}header>div,main{max-width:1180px;margin:auto}
+    h1{font-size:clamp(2rem,5vw,4rem);line-height:1.1;margin:0 0 16px}h2{margin-top:0;font-size:1.8rem}h3{margin-top:30px}p{margin:9px 0}
+    .lead{max-width:800px;color:#d8f2e9;font-size:1.08rem}.badge{display:inline-block;padding:5px 12px;border:1px solid #75b9a5;border-radius:99px;margin-bottom:20px}
+    main{display:grid;grid-template-columns:260px 1fr;gap:24px;padding:28px 20px 80px}nav{position:sticky;top:18px;align-self:start;background:#fff;border:1px solid var(--line);padding:18px;border-radius:14px}
+    nav a{display:block;color:#30443d;text-decoration:none;padding:5px 7px;border-radius:6px}nav a:hover{background:#e9f5f0;color:var(--green)}article section{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:28px;margin-bottom:22px}
+    code{font-family:Consolas,monospace}pre{background:var(--code);color:#d8f4e9;padding:18px;border-radius:10px;overflow:auto;line-height:1.55;font-size:.88rem}li{margin:7px 0}
+    table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}th{background:#edf5f1}.warn,.ok,.note{padding:14px 16px;border-left:4px solid;border-radius:6px;margin:16px 0}.warn{background:#fff4e5;border-color:#ef9c25}.ok{background:#eaf8f1;border-color:#19875f}.note{background:#edf3ff;border-color:#5274d8}
+    .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.flow span{padding:9px 12px;background:#e8f5ef;border-radius:8px}.arrow{background:none!important;color:#82918b}
+    @media(max-width:850px){main{grid-template-columns:1fr}nav{position:static}article section{padding:20px}}
+    @media print{nav{display:none}main{display:block}article section{break-inside:avoid;border-color:#bbb}header{background:#123;color:#fff}}
+  </style>
+</head>
+<body>
+<header><div><span class="badge">Project handbook • বাংলা</span><h1>Coupon System: A to Z</h1><p class="lead">Laravel backend, admin CRUD, database relations, cart calculation, Nuxt checkout, guest ও logged-in customer, order completion এবং security—অন্য project-এ নিজে প্রয়োগ করার পূর্ণ নির্দেশিকা।</p></div></header>
+<main>
+<nav><strong>সূচিপত্র</strong><a href="#overview">১. System overview</a><a href="#files">২. কোন file কী করে</a><a href="#database">৩. Database</a><a href="#migration">৪. Migration</a><a href="#models">৫. Models</a><a href="#admin">৬. Admin CRUD</a><a href="#service">৭. Calculation service</a><a href="#api">৮. Cart API</a><a href="#nuxt">৯. Nuxt frontend</a><a href="#flow">১০. সম্পূর্ণ flow</a><a href="#order">১১. Order finalization</a><a href="#security">১২. Security</a><a href="#install">১৩. অন্য project-এ</a><a href="#test">১৪. Testing checklist</a><a href="#errors">১৫. Common errors</a></nav>
+<article>
+<section id="overview"><h2>১. System overview</h2><p>Coupon apply করা মানে coupon ব্যবহৃত হয়ে গেছে—এটি নয়। Apply করলে coupon কেবল cart-এ সাময়িকভাবে যুক্ত হয় এবং প্রতিবার total দেখানোর সময় server আবার rules যাচাই করে। Payment/order সফল হলে তবেই <code>coupon_usages</code>-এ স্থায়ী usage record হবে।</p>
+<div class="flow"><span>Admin creates coupon</span><span class="arrow">→</span><span>User enters code</span><span class="arrow">→</span><span>Server validates</span><span class="arrow">→</span><span>Cart stores coupon_id</span><span class="arrow">→</span><span>Server calculates total</span><span class="arrow">→</span><span>Order transaction records usage</span></div>
+<div class="ok"><strong>মূল নীতি:</strong> browser কখনো discount amount নির্ধারণ করবে না। Laravel product price, eligible subtotal এবং final discount পুনরায় হিসাব করবে।</div></section>
+
+<section id="files"><h2>২. কোন file কী কাজ করে</h2><table><tr><th>Layer</th><th>File</th><th>কাজ</th></tr>
+<tr><td>Database</td><td><code>database/migrations/2026_08_22_060920_create_coupons_table.php</code></td><td>Coupon-এর মূল rules</td></tr>
+<tr><td>Pivot</td><td><code>...064705/6/7/8...</code></td><td>Selected products, categories, brands ও users</td></tr>
+<tr><td>Usage</td><td><code>...064709_create_coupon_usages_table.php</code></td><td>সফল order-এ ব্যবহার ইতিহাস</td></tr>
+<tr><td>Cart</td><td><code>...064710_add_coupon_id_to_carts_table.php</code></td><td>বর্তমানে apply করা coupon</td></tr>
+<tr><td>Model</td><td><code>app/Models/Coupon.php</code>, <code>CouponUsage.php</code>, <code>Cart.php</code></td><td>Relations ও casts</td></tr>
+<tr><td>Admin</td><td><code>app/Http/Controllers/CouponController.php</code></td><td>Create/edit/status/delete এবং validation</td></tr>
+<tr><td>Admin view</td><td><code>resources/views/admin/coupon/coupon.blade.php</code> ও partial</td><td>Coupon management UI</td></tr>
+<tr><td>Business rules</td><td><code>app/Services/CouponService.php</code></td><td>Eligibility ও discount calculation</td></tr>
+<tr><td>API</td><td><code>app/Http/Controllers/Api/CartController.php</code></td><td>Apply/remove ও cart response</td></tr>
+<tr><td>Nuxt data</td><td><code>frontend/app/composables/useCart.ts</code></td><td>API call ও shared cart state</td></tr>
+<tr><td>Nuxt view</td><td><code>frontend/app/pages/checkout.vue</code></td><td>Input, applied coupon, totals, toast</td></tr></table></section>
+
+<section id="database"><h2>৩. Database design</h2><table><tr><th>Table</th><th>কখন row হয়</th><th>অর্থ</th></tr>
+<tr><td><code>coupons</code></td><td>Admin save করলে</td><td>একটি campaign-এর নাম, code ও সব rule</td></tr><tr><td><code>coupon_products</code></td><td>scope=products</td><td>কোন products eligible</td></tr><tr><td><code>coupon_categories</code></td><td>scope=categories</td><td>কোন categories eligible</td></tr><tr><td><code>coupon_brands</code></td><td>scope=brands</td><td>কোন brands eligible</td></tr><tr><td><code>coupon_users</code></td><td>customer_scope=selected</td><td>কোন users code ব্যবহার করতে পারবে</td></tr><tr><td><code>carts.coupon_id</code></td><td>Apply button সফল হলে</td><td>Cart-এ বর্তমানে নির্বাচিত coupon; reload-এর পরও থাকে</td></tr><tr><td><code>coupon_usages</code></td><td>Order সফল হলে</td><td>বাস্তব ব্যবহার; limits এখান থেকে count হয়</td></tr></table>
+<p><code>coupon_users</code> eligibility list, usage history নয়। <code>coupon_usages</code> usage history। এই দুটির কাজ আলাদা।</p>
+<h3>গুরুত্বপূর্ণ columns</h3><ul><li><code>scope</code>: all/products/categories/brands</li><li><code>customer_scope</code>: all/selected/first_order/lifetime_spend</li><li><code>discount_type</code>: fixed/percentage/free_shipping</li><li><code>minimum_order_amount</code>: cart subtotal-এর সর্বনিম্ন সীমা</li><li><code>maximum_discount</code>: percentage coupon-এর সর্বোচ্চ ছাড়</li><li><code>usage_limit</code>: সব customer মিলিয়ে limit</li><li><code>usage_limit_per_user</code>: একজন customer-এর limit</li><li><code>starts_at/expires_at</code>: campaign সময়</li><li><code>exclude_discounted_products</code>: আগে থেকেই discounted item বাদ</li></ul></section>
+
+<section id="migration"><h2>৪. প্রয়োজনীয় migration pattern</h2><pre><code>Schema::create('coupon_usages', function (Blueprint $table) {
+    $table-&gt;id();
+    $table-&gt;foreignId('coupon_id')-&gt;constrained()-&gt;cascadeOnDelete();
+    $table-&gt;foreignId('user_id')-&gt;nullable()-&gt;constrained()-&gt;nullOnDelete();
+    $table-&gt;uuid('guest_token')-&gt;nullable();
+    $table-&gt;decimal('discount_amount', 12, 2);
+    $table-&gt;timestamp('used_at');
+    $table-&gt;timestamps();
+    $table-&gt;index(['coupon_id', 'user_id']);
+    $table-&gt;index(['coupon_id', 'guest_token']);
+});
+
+Schema::table('carts', function (Blueprint $table) {
+    $table-&gt;foreignId('coupon_id')-&gt;nullable()-&gt;constrained()-&gt;nullOnDelete();
+    $table-&gt;timestamp('coupon_applied_at')-&gt;nullable();
+});</code></pre><p>Migration order গুরুত্বপূর্ণ: আগে <code>coupons</code>, পরে pivot/usage, শেষে carts foreign key। এরপর:</p><pre><code>php artisan migrate
+php artisan migrate:status</code></pre></section>
+
+<section id="models"><h2>৫. Eloquent models ও relation</h2><pre><code>// Coupon.php
+public function products(): BelongsToMany {
+    return $this-&gt;belongsToMany(Product::class, 'coupon_products')-&gt;withTimestamps();
+}
+public function categories(): BelongsToMany { /* coupon_categories */ }
+public function brands(): BelongsToMany { /* coupon_brands */ }
+public function users(): BelongsToMany { /* coupon_users: eligibility */ }
+public function usages(): HasMany {
+    return $this-&gt;hasMany(CouponUsage::class);
+}
+
+// Cart.php
+public function coupon(): BelongsTo {
+    return $this-&gt;belongsTo(Coupon::class);
+}</code></pre><p><code>fillable</code>-এ form থেকে save হওয়া fields দিন এবং decimal/datetime/boolean fields cast করুন। Pivot save করার জন্য <code>sync()</code> ব্যবহার করলে পুরোনো selection পরিষ্কার হয়ে নতুন selection বসে।</p></section>
+
+<section id="admin"><h2>৬. Admin CRUD কীভাবে কাজ করে</h2><p>Admin routes <code>routes/web.php</code>-এর authenticated admin group-এ রয়েছে। Middleware module/action অনুযায়ী view/add/edit/delete permission পরীক্ষা করে।</p><pre><code>Route::get('coupons', [CouponController::class, 'index'])-&gt;name('coupons');
+Route::post('coupon', [CouponController::class, 'store'])-&gt;name('admin-coupon.store');
+Route::get('coupon/{coupon}', [CouponController::class, 'show'])-&gt;name('admin-coupon.show');
+Route::put('coupon/{coupon}', [CouponController::class, 'update'])-&gt;name('admin-coupon.update');
+Route::patch('coupon/{coupon}/status', [CouponController::class, 'updateStatus']);
+Route::delete('coupon/{coupon}', [CouponController::class, 'destroy']);</code></pre>
+<h3>Save করার মূল অংশ</h3><pre><code>DB::transaction(function () use ($coupon, $data, $relations) {
+    $coupon-&gt;fill($data);
+    if (! $coupon-&gt;exists) $coupon-&gt;created_by_id = Auth::guard('admin')-&gt;id();
+    $coupon-&gt;save();
+
+    $coupon-&gt;products()-&gt;sync($coupon-&gt;scope === 'products' ? $relations['products'] : []);
+    $coupon-&gt;categories()-&gt;sync($coupon-&gt;scope === 'categories' ? $relations['categories'] : []);
+    $coupon-&gt;brands()-&gt;sync($coupon-&gt;scope === 'brands' ? $relations['brands'] : []);
+    $coupon-&gt;users()-&gt;sync($coupon-&gt;customer_scope === 'selected' ? $relations['users'] : []);
+});</code></pre><p>Transaction ব্যবহারে coupon save হলেও pivot ব্যর্থ—এমন অর্ধেক data থাকবে না। Code save করার আগে uppercase করা হয়, তাই <code>welcome1</code> এবং <code>WELCOME1</code> একইভাবে পরিচালিত হয়।</p></section>
+
+<section id="service"><h2>৭. CouponService: business rules</h2><p>Controller পাতলা রাখা হয়েছে; coupon-এর নিয়ম একটি service-এ। Calculation-এর ক্রম:</p><ol><li>Active, start/end date এবং global limit</li><li>Customer eligibility এবং per-user limit</li><li>Minimum order</li><li>Eligible items নির্বাচন</li><li>Fixed/percentage/free-shipping calculation</li><li>Maximum discount cap</li></ol>
+<pre><code>$discount = match ($coupon-&gt;discount_type) {
+    'fixed' =&gt; min((float) $coupon-&gt;discount_value, $eligibleSubtotal),
+    'percentage' =&gt; $eligibleSubtotal * ((float) $coupon-&gt;discount_value / 100),
+    'free_shipping' =&gt; 0,
+    default =&gt; 0,
+};
+
+if ($coupon-&gt;discount_type === 'percentage' &amp;&amp; $coupon-&gt;maximum_discount !== null) {
+    $discount = min($discount, (float) $coupon-&gt;maximum_discount);
+}</code></pre>
+<div class="note"><strong>উদাহরণ:</strong> eligible subtotal ৳10,000, discount 20%, maximum discount ৳1,500 হলে raw discount ৳2,000 হলেও final discount ৳1,500। Fixed ৳500 coupon-এর eligible subtotal ৳300 হলে discount ৳300—total কখনো negative হবে না।</div>
+<h3>Product scope</h3><p><code>all</code> হলে সব cart item; <code>products</code> হলে pivot product ID; <code>categories</code> হলে product-এর category ID; <code>brands</code> হলে brand ID match করা হয়। <code>exclude_discounted_products=true</code> হলে discounted item আগে বাদ যায়।</p></section>
+
+<section id="api"><h2>৮. Cart API apply/remove</h2><pre><code>Route::prefix('cart')-&gt;group(function () {
+    Route::post('/coupon', [CartController::class, 'applyCoupon']);
+    Route::delete('/coupon', [CartController::class, 'removeCoupon']);
+});</code></pre>
+<h3>Apply</h3><pre><code>$validated = $request-&gt;validate(['code' =&gt; ['required', 'string', 'max:100']]);
+$cart = $this-&gt;carts-&gt;resolve($request, true);
+$coupon = Coupon::where('code', strtoupper(trim($validated['code'])))-&gt;first();
+if (! $coupon) throw ValidationException::withMessages(['coupon' =&gt; 'Invalid code.']);
+
+$cart-&gt;forceFill(['coupon_id' =&gt; $coupon-&gt;id, 'coupon_applied_at' =&gt; now()])-&gt;save();
+try {
+    $payload = $this-&gt;cartPayload($cart-&gt;fresh(), $request, true);
+} catch (ValidationException $e) {
+    $cart-&gt;forceFill(['coupon_id' =&gt; null, 'coupon_applied_at' =&gt; null])-&gt;save();
+    throw $e;
+}</code></pre><p>Invalid coupon প্রথমে cart-এ বসে থেকে যায় না; validation fail হলে সঙ্গে সঙ্গে remove হয়। Remove endpoint কেবল দুটি cart field null করে।</p>
+<h3>Response contract</h3><pre><code>{
+  "coupon": {"code":"WELCOME1","discount_amount":10,"free_shipping":false},
+  "summary": {"subtotal":59433.66,"discount":10,"shipping":0,"total":59423.66}
+}</code></pre></section>
+
+<section id="nuxt"><h2>৯. Nuxt frontend</h2><h3>Composable</h3><pre><code>const applyCoupon = async (code: string) =&gt; {
+  await csrf()
+  const response = await $fetch&lt;CartResponse&gt;('/cart/coupon', {
+    baseURL: config.public.apiBase,
+    method: 'POST', credentials: 'include',
+    headers: { ...requestHeaders(), ...csrfHeaders() }, body: { code },
+  })
+  return syncCart(response)
+}</code></pre><p><code>credentials: 'include'</code> Laravel session পাঠায়। <code>X-XSRF-TOKEN</code> CSRF protection দেয়। <code>X-Guest-Cart-Token</code> guest cart চেনে; login হলে Laravel session/user_id ownership নির্ধারণ করে।</p>
+<h3>Checkout</h3><pre><code>const checkoutSubtotal = computed(() =&gt; Number(cart.value?.summary.subtotal ?? 0))
+const couponDiscount = computed(() =&gt; Number(cart.value?.summary.discount ?? 0))
+const checkoutShipping = computed(() =&gt; cart.value?.summary.free_shipping ? 0 : shippingCharge.value)
+const checkoutTotal = computed(() =&gt;
+  Math.max(0, checkoutSubtotal.value - couponDiscount.value + checkoutShipping.value)
+)</code></pre><div class="warn">UI-এর computed total শুধু প্রদর্শনের জন্য। Place Order endpoint-এ Laravel আবার একই হিসাব করবে; browser-এর পাঠানো total বিশ্বাস করা যাবে না।</div></section>
+
+<section id="flow"><h2>১০. সম্পূর্ণ request flow</h2><ol><li>User code লিখে Apply চাপেন।</li><li>Nuxt CSRF cookie নেয় এবং POST <code>/api/cart/coupon</code> পাঠায়।</li><li><code>CartManager</code> guest হলে token, login হলে user_id দিয়ে cart নেয়।</li><li>Controller uppercase code দিয়ে coupon খোঁজে।</li><li>Coupon ID cart-এ সাময়িকভাবে save হয়।</li><li><code>cartPayload()</code> database price থেকে items/subtotal বানায়।</li><li><code>CouponService</code> rules যাচাই ও discount হিসাব করে।</li><li>ব্যর্থ হলে coupon cart থেকে সরিয়ে 422 error দেয়।</li><li>সফল হলে updated cart response Nuxt state-এ যায়।</li><li>Reload-এ cart-এর coupon ID থেকে আবার validation/calculation হয়।</li><li>Order সফল হলে order snapshot এবং coupon usage একই DB transaction-এ save হয়।</li></ol></section>
+
+<section id="order"><h2>১১. Place Order integration — অবশ্যই করতে হবে</h2><div class="warn"><strong>বর্তমান project status:</strong> checkout UI ও coupon apply আছে, কিন্তু real order placement/usage insert এখনও সংযুক্ত নয়। তাই এখন Apply করলে <code>carts</code> update হয়; <code>coupon_usages</code> update হওয়া উচিত নয়।</div>
+<p>Production implementation-এ transaction-এর ভিতর cart lock করে server-side total পুনরায় calculate করুন:</p><pre><code>DB::transaction(function () use ($request) {
+    $cart = Cart::where('user_id', $request-&gt;user()-&gt;id)
+        -&gt;lockForUpdate()-&gt;firstOrFail();
+
+    $payload = $this-&gt;cartPayload($cart, $request, true); // revalidate coupon
+
+    $order = Order::create([
+        'user_id' =&gt; $request-&gt;user()-&gt;id,
+        'subtotal' =&gt; $payload['summary']['subtotal'],
+        'coupon_id' =&gt; $payload['coupon']['id'] ?? null,
+        'coupon_code' =&gt; $payload['coupon']['code'] ?? null, // snapshot recommended
+        'discount_amount' =&gt; $payload['summary']['discount'],
+        'shipping_amount' =&gt; $serverShipping,
+        'grand_total' =&gt; max(0, $payload['summary']['subtotal']
+            - $payload['summary']['discount'] + $serverShipping),
+    ]);
+
+    // Create order_items here using server prices.
+    if ($cart-&gt;coupon_id) {
+        CouponUsage::create([
+            'coupon_id' =&gt; $cart-&gt;coupon_id,
+            'user_id' =&gt; $request-&gt;user()-&gt;id,
+            'guest_token' =&gt; $cart-&gt;guest_token,
+            'discount_amount' =&gt; $payload['summary']['discount'],
+            'used_at' =&gt; now(),
+        ]);
+    }
+    $cart-&gt;items()-&gt;delete();
+    $cart-&gt;delete();
+});</code></pre><p>Payment gateway থাকলে usage কখন লিখবেন তা payment model-এর উপর নির্ভর করে: COD-তে confirmed order creation; online payment-এ verified payment success/webhook। Failed/cancelled attempt usage নয়।</p>
+<div class="note"><strong>First order:</strong> production-এ শুধু CouponUsage নয়, confirmed/paid orders count যাচাই করা বেশি নির্ভরযোগ্য। অন্য coupon আগে ব্যবহার করেছে মানেই সবসময় order করেছে—এমন নয়; usage অবশ্য order success-এ লিখলে এই সমস্যা কমে।</div></section>
+
+<section id="security"><h2>১২. Security rules</h2><ul><li>Frontend subtotal/discount/total গ্রহণ করবেন না; server price ব্যবহার করুন।</li><li>Authenticated cart lookup-এর প্রথম শর্ত <code>user_id</code>; token authentication নয়।</li><li>Guest cart query-তে <code>whereNull('user_id')</code> দিন, যাতে token leak হলেও logged-in cart guest হিসেবে না পাওয়া যায়।</li><li>Apply/remove POST/DELETE হওয়ায় CSRF protection রাখুন।</li><li>Code endpoint-এ throttle যোগ করা যায়, যেমন <code>throttle:20,1</code>, brute-force code guessing কমাতে।</li><li>Order transaction-এ coupon row/cart row lock এবং limit পুনরায় check করুন, simultaneous checkout race ঠেকাতে।</li><li>Money-এর জন্য decimal ব্যবহার করুন; float শুধু display/intermediate হলে শেষে round করুন।</li><li>Admin routes permission middleware-এর ভিতরে রাখুন।</li><li>Error message অতিরিক্ত internal data প্রকাশ করবে না।</li></ul></section>
+
+<section id="install"><h2>১৩. অন্য project-এ প্রয়োগের ক্রম</h2><ol><li>নিজের products/categories/brands/users/carts schema map করুন।</li><li>Coupon ও pivot migrations copy/adapt করুন।</li><li><code>php artisan migrate</code> চালান।</li><li>Coupon, CouponUsage ও Cart relations যোগ করুন।</li><li>Admin controller/routes/permission এবং view যোগ করুন।</li><li>CouponService যোগ করে product payload-এ <code>product_id/category_id/brand_id/discount_percentage/line_total</code> নিশ্চিত করুন।</li><li>Cart apply/remove endpoints যোগ করুন।</li><li>Cart response-এ coupon ও summary contract রাখুন।</li><li>Nuxt <code>useCart</code> methods এবং checkout UI যোগ করুন।</li><li>সবশেষে order transaction ও CouponUsage যুক্ত করুন।</li><li>Feature tests লিখে তারপর production deploy করুন।</li></ol>
+<h3>Recommended commands</h3><pre><code>php artisan migrate
+php artisan route:list --path=coupon
+php artisan test --filter=Coupon
+npm run build</code></pre></section>
+
+<section id="test"><h2>১৪. Testing checklist</h2><table><tr><th>Case</th><th>Expected</th></tr><tr><td>Invalid/inactive/future/expired code</td><td>422, cart coupon null</td></tr><tr><td>Minimum order কম</td><td>422 with message</td></tr><tr><td>Fixed discount subtotal-এর বেশি</td><td>Total zero-এর নিচে নয়</td></tr><tr><td>Percentage with cap</td><td>Cap-এর বেশি discount নয়</td></tr><tr><td>Selected product/category/brand</td><td>শুধু eligible line subtotal</td></tr><tr><td>Exclude discounted</td><td>Discounted items বাদ</td></tr><tr><td>Selected user</td><td>অন্য user rejected</td></tr><tr><td>First order guest</td><td>Sign-in required</td></tr><tr><td>Per-user/global limit</td><td>Successful usage count থেকে block</td></tr><tr><td>Reload after apply</td><td>Coupon থাকে ও revalidated হয়</td></tr><tr><td>Remove</td><td>coupon_id/applied_at null, full total</td></tr><tr><td>Price tampering</td><td>Server calculation wins</td></tr><tr><td>Two simultaneous orders</td><td>Limit/stock overuse হয় না</td></tr></table></section>
+
+<section id="errors"><h2>১৫. Common errors ও diagnosis</h2><ul><li><strong>“not available yet”:</strong> <code>starts_at</code> server timezone-এর ভবিষ্যতে। App/database timezone মিলান।</li><li><strong>First order কাজ করছে না:</strong> usage কখন লেখা হচ্ছে দেখুন; Apply-এর সময় লেখা ভুল, successful order-এর সময় লিখুন।</li><li><strong>Reload-এ coupon চলে যায়:</strong> cart resolver একই cart পাচ্ছে কি না এবং <code>coupon_id</code> fillable/relation আছে কি না দেখুন।</li><li><strong>Wrong discount:</strong> eligible subtotal বনাম whole subtotal log/test করুন।</li><li><strong>coupon_users নিয়ে confusion:</strong> এটি selected-customer permission; ব্যবহারের record <code>coupon_usages</code>।</li><li><strong>Guest/login mismatch:</strong> login-এর সময় guest cart-এ user_id বসছে এবং token retained আছে কি না দেখুন।</li><li><strong>Encoding-এ ৳ ভাঙা:</strong> source/database/response UTF-8 এবং HTML <code>&lt;meta charset="utf-8"&gt;</code> নিশ্চিত করুন।</li></ul>
+<p class="ok"><strong>শেষ কথা:</strong> CouponService নিয়ম নির্ধারণ করে, CartController apply/recalculate করে, carts সাময়িক selection রাখে, এবং successful Order transaction স্থায়ী coupon usage লেখে—এই চারটি দায়িত্ব আলাদা রাখলেই system বোঝা ও অন্য project-এ নেওয়া সহজ হয়।</p></section>
+</article></main>
+</body></html>

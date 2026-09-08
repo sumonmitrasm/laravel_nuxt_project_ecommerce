@@ -26,6 +26,8 @@ Route::prefix('cart')->group(function () {
     Route::patch('/items/{item}', [CartController::class, 'update'])->name('api.cart.items.update');
     Route::delete('/items/{item}', [CartController::class, 'destroy'])->name('api.cart.items.destroy');
     Route::delete('/', [CartController::class, 'clear'])->name('api.cart.clear');
+    Route::post('/coupon', [CartController::class, 'applyCoupon'])->name('api.cart.coupon.apply');
+    Route::delete('/coupon', [CartController::class, 'removeCoupon'])->name('api.cart.coupon.remove');
 });
 
 Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
