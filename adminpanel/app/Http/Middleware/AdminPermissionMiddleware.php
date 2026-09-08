@@ -82,6 +82,11 @@ class AdminPermissionMiddleware
             'admin-shipping-method.store' => ['shipping_method', 'add'],
             'admin-shipping-method.update', 'admin-shipping-method.status' => ['shipping_method', 'edit'],
             'admin-shipping-method.delete' => ['shipping_method', 'delete'],
+
+            'home-sliders' => ['home_slider', 'view'],
+            'admin-home-slider.store' => ['home_slider', 'add'],
+            'admin-home-slider.update', 'admin-home-slider.status' => ['home_slider', 'edit'],
+            'admin-home-slider.delete' => ['home_slider', 'delete'],
             default => null,
         };
     }

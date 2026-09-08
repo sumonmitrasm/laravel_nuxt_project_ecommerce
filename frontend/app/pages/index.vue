@@ -11,6 +11,9 @@ const pageSeo = computed(() => data.value?.seo)
 usePageSeo(pageSeo)
 
 const sections = computed(() => data.value?.categories ?? [])
+const sliders = computed(() => data.value?.sliders ?? [])
+const sliderFallbackIcons = [['bi-headphones','bi-smartwatch'],['bi-laptop','bi-mouse'],['bi-earbuds','bi-speaker']]
+const formatSliderLink = value => value || '/shop'
 const activeSectionId = ref(sections.value[0]?.id ?? null)
 const activeSection = computed(() =>
   sections.value.find(section => section.id === activeSectionId.value) ?? sections.value[0] ?? null
@@ -181,75 +184,74 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
                         </div>
                     </nav>
                 </aside>
-                <div class="col-lg-9">
-                    <div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel"
-                        data-bs-interval="5000">
-                        <div class="carousel-indicators"><button type="button" data-bs-target="#heroCarousel"
-                                data-bs-slide-to="0" class="active" aria-current="true"
-                                aria-label="Slide 1"></button><button type="button" data-bs-target="#heroCarousel"
-                                data-bs-slide-to="1" aria-label="Slide 2"></button><button type="button"
-                                data-bs-target="#heroCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button></div>
+                <div v-if="sliders.length" class="col-lg-9">
+                    <div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="5000">
+                        <div v-if="sliders.length > 1" class="carousel-indicators">
+                            <button
+                                v-for="(slide, index) in sliders"
+                                :key="`indicator-${slide.id}`"
+                                type="button"
+                                data-bs-target="#heroCarousel"
+                                :data-bs-slide-to="index"
+                                :class="{ active: index === 0 }"
+                                :aria-current="index === 0 ? 'true' : undefined"
+                                :aria-label="`Slide ${index + 1}`"
+                            ></button>
+                        </div>
+
                         <div class="carousel-inner">
-                            <div class="carousel-item active">
-                                <div class="hero-slide hero-slide-one">
+                            <div
+                                v-for="(slide, index) in sliders"
+                                :key="slide.id"
+                                class="carousel-item"
+                                :class="{ active: index === 0 }"
+                            >
+                                <div class="hero-slide dynamic-home-slide" :style="{ backgroundColor: slide.background_color || '#f4f4e9' }">
                                     <div class="hero-copy">
-                                        <div class="eyebrow mb-3">New season · smart living</div>
-                                        <h1>Built for your everyday.</h1>
-                                        <p>Considered technology and modern essentials, selected for a smarter life.</p>
-                                        <div class="hero-offer"><small>From</small><strong>৳6,990</strong><span>Free
-                                                delivery</span></div><NuxtLink to="/shop"
-                                            class="btn btn-brand rounded-pill px-4 py-3">Shop collection <i
-                                                class="bi bi-arrow-right ms-2"></i></NuxtLink>
-                                        <div class="hero-assurance"><span><i class="bi bi-check2-circle"></i> Genuine
-                                                products</span><span><i class="bi bi-arrow-counterclockwise"></i> Easy
-                                                returns</span></div>
+                                        <div v-if="slide.eyebrow" class="eyebrow mb-3">{{ slide.eyebrow }}</div>
+                                        <h1>{{ slide.title }}</h1>
+                                        <p v-if="slide.description">{{ slide.description }}</p>
+                                        <div v-if="slide.offer_label || slide.offer_text || slide.offer_note" class="hero-offer">
+                                            <small v-if="slide.offer_label">{{ slide.offer_label }}</small>
+                                            <strong v-if="slide.offer_text">{{ slide.offer_text }}</strong>
+                                            <span v-if="slide.offer_note">{{ slide.offer_note }}</span>
+                                        </div>
+                                        <NuxtLink
+                                            v-if="slide.button_text"
+                                            :to="formatSliderLink(slide.button_url)"
+                                            class="btn btn-brand rounded-pill px-4 py-3"
+                                        >
+                                            {{ slide.button_text }} <i class="bi bi-arrow-right ms-2"></i>
+                                        </NuxtLink>
+                                        <div class="hero-assurance">
+                                            <span><i class="bi bi-check2-circle"></i> Genuine products</span>
+                                            <span><i class="bi bi-arrow-counterclockwise"></i> Easy returns</span>
+                                        </div>
                                     </div>
-                                    <div class="hero-art"><span class="art-circle"></span><i
-                                            class="bi bi-headphones"></i><i class="bi bi-smartwatch"></i></div>
+
+                                    <div class="hero-art dynamic-hero-art">
+                                        <div class="art-circle">
+                                            <img v-if="slide.image_url" :src="slide.image_url" :alt="slide.title">
+                                            <template v-else>
+                                                <i :class="['bi', sliderFallbackIcons[index % sliderFallbackIcons.length][0]]"></i>
+                                                <i :class="['bi', sliderFallbackIcons[index % sliderFallbackIcons.length][1]]"></i>
+                                            </template>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="carousel-item">
-                                <div class="hero-slide hero-slide-two">
-                                    <div class="hero-copy">
-                                        <div class="eyebrow mb-3">Trade-in offer · save 25%</div>
-                                        <h1>Power your next big idea.</h1>
-                                        <p>Fast laptops, crisp displays and accessories built to keep up with you.</p>
-                                        <div class="hero-offer"><small>Save up
-                                                to</small><strong>25%</strong><span>Official warranty</span></div><NuxtLink
-                                            to="/shop" class="btn btn-dark rounded-pill px-4 py-3">Explore
-                                            technology <i class="bi bi-arrow-right ms-2"></i></NuxtLink>
-                                        <div class="hero-assurance"><span><i class="bi bi-check2-circle"></i> Genuine
-                                                products</span><span><i class="bi bi-arrow-counterclockwise"></i> Easy
-                                                returns</span></div>
-                                    </div>
-                                    <div class="hero-art"><span class="art-circle"></span><i class="bi bi-laptop"></i><i
-                                            class="bi bi-mouse"></i></div>
-                                </div>
-                            </div>
-                            <div class="carousel-item">
-                                <div class="hero-slide hero-slide-three">
-                                    <div class="hero-copy">
-                                        <div class="eyebrow mb-3">Sound that moves you</div>
-                                        <h1>Turn up every moment.</h1>
-                                        <p>Premium wireless audio with all-day comfort and incredible clarity.</p>
-                                        <div class="hero-offer"><small>Special
-                                                price</small><strong>৳8,490</strong><span>40-hour battery</span></div><NuxtLink
-                                            to="/shop" class="btn btn-brand rounded-pill px-4 py-3">Shop audio <i
-                                                class="bi bi-arrow-right ms-2"></i></NuxtLink>
-                                        <div class="hero-assurance"><span><i class="bi bi-check2-circle"></i> Genuine
-                                                products</span><span><i class="bi bi-arrow-counterclockwise"></i> Easy
-                                                returns</span></div>
-                                    </div>
-                                    <div class="hero-art"><span class="art-circle"></span><i
-                                            class="bi bi-earbuds"></i><i class="bi bi-speaker"></i></div>
-                                </div>
-                            </div>
-                        </div><button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel"
-                            data-bs-slide="prev"><span class="carousel-control-prev-icon"
-                                aria-hidden="true"></span><span class="visually-hidden">Previous</span></button><button
-                            class="carousel-control-next" type="button" data-bs-target="#heroCarousel"
-                            data-bs-slide="next"><span class="carousel-control-next-icon"
-                                aria-hidden="true"></span><span class="visually-hidden">Next</span></button>
+                        </div>
+
+                        <template v-if="sliders.length > 1">
+                            <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -510,4 +512,97 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
 .section-filter-tabs{display:flex;gap:8px;overflow-x:auto;margin:0 0 14px;padding:2px 0 8px;scrollbar-width:thin}.section-filter-tabs button{display:flex;flex:0 0 auto;align-items:center;gap:8px;border:1px solid #e1e4e2;background:#fff;padding:8px 14px;color:var(--ink);font-size:.78rem}.section-filter-tabs button.active{border-color:var(--brand);background:var(--brand);color:#fff}.section-filter-tabs img{width:25px;height:25px;border-radius:50%;object-fit:cover}.category-api-image{width:112px!important;height:105px!important;object-fit:contain}.category-api-placeholder{display:grid!important;width:112px!important;height:105px!important;place-items:center;background:#f5f7f5!important;color:var(--brand)}.category-api-message{display:grid;min-height:172px;border:1px solid #e1e4e2;place-items:center;background:#fff;color:#78817d}.category-api-error{color:#b84d42}@media(max-width:575.98px){.section-filter-tabs button{padding:7px 11px}.category-api-image,.category-api-placeholder{width:112px!important;height:92px!important}}
 .flyout-section-image{width:58px;height:58px;margin-bottom:12px;object-fit:contain}
 .sidebar-section-image{flex:0 0 22px;width:22px;height:22px;margin-right:12px;object-fit:contain}
-</style>
+
+/* Dynamic home slider: balanced typography and artwork */
+.dynamic-home-slide {
+    gap: 28px;
+    padding: 52px 54px;
+}
+
+.dynamic-home-slide .hero-copy {
+    width: 50%;
+    max-width: 500px;
+}
+
+.dynamic-home-slide .hero-copy h1 {
+    max-width: 470px;
+    margin: 0;
+    font-size: clamp(2rem, 2.65vw, 2.8rem);
+    font-weight: 750;
+    line-height: 1.06;
+    letter-spacing: -.04em;
+    text-wrap: balance;
+}
+
+.dynamic-home-slide .hero-copy p {
+    max-width: 455px;
+    margin: 17px 0 13px;
+    font-size: .91rem;
+    line-height: 1.65;
+}
+
+.dynamic-home-slide .hero-offer {
+    min-height: 42px;
+    margin: 4px 0 15px;
+}
+
+.dynamic-hero-art {
+    top: 0;
+    right: 0;
+    width: 46%;
+    height: 100%;
+    transform: none;
+    isolation: isolate;
+}
+
+.dynamic-hero-art::before {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background: linear-gradient(145deg, rgba(255,255,255,.78), rgba(255,255,255,.28));
+    content: '';
+}
+
+.dynamic-hero-art .art-circle {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    width: min(76%, 330px);
+    aspect-ratio: 1;
+    height: auto;
+    border: 8px solid rgba(255,255,255,.82);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 24px 65px rgba(23,33,29,.12);
+}
+
+.dynamic-hero-art img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+@media (max-width: 1199.98px) {
+    .dynamic-home-slide { padding: 44px 40px; }
+    .dynamic-home-slide .hero-copy h1 { font-size: clamp(1.95rem, 3vw, 2.5rem); }
+}
+
+@media (max-width: 767.98px) {
+    .dynamic-home-slide {
+        display: grid;
+        grid-template-columns: 1fr;
+        align-content: start;
+        min-height: 660px;
+        padding: 38px 28px 300px;
+    }
+    .dynamic-home-slide .hero-copy { width: 100%; max-width: none; }
+    .dynamic-home-slide .hero-copy h1 { max-width: 520px; font-size: clamp(2rem, 9vw, 2.7rem); }
+    .dynamic-hero-art { top: auto; bottom: 0; width: 100%; height: 275px; }
+    .dynamic-hero-art img { width: 100%; height: 100%; }
+    .dynamic-hero-art .art-circle { width: 210px; }
+}</style>
