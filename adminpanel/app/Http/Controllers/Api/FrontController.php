@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\HomeSlider;
 use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use App\Models\Section;
@@ -28,9 +29,21 @@ class FrontController extends Controller
             fn () => Section::sections(),
         );
 
+        $sliders = Cache::remember(
+            'api.home-sliders.v1',
+            now()->addHours(6),
+            fn () => HomeSlider::query()
+                ->where('status', true)
+                ->orderBy('position')
+                ->orderBy('id')
+                ->get()
+                ->toArray(),
+        );
+
         return response()->json([
             'status' => true,
             'categories' => $sections,
+            'sliders' => $sliders,
             'site' => $this->seo->site(),
             'seo' => $this->seo->home(),
         ], 200);

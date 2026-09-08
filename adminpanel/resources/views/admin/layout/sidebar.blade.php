@@ -27,6 +27,7 @@
                             $canManageAttributes = $admin?->hasModuleAccess('attribute', 'view');
                             $canManageCoupons = $admin?->hasModuleAccess('coupon', 'view');
                             $canManageShippingMethods = $admin?->hasModuleAccess('shipping_method', 'view');
+                            $canManageHomeSliders = $admin?->hasModuleAccess('home_slider', 'view');
                         @endphp
                         <img src="{{ $admin && $admin->image
                             ? asset('admin/adminimage/' . $admin->image)
@@ -69,8 +70,8 @@
                         </ul>
                     </li>
                 @endif
-                @if ($canManageSections || $canManageCategories)
-                    <li class="slide {{ request()->routeIs('section') || request()->routeIs('category') ? 'is-expanded' : '' }}">
+                @if ($canManageSections || $canManageCategories || $canManageHomeSliders)
+                    <li class="slide {{ request()->routeIs('section') || request()->routeIs('category') || request()->routeIs('home-sliders') ? 'is-expanded' : '' }}">
                         <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                             <i class="side-menu__icon fe fe-layers"></i>
                             <span class="side-menu__label">Pages</span><i class="angle fe fe-chevron-right"></i>
@@ -78,6 +79,7 @@
                         <ul class="slide-menu">
                             @if ($canManageSections)<li><a href="{{ route('section') }}" class="slide-item">Sections</a></li>@endif
                             @if ($canManageCategories)<li><a href="{{ route('category') }}" class="slide-item">Category</a></li>@endif
+                            @if ($canManageHomeSliders)<li><a href="{{ route('home-sliders') }}" class="slide-item {{ request()->routeIs('home-sliders') ? 'active' : '' }}">Home Sliders</a></li>@endif
                         </ul>
                     </li>
                 @endif
