@@ -12,6 +12,12 @@ const { shippingMethods, fetchShippingMethods } = useShippingMethods()
 const { cart, fetchCart, applyCoupon, removeCoupon } = useCart()
 const selectedShippingMethodId = ref<number | null>(null)
 const selectedShippingMethod = computed(() => shippingMethods.value.find(method => method.id === selectedShippingMethodId.value) ?? null)
+const paymentMethods = [
+  { id: 'sslcommerz', name: 'SSLCommerz', description: 'Card, bank, bKash or Nagad', icon: 'bi bi-phone' },
+  { id: 'cod', name: 'Cash on delivery', description: 'Pay when your order arrives', icon: 'bi bi-cash-stack' },
+] as const
+const selectedPaymentMethod = ref<string | null>(null)
+const checkoutErrors = reactive({ address: '', shipping: '', payment: '', cart: '' })
 const shippingCharge = computed(() => Number(selectedShippingMethod.value?.charge ?? 0))
 const checkoutSubtotal = computed(() => Number(cart.value?.summary.subtotal ?? 0))
 const couponDiscount = computed(() => Number(cart.value?.summary.discount ?? 0))
@@ -24,8 +30,8 @@ const cartLoadedForCheckout = computed(() => cart.value !== null)
 const couponCode = ref('')
 const couponLoading = ref(false)
 const couponError = ref('')
-const itemOptions = (options: Array<{ name: string | null; value: string }>) => options.map(option => option.value).filter(Boolean).join(' · ')
-const money = (value: number) => `৳${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 2 }).format(value)}`
+const itemOptions = (options: Array<{ name: string | null; value: string }>) => options.map(option => option.value).filter(Boolean).join('\\u00B7')
+const money = (value: number) => `\u09F3${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 2 }).format(value)}`
 const districts = ref<LocationOption[]>([])
 const upazilas = ref<LocationOption[]>([])
 const selectedDivisionId = ref<number | null>(null)
@@ -42,6 +48,24 @@ const addressError = ref('')
 const addressErrors = ref<Record<string, string[]>>({})
 const delivery = reactive({ recipient_name: '', address_line: '', area: '', upazila: '', district: '', division: '', postal_code: '', phone: '' })
 const selectedAddress = computed(() => addresses.value.find(address => address.id === selectedAddressId.value) ?? null)
+
+const clearCheckoutError = (field: keyof typeof checkoutErrors) => { checkoutErrors[field] = '' }
+const validateCheckout = async () => {
+  Object.keys(checkoutErrors).forEach(key => { checkoutErrors[key as keyof typeof checkoutErrors] = '' })
+  if (!selectedAddress.value) checkoutErrors.address = 'Select a saved delivery address. If this is a new address, save it first.'
+  if (!selectedShippingMethod.value) checkoutErrors.shipping = 'Select a shipping method.'
+  if (!selectedPaymentMethod.value || !paymentMethods.some(method => method.id === selectedPaymentMethod.value)) checkoutErrors.payment = 'Select a payment method.'
+  if (!checkoutItems.value.length) checkoutErrors.cart = 'Your cart is empty. Add at least one product before checkout.'
+
+  const firstError = (['address', 'shipping', 'payment', 'cart'] as const).find(field => checkoutErrors[field])
+  if (firstError) {
+    showErrorToast('Checkout incomplete', checkoutErrors[firstError])
+    await nextTick()
+    document.getElementById(`checkout-${firstError}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return
+  }
+  showSuccessToast('Checkout information complete', 'Address, shipping and payment selections are ready.')
+}
 
 const resetLocationSelection = () => {
   selectedDivisionId.value = null
@@ -91,6 +115,7 @@ const clearDelivery = () => Object.assign(delivery, { recipient_name: user.value
 const clearAddressFeedback = () => { addressMessage.value = ''; addressError.value = ''; addressErrors.value = {} }
 
 const selectSavedAddress = async (address: UserAddress) => {
+  clearCheckoutError('address')
   selectedAddressId.value = address.id
   clearAddressFeedback()
   Object.assign(delivery, {
@@ -200,12 +225,9 @@ onMounted(async () => {
   locationsLoading.value = true
   try {
     await Promise.all([fetchAddresses(), fetchDivisions(), fetchShippingMethods(), fetchCart()])
-    const firstShippingMethod = shippingMethods.value[0]
-    if (!selectedShippingMethodId.value && firstShippingMethod) {
-      selectedShippingMethodId.value = firstShippingMethod.id
-    }
-    const initial = defaultAddress.value ?? addresses.value[0]
-    if (initial) await selectSavedAddress(initial); else { clearDelivery(); resetLocationSelection() }
+    selectedAddressId.value = null
+    clearDelivery()
+    resetLocationSelection()
   } finally {
     addressLoading.value = false
     locationsLoading.value = false
@@ -219,8 +241,8 @@ onMounted(async () => {
                     help? <a href="#">Contact support</a></span></div>
             <div class="row g-4 g-xl-5">
                 <div class="col-lg-7">
-                    <form class="checkout-form" id="checkoutForm" data-checkout-form="">
-                        <section class="checkout-section">
+                    <form class="checkout-form" id="checkoutForm" novalidate @submit.prevent="validateCheckout">
+                        <section id="checkout-address" class="checkout-section" :class="{ 'has-checkout-error': checkoutErrors.address }">
                             <div class="checkout-section-head"><span>1</span>
                                 <div>
                                     <h2>Delivery address</h2>
@@ -228,10 +250,12 @@ onMounted(async () => {
                                 </div>
                             </div>
                             <div v-if="addressLoading" class="saved-address-loading"><span class="spinner-border spinner-border-sm"></span> Loading saved addresses...</div>
-                            <div v-else-if="addresses.length" class="saved-addresses">
-                                <article v-for="address in addresses" :key="address.id" :class="{ selected: selectedAddressId === address.id }" @click="selectSavedAddress(address)">
+                            <p v-if="!addressLoading && addresses.length" class="address-selection-help"><i class="bi bi-geo-alt"></i>Select the delivery address for this order.</p>
+                            <div v-if="!addressLoading && addresses.length" class="saved-addresses">
+                                <article v-for="address in addresses" :key="address.id" role="button" tabindex="0" :aria-pressed="selectedAddressId === address.id" :class="{ selected: selectedAddressId === address.id }" @click="selectSavedAddress(address)" @keydown.enter.prevent="selectSavedAddress(address)">
+                                    <i v-if="selectedAddressId === address.id" class="bi bi-check-circle-fill address-selected-check"></i>
                                     <span><strong>{{ address.label }}</strong><small v-if="address.is_default">Default</small></span>
-                                    <em>{{ address.recipient_name }} · {{ address.phone }}</em>
+                                    <em>{{ address.recipient_name }} <span>&middot;</span> {{ address.phone }}</em>
                                     <p>{{ address.address_line }}, {{ address.upazila_name }}, {{ address.district_name }}</p>
                                     <div class="saved-address-actions">
                                         <button type="button" @click.stop="selectSavedAddress(address)"><i class="bi bi-pencil"></i> Edit</button>
@@ -257,8 +281,9 @@ onMounted(async () => {
                                 <span v-if="addressSaving" class="spinner-border spinner-border-sm"></span>
                                 <i v-else class="bi bi-bookmark-check"></i> {{ addressSaving ? 'Saving...' : (selectedAddressId ? 'Update selected address' : 'Save new address') }}
                             </button>
+                            <p v-if="checkoutErrors.address" class="checkout-validation-error"><i class="bi bi-exclamation-circle"></i>{{ checkoutErrors.address }}</p>
                         </section>
-                        <section class="checkout-section">
+                        <section id="checkout-shipping" class="checkout-section" :class="{ 'has-checkout-error': checkoutErrors.shipping }">
                             <div class="checkout-section-head"><span>2</span>
                                 <div>
                                     <h2>Shipping method</h2>
@@ -267,15 +292,16 @@ onMounted(async () => {
                             </div>
                             <div v-if="shippingMethods.length" class="checkout-options">
                                 <label v-for="method in shippingMethods" :key="method.id" :class="{ selected: selectedShippingMethodId === method.id }">
-                                    <input v-model="selectedShippingMethodId" type="radio" name="checkoutShipping" :value="method.id">
+                                    <input v-model="selectedShippingMethodId" type="radio" name="checkoutShipping" :value="method.id" @change="clearCheckoutError('shipping')">
                                     <i :class="method.icon || 'bi bi-truck'"></i>
                                     <span><strong>{{ method.name }}</strong><small v-if="method.delivery_time">{{ method.delivery_time }}</small><small v-else-if="method.description">{{ method.description }}</small></span>
                                     <b>{{ Number(method.charge) === 0 ? 'Free' : money(Number(method.charge)) }}</b>
                                 </label>
                             </div>
                             <p v-else class="checkout-address-message error">No shipping method is currently available.</p>
+                            <p v-if="checkoutErrors.shipping" class="checkout-validation-error"><i class="bi bi-exclamation-circle"></i>{{ checkoutErrors.shipping }}</p>
                         </section>
-                        <section class="checkout-section">
+                        <section id="checkout-payment" class="checkout-section" :class="{ 'has-checkout-error': checkoutErrors.payment }">
                             <div class="checkout-section-head"><span>3</span>
                                 <div>
                                     <h2>Payment</h2>
@@ -284,18 +310,19 @@ onMounted(async () => {
                                 <div class="payment-logos"><b>VISA</b><b>MC</b></div>
                             </div>
                             <div class="checkout-options payment-methods">
-                                <label class="selected"><input type="radio" name="payment" value="mobile">
-                                  <i class="bi bi-phone"></i><span><strong>SSLCommerze</strong><small>Bank/bKash/Nagad</small></span></label>
-                                <label><input type="radio" name="payment" value="cod">
-                                  <i class="bi bi-cash-stack"></i><span><strong>Cash on delivery</strong><small>Pay when your order arrives</small></span></label>
+                                <label v-for="method in paymentMethods" :key="method.id" :class="{ selected: selectedPaymentMethod === method.id }">
+                                  <input v-model="selectedPaymentMethod" type="radio" name="payment" :value="method.id" @change="clearCheckoutError('payment')">
+                                  <i :class="method.icon"></i><span><strong>{{ method.name }}</strong><small>{{ method.description }}</small></span>
+                                </label>
                             </div>
+                            <p v-if="checkoutErrors.payment" class="checkout-validation-error"><i class="bi bi-exclamation-circle"></i>{{ checkoutErrors.payment }}</p>
                         </section>
                         <button class="place-order-mobile d-lg-none" type="submit"><i class="bi bi-lock"></i> Place
-                            order · <span data-checkout-mobile-total="">{{ money(checkoutTotal) }}</span></button>
+                            order <span>&middot;</span> <span data-checkout-mobile-total="">{{ money(checkoutTotal) }}</span></button>
                     </form>
                 </div>
                 <div class="col-lg-5">
-                    <aside class="checkout-summary">
+                    <aside id="checkout-cart" class="checkout-summary" :class="{ 'has-checkout-error': checkoutErrors.cart }">
                         <h2>Order summary <span>{{ checkoutItemCount }} {{ checkoutItemCount === 1 ? 'item' : 'items' }}</span></h2>
                         <div v-if="!cartLoadedForCheckout" class="checkout-products checkout-products-state"><span class="spinner-border spinner-border-sm"></span> Loading your cart...</div>
                         <div v-else-if="checkoutItems.length" class="checkout-products">
@@ -308,6 +335,7 @@ onMounted(async () => {
                             </div>
                         </div>
                         <div v-else class="checkout-products checkout-products-empty"><i class="bi bi-cart-x"></i><div><strong>Your cart is empty</strong><small>Add products before continuing to checkout.</small></div><NuxtLink to="/shop">Shop now</NuxtLink></div>
+                        <p v-if="checkoutErrors.cart" class="checkout-validation-error"><i class="bi bi-exclamation-circle"></i>{{ checkoutErrors.cart }}</p>
                         <form v-if="!cart?.coupon" class="checkout-coupon" @submit.prevent="submitCoupon">
                             <input v-model="couponCode" name="checkoutCoupon" autocomplete="off" placeholder="Discount code">
                             <button type="submit" :disabled="couponLoading || !couponCode.trim()">
@@ -326,12 +354,11 @@ onMounted(async () => {
                         </p>
                         <div class="checkout-totals">
                             <div><span>Subtotal</span><strong>{{ money(checkoutSubtotal) }}</strong></div>
-                            <div v-if="couponDiscount > 0" class="coupon-total-row"><span>Coupon discount</span><strong>−{{ money(couponDiscount) }}</strong></div>
+                            <div v-if="couponDiscount > 0" class="coupon-total-row"><span>Coupon discount</span><strong>&minus;{{ money(couponDiscount) }}</strong></div>
                             <div><span>Shipping</span><strong>{{ checkoutShipping === 0 ? 'Free' : money(checkoutShipping) }}</strong></div>
                             <div class="checkout-grand-total"><span>Total <small>BDT</small></span><strong
                                     data-checkout-total="">{{ money(checkoutTotal) }}</strong></div>
-                        </div><button class="place-order d-none d-lg-flex" type="submit" form="checkoutForm"
-                            data-place-order=""><i class="bi bi-lock"></i> Place order</button>
+                        </div><button class="place-order d-none d-lg-flex" type="submit" form="checkoutForm"><i class="bi bi-lock"></i> Place order</button>
                         <p class="checkout-terms">By placing your order, you agree to our <a href="#">Terms</a> and <a
                                 href="#">Privacy Policy</a>.</p>
                         <div class="checkout-trust"><span><i class="bi bi-shield-check"></i><b>Secure
@@ -343,16 +370,7 @@ onMounted(async () => {
                 </div>
             </div>
         </div>
-    </main>
-    <div class="checkout-success" data-checkout-success="">
-        <div><i class="bi bi-check2-circle"></i>
-            <h2>Order placed successfully</h2>
-            <p>Thank you! Your confirmation number is <strong>NC-20481</strong>.</p><a href="index.html">Continue
-                shopping</a>
-        </div>
-    </div>
-
-    <ConfirmDialog
+    </main><ConfirmDialog
       :open="Boolean(pendingDeleteAddress)"
       eyebrow="REMOVE SAVED ADDRESS"
       :title="`Delete ${pendingDeleteAddress?.label ?? ''} address?`"
@@ -408,4 +426,12 @@ onMounted(async () => {
 .applied-coupon button { border:0; background:transparent; color:#d84b39; font-size:.68rem; font-weight:750; }
 .coupon-error { margin:9px 0 0; color:#b5362c; font-size:.68rem; line-height:1.45; }
 .coupon-saving { display:flex; align-items:center; gap:6px; margin:9px 0 0; color:#267647; font-size:.68rem; font-weight:700; }
-.coupon-total-row strong { color:#267647 !important; }</style>
+.coupon-total-row strong { color:#267647 !important; }
+.checkout-section.has-checkout-error,.checkout-summary.has-checkout-error{border-color:#e45b4c;box-shadow:0 0 0 3px rgba(228,91,76,.08)}
+.checkout-validation-error{display:flex;align-items:center;gap:7px;margin:12px 0 0;padding:10px 12px;border-left:3px solid #d94b3d;background:#fff0ee;color:#a93226;font-size:.7rem;font-weight:650}
+.address-selection-help{display:flex;align-items:center;gap:7px;margin:0 0 12px;color:#596a62;font-size:.72rem;font-weight:650}
+.address-selection-help i{color:#e6513d}
+.saved-addresses article{outline:none}
+.saved-addresses article:focus-visible{border-color:#ff5941;box-shadow:0 0 0 3px rgba(255,89,65,.14)}
+.address-selected-check{position:absolute;top:10px;right:12px;bottom:auto;color:#27804b;font-size:1rem}
+</style>
