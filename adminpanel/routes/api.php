@@ -52,5 +52,6 @@ Route::prefix('auth')->group(function () {
         Route::patch('/addresses/{address}/default',[UserAddressController::class, 'makeDefault']);
         Route::get('/orders', [OrderController::class, 'index'])->name('api.orders.index');
         Route::post('/orders', [OrderController::class, 'store'])->name('api.orders.store');
+        Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])->name('api.orders.show');
     });
 });

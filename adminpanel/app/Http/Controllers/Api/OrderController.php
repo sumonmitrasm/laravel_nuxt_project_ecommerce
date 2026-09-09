@@ -43,6 +43,70 @@ class OrderController extends Controller
         ]);
     }
 
+    public function show(Request $request, string $orderNumber): JsonResponse
+    {
+        $order = $request->user()->orders()
+            ->where('order_number', $orderNumber)
+            ->with([
+                'items',
+                'address',
+                'payments' => fn ($query) => $query->latest('id'),
+                'statusHistories' => fn ($query) => $query->oldest('id'),
+            ])
+            ->firstOrFail();
+
+        $items = $order->items->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'product_id' => $item->product_id,
+                'product_name' => $item->product_name,
+                'product_code' => $item->product_code,
+                'sku' => $item->sku,
+                'image_url' => $item->image
+                    ? asset('admin/productimage/'.basename($item->image))
+                    : null,
+                'options' => $item->options ?? [],
+                'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price,
+                'line_total' => $item->line_total,
+            ];
+        });
+
+        $payment = $order->payments->first();
+
+        return response()->json([
+            'status' => true,
+            'order' => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'order_status' => $order->order_status,
+                'payment_status' => $order->payment_status,
+                'payment_method' => $order->payment_method,
+                'shipping_method_name' => $order->shipping_method_name,
+                'subtotal' => $order->subtotal,
+                'discount_amount' => $order->discount_amount,
+                'shipping_charge' => $order->shipping_charge,
+                'tax_amount' => $order->tax_amount,
+                'grand_total' => $order->grand_total,
+                'currency' => $order->currency,
+                'customer_note' => $order->customer_note,
+                'placed_at' => $order->placed_at,
+                'items' => $items,
+                'address' => $order->address,
+                'payment' => $payment ? [
+                    'method' => $payment->method,
+                    'status' => $payment->status,
+                    'transaction_id' => $payment->transaction_id,
+                    'paid_at' => $payment->paid_at,
+                ] : null,
+                'status_histories' => $order->statusHistories->map(fn ($history) => [
+                    'status' => $history->status,
+                    'note' => $history->note,
+                    'created_at' => $history->created_at,
+                ]),
+            ],
+        ]);
+    }
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
