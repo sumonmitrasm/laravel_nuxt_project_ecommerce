@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OrderPlacedMail;
 use App\Models\Cart;
 use App\Models\CouponUsage;
 use App\Models\Order;
@@ -15,6 +16,8 @@ use App\Services\CouponService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -141,6 +144,16 @@ class OrderController extends Controller
             $cart->delete();
             return $order;
         }, 3);
+
+        try {
+            Mail::to($user->email)->send(new OrderPlacedMail($order));
+        } catch (\Throwable $exception) {
+            Log::error('Order confirmation email could not be sent.', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'status' => true, 'message' => 'Order placed successfully.',
