@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\FrontController;
 use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ShippingMethodController;
 use App\Http\Controllers\Api\UserAddressController;
 use Illuminate\Support\Facades\Route;
@@ -49,5 +50,6 @@ Route::prefix('auth')->group(function () {
         Route::patch('/addresses/{address}', [UserAddressController::class, 'update']);
         Route::delete('/addresses/{address}', [UserAddressController::class, 'destroy']);
         Route::patch('/addresses/{address}/default',[UserAddressController::class, 'makeDefault']);
+        Route::post('/orders', [OrderController::class, 'store'])->name('api.orders.store');
     });
 });

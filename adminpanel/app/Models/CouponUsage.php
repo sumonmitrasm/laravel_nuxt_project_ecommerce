@@ -10,6 +10,7 @@ class CouponUsage extends Model
     protected $fillable = [
         'coupon_id',
         'user_id',
+        'order_id',
         'guest_token',
         'discount_amount',
         'used_at',
@@ -31,5 +32,10 @@ class CouponUsage extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 }
