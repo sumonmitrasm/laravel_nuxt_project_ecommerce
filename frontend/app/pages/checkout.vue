@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LocationOption } from '~/composables/useLocations'
 import type { UserAddress } from '~/composables/useAddresses'
+import type { PlacedOrder } from '~/composables/useOrders'
 useSeoMeta({ robots: 'noindex, nofollow' })
 definePageMeta({ middleware: 'auth' })
 
@@ -10,6 +11,9 @@ const { success: showSuccessToast, error: showErrorToast } = useToast()
 const { divisions, fetchDivisions, fetchDistricts, fetchUpazilas } = useLocations()
 const { shippingMethods, fetchShippingMethods } = useShippingMethods()
 const { cart, fetchCart, applyCoupon, removeCoupon } = useCart()
+const { placeOrder: submitOrder } = useOrders()
+const orderPlacing = ref(false)
+const placedOrder = ref<PlacedOrder | null>(null)
 const selectedShippingMethodId = ref<number | null>(null)
 const selectedShippingMethod = computed(() => shippingMethods.value.find(method => method.id === selectedShippingMethodId.value) ?? null)
 const paymentMethods = [
@@ -62,9 +66,30 @@ const validateCheckout = async () => {
     showErrorToast('Checkout incomplete', checkoutErrors[firstError])
     await nextTick()
     document.getElementById(`checkout-${firstError}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    return
+    return false
   }
-  showSuccessToast('Checkout information complete', 'Address, shipping and payment selections are ready.')
+  return true
+}
+
+const placeCheckoutOrder = async () => {
+  if (orderPlacing.value || !await validateCheckout()) return
+  orderPlacing.value = true
+  try {
+    const response = await submitOrder({
+      address_id: selectedAddressId.value!,
+      shipping_method_id: selectedShippingMethodId.value!,
+      payment_method: selectedPaymentMethod.value as 'cod' | 'sslcommerz',
+    })
+    placedOrder.value = response.order
+    await fetchCart(true).catch(() => undefined)
+    showSuccessToast('Order placed', 'Your order ' + response.order.order_number + ' was placed successfully.')
+  } catch (error: any) {
+    const errors = error?.data?.errors ?? {}
+    const message = errors.address_id?.[0] ?? errors.shipping_method_id?.[0] ?? errors.payment_method?.[0] ?? errors.cart?.[0] ?? errors.coupon?.[0] ?? error?.data?.message ?? 'Your order could not be placed. Please try again.'
+    showErrorToast('Order not placed', message)
+  } finally {
+    orderPlacing.value = false
+  }
 }
 
 const resetLocationSelection = () => {
@@ -241,7 +266,7 @@ onMounted(async () => {
                     help? <a href="#">Contact support</a></span></div>
             <div class="row g-4 g-xl-5">
                 <div class="col-lg-7">
-                    <form class="checkout-form" id="checkoutForm" novalidate @submit.prevent="validateCheckout">
+                    <form class="checkout-form" id="checkoutForm" novalidate @submit.prevent="placeCheckoutOrder">
                         <section id="checkout-address" class="checkout-section" :class="{ 'has-checkout-error': checkoutErrors.address }">
                             <div class="checkout-section-head"><span>1</span>
                                 <div>
@@ -317,8 +342,7 @@ onMounted(async () => {
                             </div>
                             <p v-if="checkoutErrors.payment" class="checkout-validation-error"><i class="bi bi-exclamation-circle"></i>{{ checkoutErrors.payment }}</p>
                         </section>
-                        <button class="place-order-mobile d-lg-none" type="submit"><i class="bi bi-lock"></i> Place
-                            order <span>&middot;</span> <span data-checkout-mobile-total="">{{ money(checkoutTotal) }}</span></button>
+                        <button class="place-order-mobile d-lg-none" type="submit" :disabled="orderPlacing"><span v-if="orderPlacing" class="spinner-border spinner-border-sm"></span><i v-else class="bi bi-lock"></i> {{ orderPlacing ? 'Placing order...' : 'Place order' }} <span v-if="!orderPlacing">&middot; {{ money(checkoutTotal) }}</span></button>
                     </form>
                 </div>
                 <div class="col-lg-5">
@@ -358,7 +382,7 @@ onMounted(async () => {
                             <div><span>Shipping</span><strong>{{ checkoutShipping === 0 ? 'Free' : money(checkoutShipping) }}</strong></div>
                             <div class="checkout-grand-total"><span>Total <small>BDT</small></span><strong
                                     data-checkout-total="">{{ money(checkoutTotal) }}</strong></div>
-                        </div><button class="place-order d-none d-lg-flex" type="submit" form="checkoutForm"><i class="bi bi-lock"></i> Place order</button>
+                        </div><button class="place-order d-none d-lg-flex" type="submit" form="checkoutForm" :disabled="orderPlacing"><span v-if="orderPlacing" class="spinner-border spinner-border-sm"></span><i v-else class="bi bi-lock"></i> {{ orderPlacing ? 'Placing order...' : 'Place order' }}</button>
                         <p class="checkout-terms">By placing your order, you agree to our <a href="#">Terms</a> and <a
                                 href="#">Privacy Policy</a>.</p>
                         <div class="checkout-trust"><span><i class="bi bi-shield-check"></i><b>Secure
@@ -370,7 +394,11 @@ onMounted(async () => {
                 </div>
             </div>
         </div>
-    </main><ConfirmDialog
+    </main>
+    <div v-if="placedOrder" class="checkout-success show" role="dialog" aria-modal="true" aria-labelledby="orderSuccessTitle">
+      <div><i class="bi bi-check-circle"></i><h2 id="orderSuccessTitle">Order placed successfully</h2><p>Your confirmation number is <strong>{{ placedOrder.order_number }}</strong>.</p><p>Total: <strong>{{ money(Number(placedOrder.grand_total)) }}</strong></p><NuxtLink to="/shop">Continue shopping</NuxtLink></div>
+    </div>
+    <ConfirmDialog
       :open="Boolean(pendingDeleteAddress)"
       eyebrow="REMOVE SAVED ADDRESS"
       :title="`Delete ${pendingDeleteAddress?.label ?? ''} address?`"
@@ -434,4 +462,5 @@ onMounted(async () => {
 .saved-addresses article{outline:none}
 .saved-addresses article:focus-visible{border-color:#ff5941;box-shadow:0 0 0 3px rgba(255,89,65,.14)}
 .address-selected-check{position:absolute;top:10px;right:12px;bottom:auto;color:#27804b;font-size:1rem}
+.place-order:disabled,.place-order-mobile:disabled{cursor:not-allowed;opacity:.72}
 </style>
