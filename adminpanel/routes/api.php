@@ -50,6 +50,7 @@ Route::prefix('auth')->group(function () {
         Route::patch('/addresses/{address}', [UserAddressController::class, 'update']);
         Route::delete('/addresses/{address}', [UserAddressController::class, 'destroy']);
         Route::patch('/addresses/{address}/default',[UserAddressController::class, 'makeDefault']);
+        Route::get('/orders', [OrderController::class, 'index'])->name('api.orders.index');
         Route::post('/orders', [OrderController::class, 'store'])->name('api.orders.store');
     });
 });

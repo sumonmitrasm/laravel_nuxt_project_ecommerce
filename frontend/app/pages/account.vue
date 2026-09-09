@@ -1,8 +1,24 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 useSeoMeta({ robots: 'noindex, nofollow' })
 const route = useRoute()
 const activeSection = ref('dashboard')
 const { user, logout, updateProfile } = useAuth()
+const { cartCount, fetchCart } = useCart()
+const { defaultAddress, fetchAddresses } = useAddresses()
+const { orders: customerOrders, fetchOrders } = useOrders()
+const dashboardLoading = ref(true)
+const dashboardError = ref('')
+const wishlistCount = 0
+const money = (value: number | string) => `\u09F3${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 2 }).format(Number(value))}`
+const orders = computed(() => customerOrders.value.map(order => ({
+  id: order.order_number,
+  databaseId: order.id,
+  date: new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(order.placed_at)),
+  total: money(order.grand_total),
+  items: `${order.items_count} ${order.items_count === 1 ? 'item' : 'items'}`,
+  status: order.order_status.charAt(0).toUpperCase() + order.order_status.slice(1),
+  tone: order.order_status.toLowerCase().replace(/[^a-z0-9_-]/g, ''),
+})))
 const isLoggingOut = ref(false)
 
 definePageMeta({ middleware: 'auth' })
@@ -28,12 +44,6 @@ const sections = [
   { id: 'orders', label: 'My orders', icon: 'bi-box-seam' },
   { id: 'address', label: 'Addresses', icon: 'bi-geo-alt' },
   { id: 'profile', label: 'Account details', icon: 'bi-person' }
-]
-
-const orders = [
-  { id: '#NC-10482', date: '12 Aug 2026', total: 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³15,480', items: '2 items', status: 'Processing', tone: 'processing' },
-  { id: '#NC-10391', date: '28 Jul 2026', total: 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³8,490', items: '1 item', status: 'Delivered', tone: 'delivered' },
-  { id: '#NC-10224', date: '05 Jul 2026', total: 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³6,990', items: '1 item', status: 'Delivered', tone: 'delivered' }
 ]
 
 const profileSaved = ref(false)
@@ -133,6 +143,15 @@ const submitProfile = async () => {
     profileSaving.value = false
   }
 }
+onMounted(async () => {
+  try {
+    await Promise.all([fetchOrders(true), fetchCart(true), fetchAddresses(true)])
+  } catch (error: any) {
+    dashboardError.value = error?.data?.message ?? 'Account information could not be loaded.'
+  } finally {
+    dashboardLoading.value = false
+  }
+})
 onBeforeUnmount(() => {
   if (imagePreview.value) URL.revokeObjectURL(imagePreview.value)
 })
@@ -173,7 +192,7 @@ onBeforeUnmount(() => {
             <button v-for="section in sections" :key="section.id" type="button"
               :class="{ active: activeSection === section.id }" @click="activeSection = section.id"><i class="bi"
                 :class="section.icon"></i><span>{{ section.label }}</span><i class="bi bi-chevron-right"></i></button>
-            <NuxtLink to="/wishlist"><i class="bi bi-heart"></i><span>Wishlist</span><b>2</b></NuxtLink>
+            <NuxtLink to="/wishlist"><i class="bi bi-heart"></i><span>Wishlist</span><b>{{ wishlistCount }}</b></NuxtLink>
             <button type="button" class="account-logout" :disabled="isLoggingOut" @click="handleLogout"><i
                 class="bi bi-box-arrow-right"></i><span>{{ isLoggingOut ? 'Logging out...' : 'Log out'
                 }}</span></button>
@@ -195,11 +214,11 @@ onBeforeUnmount(() => {
             </div>
             <div class="account-summary-grid">
               <button type="button" @click="activeSection = 'orders'"><i
-                  class="bi bi-box-seam"></i><span><strong>3</strong><small>Total orders</small></span><i
+                  class="bi bi-box-seam"></i><span><strong>{{ orders.length }}</strong><small>Total orders</small></span><i
                   class="bi bi-arrow-up-right"></i></button>
-              <NuxtLink to="/wishlist"><i class="bi bi-heart"></i><span><strong>2</strong><small>Wishlist
+              <NuxtLink to="/wishlist"><i class="bi bi-heart"></i><span><strong>{{ wishlistCount }}</strong><small>Wishlist
                     items</small></span><i class="bi bi-arrow-up-right"></i></NuxtLink>
-              <NuxtLink to="/cart"><i class="bi bi-cart3"></i><span><strong>3</strong><small>Cart items</small></span><i
+              <NuxtLink to="/cart"><i class="bi bi-cart3"></i><span><strong>{{ cartCount }}</strong><small>Cart items</small></span><i
                   class="bi bi-arrow-up-right"></i></NuxtLink>
             </div>
 
@@ -211,16 +230,19 @@ onBeforeUnmount(() => {
               </div>
               <div class="account-order-table">
                 <div class="order-table-head">
-                  <span>Order</span><span>Date</span><span>Status</span><span>Total</span><span></span></div>
-                <div v-for="order in orders.slice(0, 2)" :key="order.id" class="account-order-row"><strong>{{ order.id
-                    }}</strong><span data-label="Date">{{ order.date }}</span><em :class="order.tone">{{ order.status
-                    }}</em><span data-label="Total">{{ order.total }} <small>{{ order.items }}</small></span>
-                  <NuxtLink to="/account/order-details" aria-label="View order"><i class="bi bi-arrow-right"></i>
-                  </NuxtLink>
+                  <span>Order</span><span>Date</span><span>Status</span><span>Total</span><span></span>
                 </div>
+                <div v-if="dashboardLoading" class="account-data-state">Loading your orders...</div>
+                <div v-else-if="dashboardError" class="account-data-state error">{{ dashboardError }}</div>
+                <div v-else-if="!orders.length" class="account-data-state">You have not placed any orders yet.</div>
+                <template v-else>
+                  <div v-for="order in orders.slice(0, 2)" :key="order.id" class="account-order-row">
+                    <strong>{{ order.id }}</strong><span data-label="Date">{{ order.date }}</span><em :class="order.tone">{{ order.status }}</em><span data-label="Total">{{ order.total }} <small>{{ order.items }}</small></span>
+                    <NuxtLink :to="{ path: '/account/order-details', query: { order: order.id } }" aria-label="View order"><i class="bi bi-arrow-right"></i></NuxtLink>
+                  </div>
+                </template>
               </div>
             </div>
-
             <div class="account-bottom-grid">
               <div class="account-panel account-address-card">
                 <div class="account-panel-head">
@@ -228,8 +250,14 @@ onBeforeUnmount(() => {
                     <h3>Shipping address</h3>
                   </div><button type="button" @click="activeSection = 'address'">Edit</button>
                 </div>
-                <address><strong>Sumon Rahman</strong><span>House 12, Road 4</span><span>Dhanmondi, Dhaka
-                    1209</span><span>Bangladesh</span><span>+880 1712-345678</span></address>
+                <address v-if="defaultAddress">
+                  <strong>{{ defaultAddress.recipient_name }}</strong>
+                  <span>{{ defaultAddress.address_line }}</span>
+                  <span>{{ [defaultAddress.area, defaultAddress.upazila_name, defaultAddress.district_name].filter(Boolean).join(', ') }}</span>
+                  <span>{{ [defaultAddress.division_name, defaultAddress.postal_code].filter(Boolean).join(' - ') }}</span>
+                  <span>{{ defaultAddress.phone }}</span>
+                </address>
+                <p v-else class="account-data-state address-empty">No default delivery address saved.</p>
               </div>
               <div class="account-help-card"><i class="bi bi-shield-check"></i>
                 <h3>Shop with confidence</h3>
@@ -248,16 +276,20 @@ onBeforeUnmount(() => {
               <NuxtLink to="/shop">Shop products <i class="bi bi-arrow-right"></i></NuxtLink>
             </div>
             <div class="account-panel account-all-orders">
-              <div v-for="order in orders" :key="order.id" class="account-order-card">
-                <div><small>Order number</small><strong>{{ order.id }}</strong></div>
-                <div><small>Placed on</small><span>{{ order.date }}</span></div>
-                <div><small>Total</small><span>{{ order.total }} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {{ order.items }}</span></div><em
-                  :class="order.tone">{{ order.status }}</em>
-                <NuxtLink to="/account/order-details">View details <i class="bi bi-arrow-right"></i></NuxtLink>
-              </div>
+              <div v-if="dashboardLoading" class="account-data-state">Loading your orders...</div>
+              <div v-else-if="dashboardError" class="account-data-state error">{{ dashboardError }}</div>
+              <div v-else-if="!orders.length" class="account-data-state">You have not placed any orders yet.</div>
+              <template v-else>
+                <div v-for="order in orders" :key="order.id" class="account-order-card">
+                  <div><small>Order number</small><strong>{{ order.id }}</strong></div>
+                  <div><small>Placed on</small><span>{{ order.date }}</span></div>
+                  <div><small>Total</small><span>{{ order.total }} &middot; {{ order.items }}</span></div>
+                  <em :class="order.tone">{{ order.status }}</em>
+                  <NuxtLink :to="{ path: '/account/order-details', query: { order: order.id } }">View details <i class="bi bi-arrow-right"></i></NuxtLink>
+                </div>
+              </template>
             </div>
           </template>
-
           <template v-else-if="activeSection === 'address'">
             <AccountAddressManager />
           </template>
@@ -647,6 +679,14 @@ onBeforeUnmount(() => {
 }
 
 .order-table-head,
+.account-data-state {
+  padding: 24px 12px;
+  color: #7d8782;
+  font-size: .78rem;
+  text-align: center;
+}
+.account-data-state.error { color: #c33b2e; }
+.account-data-state.address-empty { padding: 10px 0 0; text-align: left; }
 .account-order-row {
   display: grid;
   grid-template-columns: 1.1fr 1fr .9fr 1.1fr 35px;
