@@ -26,6 +26,23 @@ class OrderController extends Controller
 {
     public function __construct(private readonly CartManager $carts, private readonly CouponService $coupons) {}
 
+    public function index(Request $request): JsonResponse
+    {
+        $orders = $request->user()->orders()
+            ->withCount('items')
+            ->latest('id')
+            ->get([
+                'id', 'order_number', 'order_status', 'payment_status',
+                'payment_method', 'grand_total', 'currency', 'placed_at',
+            ]);
+
+        return response()->json([
+            'status' => true,
+            'total_orders' => $orders->count(),
+            'orders' => $orders,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([

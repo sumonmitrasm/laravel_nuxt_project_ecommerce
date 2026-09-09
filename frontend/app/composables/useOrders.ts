@@ -8,6 +8,17 @@ export type PlacedOrder = {
   currency: string
 }
 
+export type AccountOrder = PlacedOrder & {
+  placed_at: string
+  items_count: number
+}
+
+type OrdersResponse = {
+  status: boolean
+  total_orders: number
+  orders: AccountOrder[]
+}
+
 type PlaceOrderPayload = {
   address_id: number
   shipping_method_id: number
@@ -25,6 +36,19 @@ export const useOrders = () => {
   const config = useRuntimeConfig()
   const xsrfToken = useCookie<string | null>('XSRF-TOKEN')
   const guestToken = useCookie<string | null>('guest_cart_token')
+  const orders = useState<AccountOrder[]>('customer-orders', () => [])
+  const ordersLoaded = useState<boolean>('customer-orders-loaded', () => false)
+
+  const fetchOrders = async (force = false) => {
+    if (ordersLoaded.value && !force) return orders.value
+    const response = await $fetch<OrdersResponse>('/auth/orders', {
+      baseURL: config.public.apiBase,
+      credentials: 'include',
+    })
+    orders.value = response.orders
+    ordersLoaded.value = true
+    return orders.value
+  }
 
   const placeOrder = async (payload: PlaceOrderPayload) => {
     await $fetch('/sanctum/csrf-cookie', {
@@ -45,5 +69,5 @@ export const useOrders = () => {
     })
   }
 
-  return { placeOrder }
+  return { orders, ordersLoaded, fetchOrders, placeOrder }
 }
