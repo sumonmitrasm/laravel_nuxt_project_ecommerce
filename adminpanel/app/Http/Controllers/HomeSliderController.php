@@ -23,7 +23,12 @@ class HomeSliderController extends Controller
         if ($request->hasFile('image')) $data['image'] = $this->upload($request->file('image'));
         HomeSlider::create($data);
         $this->clearCache();
-        return back()->with('success', 'Home slider created successfully.');
+        return response()->json(['message' => 'Home slider created successfully.'], 201);
+    }
+
+    public function show(HomeSlider $homeSlider)
+    {
+        return response()->json(['record' => $homeSlider, 'image_url' => $homeSlider->image_url]);
     }
 
     public function update(Request $request, HomeSlider $homeSlider)
@@ -36,14 +41,14 @@ class HomeSliderController extends Controller
         }
         $homeSlider->update($data);
         $this->clearCache();
-        return back()->with('success', 'Home slider updated successfully.');
+        return response()->json(['message' => 'Home slider updated successfully.']);
     }
 
     public function status(HomeSlider $homeSlider)
     {
         $homeSlider->update(['status' => ! $homeSlider->status]);
         $this->clearCache();
-        return back()->with('success', 'Slider status updated.');
+        return response()->json(['message' => 'Slider status updated.']);
     }
 
     public function destroy(HomeSlider $homeSlider)
@@ -52,7 +57,7 @@ class HomeSliderController extends Controller
         $homeSlider->delete();
         $this->deleteImage($image);
         $this->clearCache();
-        return back()->with('success', 'Home slider deleted.');
+        return response()->json(['message' => 'Home slider deleted.']);
     }
 
     private function validated(Request $request): array
