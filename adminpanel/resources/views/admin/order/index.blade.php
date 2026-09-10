@@ -17,11 +17,12 @@
     <div class="card">
         <div class="card-header"><h3 class="card-title">All Orders</h3></div>
         <div class="card-body">
-            <form method="GET" action="{{ route('admin-orders.index') }}" class="row g-2 mb-4">
-                <div class="col-md-4"><input class="form-control" name="search" value="{{ request('search') }}" placeholder="Order no, customer, email or phone"></div>
+            <form method="GET" action="{{ route('admin-orders.index') }}" class="row g-2 mb-4" data-ajax-filter>
+                <div class="col-md-3"><input class="form-control" name="search" value="{{ request('search') }}" placeholder="Order no, customer, email or phone"></div>
                 <div class="col-md-2"><select class="form-select" name="order_status"><option value="">All order statuses</option>@foreach(['pending','confirmed','processing','shipped','delivered','cancelled'] as $status)<option value="{{ $status }}" @selected(request('order_status') === $status)>{{ ucfirst($status) }}</option>@endforeach</select></div>
                 <div class="col-md-2"><select class="form-select" name="payment_status"><option value="">All payment statuses</option>@foreach(['unpaid','pending','paid','failed','cancelled','refund_pending','refunded'] as $status)<option value="{{ $status }}" @selected(request('payment_status') === $status)>{{ ucwords(str_replace('_',' ',$status)) }}</option>@endforeach</select></div>
                 <div class="col-md-2"><select class="form-select" name="payment_method"><option value="">All payments</option><option value="cod" @selected(request('payment_method') === 'cod')>Cash on delivery</option><option value="sslcommerz" @selected(request('payment_method') === 'sslcommerz')>SSLCommerz</option></select></div>
+                <div class="col-md-1"><select class="form-select" name="per_page" aria-label="Orders per page">@foreach([10,20,50,100] as $size)<option value="{{ $size }}" @selected((int) request('per_page', 20) === $size)>{{ $size }}</option>@endforeach</select></div>
                 <div class="col-md-2 d-flex gap-2"><button class="btn btn-primary flex-grow-1">Filter</button><a class="btn btn-light" data-ajax-page href="{{ route('admin-orders.index') }}">Reset</a></div>
             </form>
 

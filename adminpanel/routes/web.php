@@ -117,6 +117,7 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::patch('home-sliders/{homeSlider}/status', [HomeSliderController::class, 'status'])->name('admin-home-slider.status');
         Route::delete('home-sliders/{homeSlider}', [HomeSliderController::class, 'destroy'])->name('admin-home-slider.delete');
         Route::get('orders', [AdminOrderController::class, 'index'])->name('admin-orders.index');
+        Route::get('sales-analytics', [AdminOrderController::class, 'analytics'])->name('admin-orders.analytics');
         Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('admin-orders.show');
         Route::patch('orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('admin-orders.status');
         Route::get('notifications', [AdminNotificationController::class, 'index'])->name('admin-notifications.index');

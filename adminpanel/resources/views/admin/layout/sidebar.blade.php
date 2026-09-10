@@ -119,7 +119,8 @@
                     </a>
                     <ul class="slide-menu">
                         <li class="side-menu-label1"><a href="javascript:void(0)">Orders</a></li>
-                        <li><a href="{{ route('admin-orders.index') }}" class="slide-item {{ request()->routeIs('admin-orders.*') ? 'active' : '' }}">All Orders</a></li>
+                        <li><a href="{{ route('admin-orders.index') }}" class="slide-item {{ request()->routeIs('admin-orders.index', 'admin-orders.show') ? 'active' : '' }}">All Orders</a></li>
+                        <li><a href="{{ route('admin-orders.analytics') }}" class="slide-item {{ request()->routeIs('admin-orders.analytics') ? 'active' : '' }}">Sales Analytics</a></li>
                     </ul>
                 </li>
                 @endif
