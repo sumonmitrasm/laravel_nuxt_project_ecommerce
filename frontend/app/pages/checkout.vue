@@ -11,7 +11,7 @@ const { success: showSuccessToast, error: showErrorToast } = useToast()
 const { divisions, fetchDivisions, fetchDistricts, fetchUpazilas } = useLocations()
 const { shippingMethods, fetchShippingMethods } = useShippingMethods()
 const { cart, fetchCart, applyCoupon, removeCoupon } = useCart()
-const { placeOrder: submitOrder } = useOrders()
+const { placeOrder: submitOrder, startSslCommerzPayment } = useOrders()
 const orderPlacing = ref(false)
 const placedOrder = ref<PlacedOrder | null>(null)
 const selectedShippingMethodId = ref<number | null>(null)
@@ -80,8 +80,24 @@ const placeCheckoutOrder = async () => {
       shipping_method_id: selectedShippingMethodId.value!,
       payment_method: selectedPaymentMethod.value as 'cod' | 'sslcommerz',
     })
-    placedOrder.value = response.order
     await fetchCart(true).catch(() => undefined)
+
+    if (response.order.payment_method === 'sslcommerz') {
+      try {
+        const payment = await startSslCommerzPayment(response.order.order_number)
+        window.location.assign(payment.gateway_url)
+        return
+      } catch (paymentError: any) {
+        showErrorToast(
+          'Payment not started',
+          paymentError?.data?.message ?? `Order ${response.order.order_number} was created, but the payment page could not be opened. You can retry from order details.`
+        )
+        await navigateTo({ path: '/account/order-details', query: { order: response.order.order_number, payment: 'failed' } })
+        return
+      }
+    }
+
+    placedOrder.value = response.order
     showSuccessToast('Order placed', 'Your order ' + response.order.order_number + ' was placed successfully.')
   } catch (error: any) {
     const errors = error?.data?.errors ?? {}

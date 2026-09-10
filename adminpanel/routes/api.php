@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\FrontController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ShippingMethodController;
+use App\Http\Controllers\Api\SslCommerzController;
 use App\Http\Controllers\Api\UserAddressController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +15,10 @@ Route::get('/products', [FrontController::class, 'products'])->name('api.product
 Route::get('/listing/{url}', [FrontController::class, 'listing'])->name('api.listing');
 Route::get('/detail/{id}', [FrontController::class, 'details'])->whereNumber('id')->name('api.detail');
 Route::get('/shipping-methods', [ShippingMethodController::class, 'index'])->name('api.shipping-methods');
+Route::post('/payments/sslcommerz/success', [SslCommerzController::class, 'success'])->name('sslcommerz.success');
+Route::post('/payments/sslcommerz/fail', [SslCommerzController::class, 'fail'])->name('sslcommerz.fail');
+Route::post('/payments/sslcommerz/cancel', [SslCommerzController::class, 'cancel'])->name('sslcommerz.cancel');
+Route::post('/payments/sslcommerz/ipn', [SslCommerzController::class, 'ipn'])->name('sslcommerz.ipn');
 
 Route::prefix('locations')->group(function () {
     Route::get('/divisions', [LocationController::class, 'divisions']);
@@ -52,6 +57,7 @@ Route::prefix('auth')->group(function () {
         Route::patch('/addresses/{address}/default',[UserAddressController::class, 'makeDefault']);
         Route::get('/orders', [OrderController::class, 'index'])->name('api.orders.index');
         Route::post('/orders', [OrderController::class, 'store'])->name('api.orders.store');
+        Route::post('/orders/{orderNumber}/payment', [SslCommerzController::class, 'initiate'])->middleware('throttle:10,1')->name('api.orders.payment');
         Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])->name('api.orders.show');
         Route::patch('/orders/{orderNumber}/cancel', [OrderController::class, 'cancel'])->name('api.orders.cancel');
     });

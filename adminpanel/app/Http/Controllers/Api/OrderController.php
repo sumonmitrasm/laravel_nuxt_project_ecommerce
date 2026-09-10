@@ -287,7 +287,9 @@ class OrderController extends Controller
         }, 3);
 
         try {
-            Mail::to($user->email)->send(new OrderPlacedMail($order));
+            if ($order->payment_method === 'cod') {
+                Mail::to($user->email)->send(new OrderPlacedMail($order));
+            }
         } catch (\Throwable $exception) {
             Log::error('Order confirmation email could not be sent.', [
                 'order_id' => $order->id,

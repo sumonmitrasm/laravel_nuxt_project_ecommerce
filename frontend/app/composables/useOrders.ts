@@ -32,6 +32,10 @@ type PlaceOrderResponse = {
   order: PlacedOrder
 }
 
+type PaymentSessionResponse = {
+  status: boolean
+  gateway_url: string
+}
 export const useOrders = () => {
   const config = useRuntimeConfig()
   const xsrfToken = useCookie<string | null>('XSRF-TOKEN')
@@ -69,5 +73,21 @@ export const useOrders = () => {
     })
   }
 
-  return { orders, ordersLoaded, fetchOrders, placeOrder }
+  const startSslCommerzPayment = async (orderNumber: string) => {
+    await $fetch('/sanctum/csrf-cookie', {
+      baseURL: config.public.backendBase,
+      credentials: 'include',
+    })
+    refreshCookie('XSRF-TOKEN')
+
+    return await $fetch<PaymentSessionResponse>(`/auth/orders/${encodeURIComponent(orderNumber)}/payment`, {
+      baseURL: config.public.apiBase,
+      method: 'POST',
+      credentials: 'include',
+      headers: xsrfToken.value
+        ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrfToken.value) }
+        : {},
+    })
+  }
+  return { orders, ordersLoaded, fetchOrders, placeOrder, startSslCommerzPayment }
 }
