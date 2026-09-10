@@ -7,11 +7,15 @@ const props = withDefaults(defineProps<{
   confirmLabel?: string
   cancelLabel?: string
   loading?: boolean
+  icon?: string
+  loadingLabel?: string
 }>(), {
   eyebrow: 'PLEASE CONFIRM',
   confirmLabel: 'Confirm',
   cancelLabel: 'Cancel',
   loading: false,
+  icon: 'bi-trash3',
+  loadingLabel: 'Deleting...',
 })
 
 const emit = defineEmits<{ confirm: []; cancel: [] }>()
@@ -28,11 +32,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       <div v-if="open" class="confirm-overlay" @click.self="cancel">
         <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
           <button class="confirm-close" type="button" aria-label="Close" :disabled="loading" @click="cancel"><i class="bi bi-x-lg"></i></button>
-          <span class="confirm-icon"><i class="bi bi-trash3"></i></span>
+          <span class="confirm-icon"><i class="bi" :class="icon"></i></span>
           <div><small>{{ eyebrow }}</small><h3 id="confirm-dialog-title">{{ title }}</h3><p>{{ message }}</p></div>
           <div class="confirm-actions">
             <button type="button" :disabled="loading" @click="cancel">{{ cancelLabel }}</button>
-            <button class="danger" type="button" :disabled="loading" @click="emit('confirm')"><span v-if="loading" class="spinner-border spinner-border-sm"></span>{{ loading ? 'Deleting...' : confirmLabel }}</button>
+            <button class="danger" type="button" :disabled="loading" @click="emit('confirm')"><span v-if="loading" class="spinner-border spinner-border-sm"></span>{{ loading ? loadingLabel : confirmLabel }}</button>
           </div>
         </div>
       </div>

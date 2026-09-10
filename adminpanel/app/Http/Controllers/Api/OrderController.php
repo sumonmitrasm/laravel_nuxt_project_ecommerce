@@ -107,6 +107,66 @@ class OrderController extends Controller
             ],
         ]);
     }
+    public function cancel(Request $request, string $orderNumber): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $order = DB::transaction(function () use ($request, $orderNumber, $validated) {
+            $order = Order::query()
+                ->where('user_id', $request->user()->id)
+                ->where('order_number', $orderNumber)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! in_array($order->order_status, ['pending', 'confirmed'], true)) {
+                throw ValidationException::withMessages([
+                    'order' => 'This order can no longer be cancelled.',
+                ]);
+            }
+
+            $order->load('items');
+            foreach ($order->items as $item) {
+                if ($item->product_variant_id) {
+                    ProductVariant::query()
+                        ->whereKey($item->product_variant_id)
+                        ->lockForUpdate()
+                        ->first()
+                        ?->increment('stock', $item->quantity);
+                }
+            }
+
+            $paymentStatus = $order->payment_status === 'paid' ? 'refund_pending' : 'cancelled';
+            $order->update([
+                'order_status' => 'cancelled',
+                'payment_status' => $paymentStatus,
+                'cancellation_reason' => $validated['reason'],
+                'cancelled_at' => now(),
+            ]);
+            $order->payments()->update(['status' => $paymentStatus]);
+            $order->statusHistories()->create([
+                'status' => 'cancelled',
+                'note' => $validated['reason'],
+                'changed_by_type' => 'user',
+                'changed_by_id' => $request->user()->id,
+            ]);
+            CouponUsage::where('order_id', $order->id)->delete();
+
+            return $order;
+        }, 3);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Your order has been cancelled.',
+            'order' => [
+                'order_status' => $order->order_status,
+                'payment_status' => $order->payment_status,
+                'cancellation_reason' => $order->cancellation_reason,
+                'cancelled_at' => $order->cancelled_at,
+            ],
+        ]);
+    }
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -227,7 +287,9 @@ class OrderController extends Controller
         }, 3);
 
         try {
-            Mail::to($user->email)->send(new OrderPlacedMail($order));
+            if ($order->payment_method === 'cod') {
+                Mail::to($user->email)->send(new OrderPlacedMail($order));
+            }
         } catch (\Throwable $exception) {
             Log::error('Order confirmation email could not be sent.', [
                 'order_id' => $order->id,
