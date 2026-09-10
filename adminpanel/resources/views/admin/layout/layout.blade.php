@@ -423,6 +423,42 @@
                 }
             }
 
+            // Update an order without leaving the details page, then show the shared toast.
+            $(document).on('submit', '[data-order-status-form]', function (event) {
+                event.preventDefault();
+                var $form = $(this);
+                var $button = $form.find('[data-order-status-submit]');
+                var $spinner = $button.find('[data-order-status-spinner]');
+                var $label = $button.find('[data-order-status-label]');
+                var originalLabel = $label.text();
+                var $errors = $form.find('.js-order-status-errors').addClass('d-none').empty();
+                $button.prop('disabled', true);
+                $spinner.removeClass('d-none');
+                $label.text('Updating...');
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    method: 'POST',
+                    data: $form.serialize(),
+                    headers: { Accept: 'application/json' }
+                }).done(function (response) {
+                    window.loadAjaxPage(window.location.href, false);
+                    setTimeout(function () { crudToast('success', response.message || 'Order status updated successfully.'); }, 250);
+                }).fail(function (xhr) {
+                    var errors = xhr.responseJSON && xhr.responseJSON.errors;
+                    var message = xhr.responseJSON && xhr.responseJSON.message;
+                    if (errors) {
+                        message = $.map(errors, function (items) { return items.join('<br>'); }).join('<br>');
+                        $errors.html(message).removeClass('d-none');
+                    }
+                    crudToast('error', message || 'Order status could not be updated.');
+                }).always(function () {
+                    $button.prop('disabled', false);
+                    $spinner.addClass('d-none');
+                    $label.text(originalLabel);
+                });
+            });
+
             // Display Laravel 422 validation messages inside the current CRUD form.
             function crudErrors($form, errors) {
                 var messages = $.map(errors, function (items) { return items.join('<br>'); });
@@ -648,6 +684,8 @@
                 var $button = $form.find('#btn-save-permissions');
 
                 $button.prop('disabled', true);
+                $spinner.removeClass('d-none');
+                $label.text('Updating...');
 
                 $.ajax({
                     url: $form.data('url'),
@@ -661,6 +699,8 @@
                     crudToast('error', message);
                 }).always(function () {
                     $button.prop('disabled', false);
+                    $spinner.addClass('d-none');
+                    $label.text(originalLabel);
                 });
             });
 

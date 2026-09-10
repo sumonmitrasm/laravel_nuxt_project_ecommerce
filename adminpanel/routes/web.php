@@ -13,6 +13,7 @@ use App\Http\Controllers\ProductAttributeController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\ShippingMethodController;
 use App\Http\Controllers\HomeSliderController;
+use App\Http\Controllers\AdminOrderController;
 
 Route::get('/clear-cache', function() {
     Artisan::call('view:clear');
@@ -114,6 +115,9 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::put('home-sliders/{homeSlider}', [HomeSliderController::class, 'update'])->name('admin-home-slider.update');
         Route::patch('home-sliders/{homeSlider}/status', [HomeSliderController::class, 'status'])->name('admin-home-slider.status');
         Route::delete('home-sliders/{homeSlider}', [HomeSliderController::class, 'destroy'])->name('admin-home-slider.delete');
+        Route::get('orders', [AdminOrderController::class, 'index'])->name('admin-orders.index');
+        Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('admin-orders.show');
+        Route::patch('orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('admin-orders.status');
         //>>>>>>>>>>>>>>>>>>>>>>>>End Coupon activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         //>>>>>>>>>>>>>>>>>>>>>>>>Product Attributes activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('product-attributes', [ProductAttributeController::class, 'index'])->name('product-attributes');

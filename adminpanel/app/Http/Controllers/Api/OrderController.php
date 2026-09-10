@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\OrderPlacedMail;
+use App\Mail\OrderStatusMail;
 use App\Models\Cart;
 use App\Models\CouponUsage;
 use App\Models\Order;
@@ -155,6 +156,15 @@ class OrderController extends Controller
 
             return $order;
         }, 3);
+
+        try {
+            Mail::to($request->user()->email)->send(new OrderStatusMail($order, 'cancelled'));
+        } catch (\Throwable $exception) {
+            Log::error('Order cancellation email could not be sent.', [
+                'order_id' => $order->id,
+                'message' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'status' => true,
