@@ -53,5 +53,6 @@ Route::prefix('auth')->group(function () {
         Route::get('/orders', [OrderController::class, 'index'])->name('api.orders.index');
         Route::post('/orders', [OrderController::class, 'store'])->name('api.orders.store');
         Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])->name('api.orders.show');
+        Route::patch('/orders/{orderNumber}/cancel', [OrderController::class, 'cancel'])->name('api.orders.cancel');
     });
 });
