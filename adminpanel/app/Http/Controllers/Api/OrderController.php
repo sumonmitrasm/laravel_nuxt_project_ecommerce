@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ShippingMethod;
 use App\Models\UserAddress;
+use App\Services\AdminOrderNotifier;
 use App\Services\CartManager;
 use App\Services\CouponService;
 use Illuminate\Http\JsonResponse;
@@ -158,6 +159,11 @@ class OrderController extends Controller
         }, 3);
 
         try {
+            app(AdminOrderNotifier::class)->send($order, 'cancelled');
+        } catch (\Throwable $exception) {
+            Log::error('Admin cancellation notification could not be created.', ['order_id' => $order->id, 'message' => $exception->getMessage()]);
+        }
+        try {
             Mail::to($request->user()->email)->send(new OrderStatusMail($order, 'cancelled'));
         } catch (\Throwable $exception) {
             Log::error('Order cancellation email could not be sent.', [
@@ -296,6 +302,11 @@ class OrderController extends Controller
             return $order;
         }, 3);
 
+        try {
+            app(AdminOrderNotifier::class)->send($order, 'placed');
+        } catch (\Throwable $exception) {
+            Log::error('Admin new-order notification could not be created.', ['order_id' => $order->id, 'message' => $exception->getMessage()]);
+        }
         try {
             if ($order->payment_method === 'cod') {
                 Mail::to($user->email)->send(new OrderPlacedMail($order));

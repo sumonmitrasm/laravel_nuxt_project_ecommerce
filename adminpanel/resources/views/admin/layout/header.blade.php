@@ -84,47 +84,12 @@
                                             </a>
                                         </div>
                                         <div class="dropdown header-notify">
-                                            <a class="nav-link icon" data-bs-toggle="dropdown">
-                                                <svg class="header-icon" x="1008" y="1248" viewBox="0 0 24 24" height="100%" width="100%" preserveAspectRatio="xMidYMid meet" focusable="false"><path opacity=".3" d="M12 6.5c-2.49 0-4 2.02-4 4.5v6h8v-6c0-2.48-1.51-4.5-4-4.5z"></path><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-11c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2v-5zm-2 6H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6zM7.58 4.08L6.15 2.65C3.75 4.48 2.17 7.3 2.03 10.5h2a8.445 8.445 0 013.55-6.42zm12.39 6.42h2c-.15-3.2-1.73-6.02-4.12-7.85l-1.42 1.43a8.495 8.495 0 013.54 6.42z"></path></svg>
-                                                <span class="pulse "></span>
+                                            <a class="nav-link icon" href="javascript:void(0)" data-bs-toggle="dropdown" aria-label="Notifications">
+                                                <svg class="header-icon" viewBox="0 0 24 24" height="100%" width="100%" focusable="false"><path opacity=".3" d="M12 6.5c-2.49 0-4 2.02-4 4.5v6h8v-6c0-2.48-1.51-4.5-4-4.5z"></path><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-11c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2v-5z"></path></svg>
+                                                @if($unreadAdminNotificationCount)<span class="pulse"></span><span class="badge bg-danger rounded-pill position-absolute" style="top:3px;right:1px;font-size:9px">{{ $unreadAdminNotificationCount > 99 ? '99+' : $unreadAdminNotificationCount }}</span>@endif
                                             </a>
-                                            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow  animated">
-                                                <a href="email-inbox.html" class="dropdown-item d-flex pb-3">
-                                                    <svg class="header-icon me-4" x="1008" y="1248" viewBox="0 0 24 24" height="100%" width="100%" preserveAspectRatio="xMidYMid meet" focusable="false">
-                                                            <path d="M15 11V4H4v8.17l.59-.58.58-.59H6z" opacity=".3"/><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-5 7c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10zM4.59 11.59l-.59.58V4h11v7H5.17l-.58.59z"/></svg>
-                                                    <div>
-                                                        <div class="font-weight-bold">Message Sent.</div>
-                                                        <div class="small text-muted">3 hours ago</div>
-                                                    </div>
-                                                </a>
-                                                <a href="email-inbox.html" class="dropdown-item d-flex pb-3">
-                                                    <svg class="header-icon me-4" x="1008" y="1248" viewBox="0 0 24 24" height="100%" width="100%" preserveAspectRatio="xMidYMid meet" focusable="false">
-                                                            <path d="M0 0h24v24H0V0z" fill="none"/><path d="M15.55 11l2.76-5H6.16l2.37 5z" opacity=".3"/><path d="M15.55 13c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.37-.66-.11-1.48-.87-1.48H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.44C4.52 15.37 5.48 17 7 17h12v-2H7l1.1-2h7.45zM6.16 6h12.15l-2.76 5H8.53L6.16 6zM7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
-                                                    <div>
-                                                        <div class="font-weight-bold"> Order Placed</div>
-                                                        <div class="small text-muted">5 hour ago</div>
-                                                    </div>
-                                                </a>
-                                                <a href="email-inbox.html" class="dropdown-item d-flex pb-3">
-                                                    <svg class="header-icon me-4" x="1008" y="1248" viewBox="0 0 24 24" height="100%" width="100%" preserveAspectRatio="xMidYMid meet" focusable="false">
-                                                            <path d="M5 8h14V6H5z" opacity=".3"/><path d="M7 11h2v2H7zm12-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-4 3h2v2h-2zm-4 0h2v2h-2z"/>
-                                                        </svg>
-                                                    <div>
-                                                        <div class="font-weight-bold"> Event Started</div>
-                                                        <div class="small text-muted">45 mintues ago</div>
-                                                    </div>
-                                                </a>
-                                                <a href="email-inbox.html" class="dropdown-item d-flex pb-3">
-                                                    <svg class="header-icon me-4" x="1008" y="1248" viewBox="0 0 24 24" height="100%" width="100%" preserveAspectRatio="xMidYMid meet" focusable="false">
-                                                            <path d="M0 0h24v24H0V0z" fill="none"/><path d="M18 13h5v7h-5z" opacity=".3"/><path d="M23 11.01L18 11c-.55 0-1 .45-1 1v9c0 .55.45 1 1 1h5c.55 0 1-.45 1-1v-9c0-.55-.45-.99-1-.99zM23 20h-5v-7h5v7zM2 4h18v5h2V4c0-1.11-.9-2-2-2H2C.89 2 0 2.89 0 4v12c0 1.1.89 2 2 2h7v2H7v2h8v-2h-2v-2h2v-2H2V4zm9 2l-.97 3H7l2.47 1.76-.94 2.91 2.47-1.8 2.47 1.8-.94-2.91L15 9h-3.03z"/></svg>
-                                                    <div>
-                                                        <div class="font-weight-bold">Your Admin launched</div>
-                                                        <div class="small text-muted">1 day ago</div>
-                                                    </div>
-                                                </a>
-                                                <div class=" text-center p-2 border-top">
-                                                    <a href="email-inbox.html" class="">View All Notifications</a>
-                                                </div>
+                                            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow animated admin-notification-menu" data-admin-notification-list>
+                                                @include('admin.notification.partials.header-items')
                                             </div>
                                         </div>
                                         <div class="dropdown profile-dropdown">

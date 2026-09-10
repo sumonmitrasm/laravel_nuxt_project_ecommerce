@@ -58,7 +58,11 @@ class Admin extends Authenticatable
         if ($this->type === 'superadmin') {
             return true;
         }
-        $role = $this->roles()->where('module', $module)->first();
+        // AdminMiddleware loads all roles once. Reuse that collection so the
+        // sidebar does not query the database separately for every menu item.
+        $role = $this->relationLoaded('roles')
+            ? $this->roles->firstWhere('module', $module)
+            : $this->roles()->where('module', $module)->first();
         if (!$role || $role->no_access == 1) {
             return false;
         }
