@@ -5,6 +5,7 @@
 
     <!-- Meta data -->
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=0'>
     <meta content="Dashtic - Bootstrap Webapp Responsive Dashboard Simple Admin Panel Premium HTML5 Template" name="description">
     <meta content="Spruko Technologies Private Limited" name="author">
@@ -53,6 +54,46 @@
             height: 34px;
         }
 
+        .admin-notification-menu {
+            width: 380px;
+            max-width: calc(100vw - 24px);
+            max-height: 480px;
+            padding: 8px;
+            overflow-y: auto;
+            border: 1px solid rgba(139, 157, 218, .2);
+            border-radius: 10px;
+            background: #101735;
+            box-shadow: 0 18px 45px rgba(3, 8, 29, .35);
+        }
+        .admin-notification-item {
+            display: grid;
+            grid-template-columns: 38px minmax(0, 1fr) auto;
+            gap: 11px;
+            align-items: start;
+            margin-bottom: 5px;
+            padding: 12px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            color: #eef2ff;
+            text-decoration: none;
+            transition: background .18s ease, border-color .18s ease, transform .18s ease;
+        }
+        .admin-notification-item.is-unread { background: #172044; border-color: rgba(96, 118, 214, .18); }
+        .admin-notification-item:hover,
+        .admin-notification-item:focus { background: #202b58 !important; border-color: rgba(112, 137, 244, .35); color: #fff !important; transform: translateY(-1px); }
+        .admin-notification-icon { display:grid;width:38px;height:38px;place-items:center;border-radius:10px;font-size:16px; }
+        .admin-notification-icon.is-order { background:rgba(36,199,126,.14);color:#38d890; }
+        .admin-notification-icon.is-cancelled { background:rgba(241,83,83,.15);color:#ff7777; }
+        .admin-notification-copy { min-width:0;white-space:normal; }
+        .admin-notification-copy strong { display:block;margin-bottom:3px;color:#f4f6ff;font-size:13px;line-height:18px; }
+        .admin-notification-copy small { display:block;overflow:hidden;color:#aeb8da;font-size:11px;line-height:16px;text-overflow:ellipsis; }
+        .admin-notification-copy time { display:block;margin-top:5px;color:#707da9;font-size:10px; }
+        .admin-notification-new { padding:4px 7px;border-radius:999px;background:#5068db;color:#fff;font-size:9px;font-weight:700;text-transform:uppercase; }
+        .admin-notification-footer { display:flex;justify-content:space-between;align-items:center;margin:5px -8px -8px;padding:12px 14px;border-top:1px solid rgba(139,157,218,.16);background:#0d1430; }
+        .admin-notification-footer a,.admin-notification-footer button { border:0;background:transparent;color:#aebcff;font-size:11px;font-weight:600;text-decoration:none; }
+        .admin-notification-footer a:hover,.admin-notification-footer button:hover { color:#fff; }
+        .admin-notification-empty { display:grid;justify-items:center;gap:8px;padding:28px;color:#7f8aaf;font-size:12px; }
+        .admin-notification-empty i { font-size:22px; }
         @media (max-width: 575.98px) {
             .table-list-search {
                 width: 100%;
@@ -459,6 +500,39 @@
                 });
             });
 
+            // Mark a bell notification as read, then open its order through AJAX.
+            $(document).on('click', '[data-admin-notification]', function (event) {
+                event.preventDefault();
+                var link = this.href;
+                $.ajax({
+                    url: $(this).data('read-url'),
+                    method: 'POST',
+                    data: { _method: 'PATCH', _token: $('meta[name="csrf-token"]').attr('content') },
+                    headers: { Accept: 'application/json' }
+                }).done(function (response) {
+                    window.loadAjaxPage(response.redirect_url || link, true);
+                }).fail(function () {
+                    crudToast('error', 'Notification could not be opened.');
+                });
+            });
+
+            $(document).on('click', '[data-notifications-read-all]', function () {
+                var $button = $(this).prop('disabled', true);
+                $.ajax({
+                    url: $button.data('url'),
+                    method: 'POST',
+                    data: { _method: 'PATCH', _token: $('meta[name="csrf-token"]').attr('content') },
+                    headers: { Accept: 'application/json' }
+                }).done(function (response) {
+                    $('.header-notify .pulse, .header-notify .badge, [data-admin-notification] .badge').remove();
+                    $('[data-admin-notification]').removeClass('bg-light is-unread');
+                    $button.remove();
+                    crudToast('success', response.message || 'All notifications marked as read.');
+                }).fail(function () {
+                    $button.prop('disabled', false);
+                    crudToast('error', 'Notifications could not be updated.');
+                });
+            });
             // Display Laravel 422 validation messages inside the current CRUD form.
             function crudErrors($form, errors) {
                 var messages = $.map(errors, function (items) { return items.join('<br>'); });

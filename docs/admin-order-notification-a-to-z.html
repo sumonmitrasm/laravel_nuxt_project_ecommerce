@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Laravel Admin Order Notification — A to Z</title>
+<style>
+:root{--ink:#17251f;--brand:#ff5b47;--navy:#101735;--blue:#5368d9;--paper:#f4f7f5;--line:#dfe7e2;--muted:#66756e;--green:#198754;--red:#c43d32}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.7 Inter,Segoe UI,Arial,sans-serif}.hero{background:linear-gradient(135deg,#101735,#17382a);padding:58px 24px;color:#fff}.wrap{width:min(1180px,calc(100% - 32px));margin:auto}.eyebrow{color:#ff9b8d;font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase}h1{max-width:850px;margin:9px 0;font-size:clamp(34px,5vw,62px);line-height:1.08}.hero p{max-width:760px;color:#cbd7d1;font-size:17px}.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;padding:30px 0 70px}.toc{position:sticky;top:18px;align-self:start;padding:18px;border:1px solid var(--line);border-radius:12px;background:#fff}.toc strong{display:block;margin-bottom:8px}.toc a{display:block;padding:5px 8px;border-radius:6px;color:#4f5f57;text-decoration:none}.toc a:hover{background:#eef3ef;color:var(--brand)}main{min-width:0}.card{margin-bottom:22px;padding:28px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 8px 28px rgba(24,45,36,.04)}h2{margin:0 0 13px;font-size:27px}h3{margin:25px 0 9px;font-size:19px}.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:18px 0}.flow span{padding:9px 12px;border-radius:8px;background:#edf2ff;color:#35499c;font-weight:700}.flow b{color:var(--brand)}pre{overflow:auto;margin:12px 0 20px;padding:19px;border-radius:10px;background:#0d1430;color:#e9edff;font:13px/1.65 Consolas,Monaco,monospace;white-space:pre}code{font-family:Consolas,Monaco,monospace}.inline{padding:2px 6px;border-radius:5px;background:#edf1ef;color:#b33728}.note,.good,.warning{margin:14px 0;padding:13px 16px;border-left:4px solid var(--blue);background:#f0f3ff}.good{border-color:var(--green);background:#effaf4}.warning{border-color:#e5a11b;background:#fff8e8}.file{display:inline-block;margin:4px 4px 4px 0;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:#fafcfb;font-family:Consolas,monospace;font-size:12px}.check li{margin:7px 0}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:10px;border:1px solid var(--line);text-align:left}.table th{background:#f0f4f2}@media(max-width:860px){.layout{grid-template-columns:1fr}.toc{position:static}.card{padding:20px}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap"><div class="eyebrow">Reusable Laravel Guide</div><h1>Admin Order Notification System — A to Z</h1><p>Customer order place বা cancel করলে permission-ভিত্তিক admin bell notification, unread count, order link, AJAX read action এবং failure-safe integration তৈরির সম্পূর্ণ guide।</p></div></header>
+<div class="wrap layout">
+<nav class="toc"><strong>সূচিপত্র</strong><a href="#architecture">1. Architecture</a><a href="#commands">2. Commands</a><a href="#migration">3. Migration</a><a href="#model">4. Model</a><a href="#service">5. Service</a><a href="#hooks">6. Order hooks</a><a href="#controller">7. Controller</a><a href="#routes">8. Routes</a><a href="#composer">9. Header data</a><a href="#bell">10. Bell Blade</a><a href="#list">11. All page</a><a href="#ajax">12. AJAX</a><a href="#css">13. UI CSS</a><a href="#security">14. Security</a><a href="#testing">15. Testing</a><a href="#copy">16. Copy checklist</a><a href="#trouble">17. Troubleshooting</a></nav>
+<main>
+<section class="card" id="architecture"><h2>1. System কীভাবে কাজ করে</h2><div class="flow"><span>Customer action</span><b>→</b><span>Order transaction</span><b>→</b><span>Notifier service</span><b>→</b><span>admin_notifications</span><b>→</b><span>Header bell</span></div><p>Order save/cancel আগে সম্পন্ন হয়। এরপর notification তৈরির চেষ্টা হয়। Notification ব্যর্থ হলে exception log হয়, কিন্তু order rollback হয় না। প্রত্যেক eligible admin-এর জন্য আলাদা row হওয়ায় read state ব্যক্তিগত থাকে।</p><table class="table"><tr><th>Event</th><th>Notification</th><th>Receiver</th></tr><tr><td>Order placed</td><td>New order received</td><td>Active superadmin + Order View permission admin</td></tr><tr><td>Customer cancelled</td><td>Order cancelled</td><td>একই eligible admins</td></tr></table></section>
+
+<section class="card" id="commands"><h2>2. প্রয়োজনীয় commands</h2><pre><code>php artisan make:migration create_admin_notifications_table
+php artisan make:model AdminNotification
+php artisan make:controller AdminNotificationController
+php artisan make:class Services/AdminOrderNotifier
+php artisan migrate
+
+# Verification
+php artisan route:list --path=admin/notifications
+php artisan view:clear
+php artisan view:cache</code></pre><div class="warning">Production database backup নিয়ে migration চালাবেন। এই project-এ migration ইতিমধ্যে চালানো হয়েছে।</div></section>
+
+<section class="card" id="migration"><h2>3. Database migration</h2><span class="file">database/migrations/2026_09_10_140000_create_admin_notifications_table.php</span><pre><code>&lt;?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('admin_notifications', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('admin_id')->constrained('admins')->cascadeOnDelete();
+            $table->foreignId('order_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->string('type', 40);
+            $table->string('title', 120);
+            $table->string('message', 255);
+            $table->timestamp('read_at')->nullable();
+            $table->timestamps();
+            $table->index(['admin_id', 'read_at', 'created_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('admin_notifications');
+    }
+};</code></pre><h3>Column-এর কাজ</h3><ul><li><code class="inline">admin_id</code>: কার notification।</li><li><code class="inline">order_id</code>: কোন order details খুলবে।</li><li><code class="inline">type</code>: UI icon/color নির্ধারণ করে।</li><li><code class="inline">read_at</code>: null মানে unread; timestamp মানে read।</li><li>Composite index unread count দ্রুত করে।</li></ul></section>
+
+<section class="card" id="model"><h2>4. Notification model</h2><span class="file">app/Models/AdminNotification.php</span><pre><code>&lt;?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class AdminNotification extends Model
+{
+    protected $fillable = [
+        'admin_id', 'order_id', 'type', 'title', 'message', 'read_at'
+    ];
+
+    protected function casts(): array
+    {
+        return ['read_at' =&gt; 'datetime'];
+    }
+
+    public function admin(): BelongsTo
+    {
+        return $this-&gt;belongsTo(Admin::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this-&gt;belongsTo(Order::class);
+    }
+}</code></pre></section>
+
+<section class="card" id="service"><h2>5. Eligible admin বাছাই ও bulk insert service</h2><span class="file">app/Services/AdminOrderNotifier.php</span><pre><code>&lt;?php
+
+namespace App\Services;
+
+use App\Models\Admin;
+use App\Models\AdminNotification;
+use App\Models\Order;
+
+class AdminOrderNotifier
+{
+    public function send(Order $order, string $event): void
+    {
+        $admins = Admin::query()
+            -&gt;where('status', true)
+            -&gt;where(function ($query) {
+                $query-&gt;where('type', 'superadmin')
+                    -&gt;orWhereHas('roles', fn ($roles) =&gt; $roles
+                        -&gt;where('module', 'order')
+                        -&gt;where('view_access', true)
+                        -&gt;where('no_access', false));
+            })
+            -&gt;pluck('id');
+
+        if ($admins-&gt;isEmpty()) return;
+
+        $cancelled = $event === 'cancelled';
+        $now = now();
+        $rows = $admins-&gt;map(fn ($adminId) =&gt; [
+            'admin_id' =&gt; $adminId,
+            'order_id' =&gt; $order-&gt;id,
+            'type' =&gt; $cancelled ? 'order_cancelled' : 'order_placed',
+            'title' =&gt; $cancelled ? 'Order cancelled' : 'New order received',
+            'message' =&gt; $cancelled
+                ? $order-&gt;order_number.' was cancelled by the customer.'
+                : $order-&gt;order_number.' was placed for BDT '
+                    .number_format((float) $order-&gt;grand_total, 2).'.',
+            'created_at' =&gt; $now,
+            'updated_at' =&gt; $now,
+        ])-&gt;all();
+
+        AdminNotification::insert($rows);
+    }
+}</code></pre><div class="good"><strong>কেন bulk insert?</strong> ১০ জন admin থাকলে ১০টি আলাদা create query না দিয়ে একটি insert query হয়।</div></section>
+
+<section class="card" id="hooks"><h2>6. OrderController-এ event hooks</h2><span class="file">app/Http/Controllers/Api/OrderController.php</span><h3>Import</h3><pre><code>use App\Services\AdminOrderNotifier;
+use Illuminate\Support\Facades\Log;</code></pre><h3>Order place transaction শেষ হওয়ার পরে</h3><pre><code>$order = DB::transaction(function () use (...) {
+    // order, items, address, payment save
+    return $order;
+}, 3);
+
+try {
+    app(AdminOrderNotifier::class)-&gt;send($order, 'placed');
+} catch (\Throwable $exception) {
+    Log::error('Admin new-order notification could not be created.', [
+        'order_id' =&gt; $order-&gt;id,
+        'message' =&gt; $exception-&gt;getMessage(),
+    ]);
+}</code></pre><h3>Customer cancellation transaction শেষ হওয়ার পরে</h3><pre><code>$order = DB::transaction(function () use (...) {
+    // cancellation, stock restore, history update
+    return $order;
+}, 3);
+
+try {
+    app(AdminOrderNotifier::class)-&gt;send($order, 'cancelled');
+} catch (\Throwable $exception) {
+    Log::error('Admin cancellation notification could not be created.', [
+        'order_id' =&gt; $order-&gt;id,
+        'message' =&gt; $exception-&gt;getMessage(),
+    ]);
+}</code></pre><div class="warning">Notifier-কে order transaction-এর ভেতরে রাখবেন না। Notification table error-এর কারণে real order rollback হওয়া উচিত নয়।</div></section>
+
+<section class="card" id="controller"><h2>7. Read / Read-all controller</h2><span class="file">app/Http/Controllers/AdminNotificationController.php</span><pre><code>&lt;?php
+
+namespace App\Http\Controllers;
+
+use App\Models\AdminNotification;
+use Illuminate\Support\Facades\Auth;
+
+class AdminNotificationController extends Controller
+{
+    public function index()
+    {
+        $notifications = AdminNotification::query()
+            -&gt;where('admin_id', Auth::guard('admin')-&gt;id())
+            -&gt;with('order:id,order_number')
+            -&gt;latest()
+            -&gt;paginate(20);
+
+        return view('admin.notification.index', compact('notifications'));
+    }
+
+    public function read(AdminNotification $notification)
+    {
+        abort_unless(
+            $notification-&gt;admin_id === Auth::guard('admin')-&gt;id(),
+            404
+        );
+
+        if (! $notification-&gt;read_at) {
+            $notification-&gt;update(['read_at' =&gt; now()]);
+        }
+
+        return response()-&gt;json([
+            'message' =&gt; 'Notification marked as read.',
+            'redirect_url' =&gt; $notification-&gt;order_id
+                ? route('admin-orders.show', $notification-&gt;order_id)
+                : route('admin-notifications.index'),
+        ]);
+    }
+
+    public function readAll()
+    {
+        AdminNotification::query()
+            -&gt;where('admin_id', Auth::guard('admin')-&gt;id())
+            -&gt;whereNull('read_at')
+            -&gt;update(['read_at' =&gt; now()]);
+
+        return response()-&gt;json([
+            'message' =&gt; 'All notifications marked as read.'
+        ]);
+    }
+}</code></pre><div class="good"><code class="inline">abort_unless</code> IDOR আটকায়: URL বদলে অন্য admin-এর notification পড়া যাবে না।</div></section>
+
+<section class="card" id="routes"><h2>8. Admin routes</h2><span class="file">routes/web.php</span><pre><code>use App\Http\Controllers\AdminNotificationController;
+
+// admin.auth middleware group-এর ভিতরে:
+Route::get('notifications',
+    [AdminNotificationController::class, 'index'])
+    -&gt;name('admin-notifications.index');
+
+Route::patch('notifications/read-all',
+    [AdminNotificationController::class, 'readAll'])
+    -&gt;name('admin-notifications.read-all');
+
+Route::patch('notifications/{notification}/read',
+    [AdminNotificationController::class, 'read'])
+    -&gt;name('admin-notifications.read');</code></pre><p>Static <code class="inline">read-all</code> route parameter route-এর আগে রাখুন, যাতে Laravel এটিকে notification ID মনে না করে।</p></section>
+
+<section class="card" id="composer"><h2>9. Header-এ data পাঠানো</h2><span class="file">app/Providers/AppServiceProvider.php</span><h3>Imports</h3><pre><code>use App\Models\AdminNotification;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\View;</code></pre><h3>boot() method</h3><pre><code>View::composer('admin.layout.header', function ($view) {
+    $query = AdminNotification::query()
+        -&gt;where('admin_id', Auth::guard('admin')-&gt;id());
+
+    $view-&gt;with(
+        'adminNotifications',
+        (clone $query)-&gt;latest()-&gt;limit(5)-&gt;get()
+    )-&gt;with(
+        'unreadAdminNotificationCount',
+        (clone $query)-&gt;whereNull('read_at')-&gt;count()
+    );
+});</code></pre><p>View composer শুধু admin header render হলে query চালায়; frontend/customer page-এ অপ্রয়োজনীয় query হয় না।</p></section>
+
+<section class="card" id="bell"><h2>10. Header bell ও dropdown</h2><span class="file">resources/views/admin/layout/header.blade.php</span><pre><code>&lt;div class="dropdown header-notify"&gt;
+    &lt;a class="nav-link icon" href="javascript:void(0)"
+       data-bs-toggle="dropdown" aria-label="Notifications"&gt;
+        &lt;!-- bell SVG এখানে --&gt;
+
+        @if($unreadAdminNotificationCount)
+            &lt;span class="pulse"&gt;&lt;/span&gt;
+            &lt;span class="badge bg-danger rounded-pill position-absolute"&gt;
+                {{ $unreadAdminNotificationCount &gt; 99
+                    ? '99+' : $unreadAdminNotificationCount }}
+            &lt;/span&gt;
+        @endif
+    &lt;/a&gt;
+
+    &lt;div class="dropdown-menu dropdown-menu-end
+                admin-notification-menu"
+         data-admin-notification-list&gt;
+        @include('admin.notification.partials.header-items')
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre><h3>Dropdown partial</h3><span class="file">resources/views/admin/notification/partials/header-items.blade.php</span><pre><code>@forelse($adminNotifications as $notification)
+&lt;a href="{{ $notification-&gt;order_id
+        ? route('admin-orders.show', $notification-&gt;order_id) : '#' }}"
+   data-admin-notification
+   data-read-url="{{ route('admin-notifications.read', $notification) }}"
+   class="admin-notification-item
+          {{ $notification-&gt;read_at ? '' : 'is-unread' }}"&gt;
+
+    &lt;span class="admin-notification-icon
+        {{ $notification-&gt;type === 'order_cancelled'
+            ? 'is-cancelled' : 'is-order' }}"&gt;
+        &lt;i class="fe {{ $notification-&gt;type === 'order_cancelled'
+            ? 'fe-x' : 'fe-shopping-bag' }}"&gt;&lt;/i&gt;
+    &lt;/span&gt;
+
+    &lt;span class="admin-notification-copy"&gt;
+        &lt;strong&gt;{{ $notification-&gt;title }}&lt;/strong&gt;
+        &lt;small&gt;{{ $notification-&gt;message }}&lt;/small&gt;
+        &lt;time&gt;{{ $notification-&gt;created_at-&gt;diffForHumans() }}&lt;/time&gt;
+    &lt;/span&gt;
+
+    @if(!$notification-&gt;read_at)
+        &lt;span class="admin-notification-new"&gt;New&lt;/span&gt;
+    @endif
+&lt;/a&gt;
+@empty
+    &lt;div class="admin-notification-empty"&gt;No notifications yet&lt;/div&gt;
+@endforelse
+
+&lt;div class="admin-notification-footer"&gt;
+    &lt;a href="{{ route('admin-notifications.index') }}" data-ajax-page&gt;
+        View all notifications
+    &lt;/a&gt;
+    @if($unreadAdminNotificationCount)
+        &lt;button type="button" data-notifications-read-all
+          data-url="{{ route('admin-notifications.read-all') }}"&gt;
+            Mark all read
+        &lt;/button&gt;
+    @endif
+&lt;/div&gt;</code></pre></section>
+
+<section class="card" id="list"><h2>11. View all page</h2><span class="file">resources/views/admin/notification/index.blade.php</span><pre><code>@extends('admin.layout.layout')
+
+@section('content')
+&lt;div class="app-content main-content"&gt;
+  &lt;div class="side-app"&gt;&lt;div class="container-fluid main-container"&gt;
+    &lt;div class="page-header"&gt;
+      &lt;h4 class="page-title"&gt;Notifications&lt;/h4&gt;
+      &lt;button data-notifications-read-all
+        data-url="{{ route('admin-notifications.read-all') }}"&gt;
+        Mark all as read
+      &lt;/button&gt;
+    &lt;/div&gt;
+
+    @forelse($notifications as $notification)
+      &lt;a href="{{ route('admin-orders.show',$notification-&gt;order_id) }}"
+         data-admin-notification
+         data-read-url="{{ route('admin-notifications.read',$notification) }}"&gt;
+        &lt;strong&gt;{{ $notification-&gt;title }}&lt;/strong&gt;
+        &lt;span&gt;{{ $notification-&gt;message }}&lt;/span&gt;
+        &lt;small&gt;{{ $notification-&gt;created_at-&gt;diffForHumans() }}&lt;/small&gt;
+      &lt;/a&gt;
+    @empty
+      &lt;p&gt;No notifications yet.&lt;/p&gt;
+    @endforelse
+
+    {{ $notifications-&gt;links() }}
+  &lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+@endsection</code></pre></section>
+
+<section class="card" id="ajax"><h2>12. CSRF-protected AJAX</h2><span class="file">resources/views/admin/layout/layout.blade.php</span><h3>Head-এর মধ্যে token</h3><pre><code>&lt;meta name="csrf-token" content="{{ csrf_token() }}"&gt;</code></pre><h3>Single notification read + order open</h3><pre><code>$(document).on('click', '[data-admin-notification]', function (event) {
+    event.preventDefault();
+    var link = this.href;
+
+    $.ajax({
+        url: $(this).data('read-url'),
+        method: 'POST',
+        data: {
+            _method: 'PATCH',
+            _token: $('meta[name="csrf-token"]').attr('content')
+        },
+        headers: { Accept: 'application/json' }
+    }).done(function (response) {
+        window.loadAjaxPage(response.redirect_url || link, true);
+    }).fail(function () {
+        crudToast('error', 'Notification could not be opened.');
+    });
+});</code></pre><h3>Mark all read</h3><pre><code>$(document).on('click', '[data-notifications-read-all]', function () {
+    var $button = $(this).prop('disabled', true);
+
+    $.ajax({
+        url: $button.data('url'),
+        method: 'POST',
+        data: {
+            _method: 'PATCH',
+            _token: $('meta[name="csrf-token"]').attr('content')
+        },
+        headers: { Accept: 'application/json' }
+    }).done(function (response) {
+        $('.header-notify .pulse, .header-notify .badge').remove();
+        $('[data-admin-notification]').removeClass('is-unread');
+        $button.remove();
+        crudToast('success', response.message);
+    }).fail(function () {
+        $button.prop('disabled', false);
+        crudToast('error', 'Notifications could not be updated.');
+    });
+});</code></pre></section>
+
+<section class="card" id="css"><h2>13. Professional dark dropdown CSS</h2><pre><code>.admin-notification-menu {
+  width: 380px;
+  max-width: calc(100vw - 24px);
+  max-height: 480px;
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid rgba(139,157,218,.2);
+  border-radius: 10px;
+  background: #101735;
+  box-shadow: 0 18px 45px rgba(3,8,29,.35);
+}
+.admin-notification-item {
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr) auto;
+  gap:11px;align-items:start;margin-bottom:5px;padding:12px;
+  border:1px solid transparent;border-radius:8px;
+  color:#eef2ff;text-decoration:none;
+  transition:.18s ease;
+}
+.admin-notification-item.is-unread {
+  background:#172044;
+  border-color:rgba(96,118,214,.18);
+}
+.admin-notification-item:hover,
+.admin-notification-item:focus {
+  background:#202b58 !important;
+  border-color:rgba(112,137,244,.35);
+  color:#fff !important;
+  transform:translateY(-1px);
+}
+.admin-notification-copy strong { display:block;color:#f4f6ff; }
+.admin-notification-copy small { display:block;color:#aeb8da; }
+.admin-notification-copy time { display:block;color:#707da9;font-size:10px; }
+.admin-notification-new {
+  padding:4px 7px;border-radius:999px;
+  background:#5068db;color:#fff;font-size:9px;font-weight:700;
+}</code></pre></section>
+
+<section class="card" id="security"><h2>14. Security ও reliability rules</h2><ul class="check"><li>সব notification routes <code class="inline">admin.auth</code> middleware-এর ভিতরে রাখুন।</li><li>প্রতিটি read query-তে logged-in <code class="inline">admin_id</code> যাচাই করুন।</li><li>GET দিয়ে read state পরিবর্তন করবেন না; CSRF-protected PATCH ব্যবহার করুন।</li><li>Client পাঠানো <code class="inline">admin_id</code> বিশ্বাস করবেন না—guard থেকে নিন।</li><li>Notification order transaction-এর পরে তৈরি করুন এবং <code class="inline">try/catch</code> দিন।</li><li>Bell message-এ card/password/gateway payload রাখবেন না।</li><li>Admin delete হলে cascade notification cleanup হবে; order delete হলেও linked rows cleanup হবে।</li><li>Message Blade-এর <code class="inline">{{ }}</code> দিয়ে output করুন, raw <code class="inline">{!! !!}</code> নয়।</li></ul></section>
+
+<section class="card" id="testing"><h2>15. Test করার ধাপ</h2><ol class="check"><li>Order View permission থাকা admin দিয়ে login করুন।</li><li>অন্য browser/incognito থেকে customer order place করুন।</li><li>Admin page refresh করে bell count দেখুন।</li><li>Bell item click করুন—read হবে এবং correct order খুলবে।</li><li>Customer order cancel করুন—cancel notification দেখুন।</li><li>দুই admin দিয়ে login করে নিশ্চিত করুন একজন read করলে অন্যজন unread থাকে।</li><li>Notification table সাময়িক unavailable হলেও order place fail না হওয়ার log পরীক্ষা করুন।</li></ol><pre><code>SELECT id, admin_id, order_id, type, title, read_at, created_at
+FROM admin_notifications
+ORDER BY id DESC;
+
+php artisan route:list --path=admin/notifications
+php artisan view:cache
+tail -f storage/logs/laravel.log</code></pre></section>
+
+<section class="card" id="copy"><h2>16. অন্য project-এ copy করার checklist</h2><ol class="check"><li>আপনার project-এ <code class="inline">admins</code>, <code class="inline">orders</code> এবং permission schema-এর নাম মিলান।</li><li>Migration copy করে foreign table names ঠিক করুন।</li><li>Model ও service copy করুন।</li><li>Order success/cancel transaction-এর পরে notifier call দিন।</li><li>Controller ও admin-auth routes যোগ করুন।</li><li>AppServiceProvider view composer যোগ করুন।</li><li>Header partial, all-notifications view, CSS এবং JS যোগ করুন।</li><li>Migration, route list, view cache এবং two-admin isolation test চালান।</li></ol><div class="note">আপনার project-এ permission table না থাকলে service-এর admin query সাময়িকভাবে শুধু <code class="inline">Admin::where('status', true)-&gt;pluck('id')</code> করতে পারেন।</div></section>
+
+<section class="card" id="trouble"><h2>17. Common সমস্যা ও সমাধান</h2><table class="table"><tr><th>সমস্যা</th><th>কারণ/সমাধান</th></tr><tr><td>Bell সবসময় static</td><td>পুরোনো demo markup সরিয়ে dynamic partial include করুন।</td></tr><tr><td>Notification তৈরি হয় না</td><td>Eligible admin-এর Order View permission ও active status পরীক্ষা করুন।</td></tr><tr><td>419 Page Expired</td><td>CSRF meta এবং AJAX <code>_token</code> নিশ্চিত করুন।</td></tr><tr><td>অন্য admin-এর item read হয়</td><td>Controller-এ strict admin ownership check দিন।</td></tr><tr><td>Hover-এ লেখা অদৃশ্য</td><td>Scoped hover background ও text color দুটোই override করুন।</td></tr><tr><td>Migration-এ foreign key error</td><td><code>admins</code>/<code>orders</code> migration আগে চলছে কি না দেখুন।</td></tr><tr><td>Order notification error-এ fail</td><td>Notifier transaction-এর বাইরে এবং try/catch-এর মধ্যে রাখুন।</td></tr></table><h3>Production upgrade</h3><p>এই version database-backed এবং page refresh-এর পর নতুন notification দেখায়। Instant live bell-এর জন্য Laravel Reverb/WebSocket বা 20–30 second polling যোগ করা যায়। High traffic-এ notification creation queue job-এ পাঠানো এবং পুরোনো read notification scheduled cleanup করা উচিত।</p></section>
+</main></div>
+</body></html>

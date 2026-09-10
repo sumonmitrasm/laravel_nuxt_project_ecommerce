@@ -14,6 +14,7 @@ use App\Http\Controllers\CouponController;
 use App\Http\Controllers\ShippingMethodController;
 use App\Http\Controllers\HomeSliderController;
 use App\Http\Controllers\AdminOrderController;
+use App\Http\Controllers\AdminNotificationController;
 
 Route::get('/clear-cache', function() {
     Artisan::call('view:clear');
@@ -118,6 +119,9 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::get('orders', [AdminOrderController::class, 'index'])->name('admin-orders.index');
         Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('admin-orders.show');
         Route::patch('orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('admin-orders.status');
+        Route::get('notifications', [AdminNotificationController::class, 'index'])->name('admin-notifications.index');
+        Route::patch('notifications/read-all', [AdminNotificationController::class, 'readAll'])->name('admin-notifications.read-all');
+        Route::patch('notifications/{notification}/read', [AdminNotificationController::class, 'read'])->name('admin-notifications.read');
         //>>>>>>>>>>>>>>>>>>>>>>>>End Coupon activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         //>>>>>>>>>>>>>>>>>>>>>>>>Product Attributes activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('product-attributes', [ProductAttributeController::class, 'index'])->name('product-attributes');

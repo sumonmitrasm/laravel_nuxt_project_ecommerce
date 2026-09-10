@@ -20,6 +20,7 @@ use App\Observers\SectionObserver;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Auth;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -50,5 +51,11 @@ class AppServiceProvider extends ServiceProvider
         );
 
         View::share('generalSetting', $generalSetting ? (object) $generalSetting : null);
+
+        View::composer('admin.layout.header', function ($view) {
+            $query = AdminNotification::query()->where('admin_id', Auth::guard('admin')->id());
+            $view->with('adminNotifications', (clone $query)->latest()->limit(5)->get())
+                ->with('unreadAdminNotificationCount', (clone $query)->whereNull('read_at')->count());
+        });
     }
 }
