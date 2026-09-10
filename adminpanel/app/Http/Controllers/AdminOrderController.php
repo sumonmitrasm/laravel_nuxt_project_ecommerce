@@ -6,6 +6,7 @@ use App\Mail\OrderStatusMail;
 
 use App\Models\CouponUsage;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\ProductVariant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,6 +68,69 @@ class AdminOrderController extends Controller
         ]);
     }
 
+    public function analytics(Request $request)
+    {
+        $filters = $request->validate([
+            'period' => ['nullable', Rule::in(['today', '7_days', 'month', 'year', 'all'])],
+            'per_page' => ['nullable', 'integer', Rule::in([10, 15, 25, 50])],
+        ]);
+
+        $period = $filters['period'] ?? 'month';
+        $perPage = (int) ($filters['per_page'] ?? 15);
+        $now = now();
+        [$from, $to, $periodLabel] = match ($period) {
+            'today' => [$now->copy()->startOfDay(), $now->copy()->endOfDay(), 'Today'],
+            '7_days' => [$now->copy()->subDays(6)->startOfDay(), $now->copy()->endOfDay(), 'Last 7 days'],
+            'year' => [$now->copy()->startOfYear(), $now->copy()->endOfYear(), 'This year'],
+            'all' => [null, null, 'All time'],
+            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth(), 'This month'],
+        };
+
+        $recognizedOrders = Order::query()
+            ->where('order_status', '!=', 'cancelled')
+            ->where(function ($query) {
+                $query->where('payment_status', 'paid')
+                    ->orWhere(fn ($query) => $query->where('payment_method', 'cod')->where('order_status', 'delivered'));
+            })
+            ->when($from, fn ($query) => $query->whereBetween('placed_at', [$from, $to]));
+
+        $revenue = (float) (clone $recognizedOrders)->sum('grand_total');
+        $orderCount = (clone $recognizedOrders)->count();
+        $soldQuantity = (int) OrderItem::query()->whereHas('order', function ($query) use ($from, $to) {
+            $query->where('order_status', '!=', 'cancelled')
+                ->where(function ($query) {
+                    $query->where('payment_status', 'paid')
+                        ->orWhere(fn ($query) => $query->where('payment_method', 'cod')->where('order_status', 'delivered'));
+                })->when($from, fn ($query) => $query->whereBetween('placed_at', [$from, $to]));
+        })->sum('quantity');
+
+        $topProducts = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.order_status', '!=', 'cancelled')
+            ->where(function ($query) {
+                $query->where('orders.payment_status', 'paid')
+                    ->orWhere(fn ($query) => $query->where('orders.payment_method', 'cod')->where('orders.order_status', 'delivered'));
+            })
+            ->when($from, fn ($query) => $query->whereBetween('orders.placed_at', [$from, $to]))
+            ->selectRaw('order_items.product_id, order_items.product_name, MAX(order_items.image) as image, COUNT(DISTINCT orders.id) as order_count, SUM(order_items.quantity) as units_sold, SUM(order_items.line_total) as product_sales')
+            ->groupBy('order_items.product_id', 'order_items.product_name')
+            ->orderByDesc('units_sold')->paginate($perPage)->withQueryString();
+
+        $paymentBreakdown = (clone $recognizedOrders)
+            ->selectRaw('payment_method, COUNT(*) as order_count, SUM(grand_total) as revenue')
+            ->groupBy('payment_method')->orderByDesc('revenue')->get();
+        $statusBreakdown = Order::query()
+            ->when($from, fn ($query) => $query->whereBetween('placed_at', [$from, $to]))
+            ->selectRaw('order_status, COUNT(*) as total')->groupBy('order_status')->pluck('total', 'order_status');
+
+        return view('admin.order.analytics', [
+            'title' => 'Sales Analytics', 'period' => $period, 'periodLabel' => $periodLabel,
+            'revenue' => $revenue, 'orderCount' => $orderCount, 'soldQuantity' => $soldQuantity,
+            'averageOrderValue' => $orderCount > 0 ? $revenue / $orderCount : 0,
+            'topProducts' => $topProducts, 'paymentBreakdown' => $paymentBreakdown,
+            'statusBreakdown' => $statusBreakdown,
+        ]);
+    }
     public function show(Order $order)
     {
         $order->load([
@@ -120,6 +184,12 @@ class AdminOrderController extends Controller
                 $lockedOrder->cancelled_at = now();
             }
 
+            if ($validated['status'] === 'delivered' && $lockedOrder->payment_method === 'cod') {
+                $lockedOrder->payment_status = 'paid';
+                $lockedOrder->payments()->where('status', '!=', 'paid')->update([
+                    'status' => 'paid', 'paid_at' => now(),
+                ]);
+            }
             $lockedOrder->order_status = $validated['status'];
             $lockedOrder->save();
             $lockedOrder->statusHistories()->create([

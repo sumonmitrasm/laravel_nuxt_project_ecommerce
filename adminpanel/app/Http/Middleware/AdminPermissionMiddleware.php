@@ -88,7 +88,7 @@ class AdminPermissionMiddleware
             'admin-home-slider.show', 'admin-home-slider.update', 'admin-home-slider.status' => ['home_slider', 'edit'],
             'admin-home-slider.delete' => ['home_slider', 'delete'],
 
-            'admin-orders.index', 'admin-orders.show' => ['order', 'view'],
+            'admin-orders.index', 'admin-orders.show', 'admin-orders.analytics' => ['order', 'view'],
             'admin-orders.status' => ['order', 'edit'],
             default => null,
         };

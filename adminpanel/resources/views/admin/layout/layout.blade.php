@@ -289,6 +289,23 @@
                 window.loadAjaxPage(url.href, true);
             });
 
+            // Submit GET filters through the shared AJAX page loader.
+            $(document).on('submit', '[data-ajax-filter]', function (event) {
+                event.preventDefault();
+                var form = this;
+                var url = new URL(form.action, window.location.href);
+                new FormData(form).forEach(function (value, key) {
+                    value = String(value).trim();
+                    if (value !== '') url.searchParams.set(key, value);
+                });
+                url.searchParams.delete('page');
+                window.loadAjaxPage(url.href, true);
+            });
+
+            // Auto-submit an AJAX filter when a marked select changes.
+            $(document).on('change', '[data-ajax-filter-auto]', function () {
+                $(this.form).trigger('submit');
+            });
             // Load server-side pagination links without refreshing the full layout.
             $(document).on('click', '#ajax-page-content .pagination a', function (event) {
                 event.preventDefault();
