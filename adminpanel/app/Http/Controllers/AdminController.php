@@ -11,17 +11,61 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use App\Models\Admin;
 use App\Models\AdminRole;
+use App\Models\Order;
+use App\Models\ProductVariant;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\Format;
 use Intervention\Image\ImageManager;
 
 class AdminController extends Controller
 {
-    public function dashboard()
+    public function dashboard(Request $request)
     {
-        return view('admin.dashboard');
-    }
+        $filters = $request->validate(['period' => ['nullable', Rule::in(['today', '7_days', 'month', 'year', 'all'])]]);
+        $period = $filters['period'] ?? 'month';
+        $now = now();
+        [$from, $to, $periodLabel] = match ($period) {
+            'today' => [$now->copy()->startOfDay(), $now->copy()->endOfDay(), 'Today'],
+            '7_days' => [$now->copy()->subDays(6)->startOfDay(), $now->copy()->endOfDay(), 'Last 7 days'],
+            'year' => [$now->copy()->startOfYear(), $now->copy()->endOfYear(), 'This year'],
+            'all' => [null, null, 'All time'],
+            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth(), 'This month'],
+        };
+        $recognizedOrders = fn () => Order::query()->where('order_status', '!=', 'cancelled')->where(function ($query) {
+            $query->where('payment_status', 'paid')->orWhere(fn ($query) => $query->where('payment_method', 'cod')->where('order_status', 'delivered'));
+        });
+        $withinPeriod = fn ($query) => $query->when($from, fn ($query) => $query->whereBetween('placed_at', [$from, $to]));
+        $todaySales = (float) $recognizedOrders()->whereBetween('placed_at', [$now->copy()->startOfDay(), $now->copy()->endOfDay()])->sum('grand_total');
+        $periodSales = (float) $withinPeriod($recognizedOrders())->sum('grand_total');
+        $statusCounts = $withinPeriod(Order::query())->selectRaw('order_status, COUNT(*) as total')->whereIn('order_status', ['pending', 'processing', 'shipped'])->groupBy('order_status')->pluck('total', 'order_status');
+        $newCustomers = User::query()->when($from, fn ($query) => $query->whereBetween('created_at', [$from, $to]))->count();
+        $recentOrders = $withinPeriod(Order::query())->with('user:id,name,email')->withCount('items')->latest('placed_at')->limit(8)->get();
+        $lowStockProducts = ProductVariant::query()->with('product:id,product_name,product_image')->where('status', true)->where('stock', '<=', 5)->orderBy('stock')->limit(8)->get();
+        $lowStockCount = ProductVariant::query()->where('status', true)->where('stock', '<=', 5)->count();
 
+        if ($period === 'today') {
+            $rows = $recognizedOrders()->whereBetween('placed_at', [$from, $to])->selectRaw('HOUR(placed_at) as chart_key, SUM(grand_total) as revenue')->groupByRaw('HOUR(placed_at)')->pluck('revenue', 'chart_key');
+            $revenueChart = collect(range(0, 23))->map(fn ($hour) => ['label' => str_pad($hour, 2, '0', STR_PAD_LEFT).':00', 'revenue' => (float) ($rows[$hour] ?? 0)]);
+        } elseif (in_array($period, ['7_days', 'month'], true)) {
+            $rows = $recognizedOrders()->whereBetween('placed_at', [$from, $to])->selectRaw('DATE(placed_at) as chart_key, SUM(grand_total) as revenue')->groupByRaw('DATE(placed_at)')->pluck('revenue', 'chart_key');
+            $days = $from->copy()->startOfDay()->daysUntil($to->copy()->startOfDay()->addDay());
+            $revenueChart = collect($days)->map(fn ($date) => ['label' => $date->format('d M'), 'revenue' => (float) ($rows[$date->format('Y-m-d')] ?? 0)]);
+        } elseif ($period === 'year') {
+            $rows = $recognizedOrders()->whereBetween('placed_at', [$from, $to])->selectRaw('MONTH(placed_at) as chart_key, SUM(grand_total) as revenue')->groupByRaw('MONTH(placed_at)')->pluck('revenue', 'chart_key');
+            $revenueChart = collect(range(1, 12))->map(fn ($month) => ['label' => $now->copy()->month($month)->format('M'), 'revenue' => (float) ($rows[$month] ?? 0)]);
+        } else {
+            $rows = $recognizedOrders()->selectRaw('YEAR(placed_at) as chart_key, SUM(grand_total) as revenue')->groupByRaw('YEAR(placed_at)')->orderBy('chart_key')->pluck('revenue', 'chart_key');
+            $revenueChart = $rows->map(fn ($revenue, $year) => ['label' => (string) $year, 'revenue' => (float) $revenue])->values();
+        }
+        $topCategories = DB::table('order_items')->join('orders', 'orders.id', '=', 'order_items.order_id')->join('products', 'products.id', '=', 'order_items.product_id')->join('categories', 'categories.id', '=', 'products.category_id')
+            ->where('orders.order_status', '!=', 'cancelled')->where(function ($query) {
+                $query->where('orders.payment_status', 'paid')->orWhere(fn ($query) => $query->where('orders.payment_method', 'cod')->where('orders.order_status', 'delivered'));
+            })->when($from, fn ($query) => $query->whereBetween('orders.placed_at', [$from, $to]))
+            ->selectRaw('categories.id, categories.category_name, SUM(order_items.quantity) as units_sold, SUM(order_items.line_total) as product_sales')->groupBy('categories.id', 'categories.category_name')->orderByDesc('product_sales')->limit(6)->get();
+        return view('admin.dashboard', compact('period', 'periodLabel', 'todaySales', 'periodSales', 'statusCounts', 'newCustomers', 'recentOrders', 'lowStockProducts', 'lowStockCount', 'revenueChart', 'topCategories'));
+    }
     public function login(Request $request)
     {
         if ($request->isMethod('post')) {
