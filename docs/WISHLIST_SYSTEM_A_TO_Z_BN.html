@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dynamic Wishlist System A–Z — Laravel + Nuxt 3</title>
+<style>
+:root{--dark:#10251e;--green:#176b50;--brand:#ff5948;--paper:#fff;--soft:#f3f7f5;--line:#dbe5e0;--code:#0d1c17;--blue:#eaf4ff;--warn:#fff6df}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#eaf0ed;color:#192720;font:16px/1.72 system-ui,"Noto Sans Bengali",sans-serif}.book{max-width:1180px;margin:28px auto;background:var(--paper);box-shadow:0 20px 65px #17392b20}.hero{padding:58px 64px;background:linear-gradient(135deg,#0d241c,#1a5b45);color:#fff}.hero small{color:#ff9d92;font-weight:800;letter-spacing:.15em}.hero h1{max-width:900px;margin:9px 0 14px;font-size:44px;line-height:1.15}.hero p{max-width:830px;margin:0;color:#d4e7df}.content{padding:45px 64px 70px}h2{margin:52px 0 16px;padding-bottom:9px;border-bottom:2px solid var(--line);color:#113b2e;font-size:28px}h3{margin:29px 0 10px;color:#1a5945}p{margin:9px 0 16px}.toc{padding:22px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}.toc a{display:inline-block;margin:5px 18px 5px 0;color:#17664e;text-decoration:none;font-weight:700}.note,.warning,.success{margin:18px 0;padding:16px 18px;border-radius:9px}.note{background:var(--blue);border-left:5px solid #3985cf}.warning{background:var(--warn);border-left:5px solid #e4a51b}.success{background:#eaf8ef;border-left:5px solid #26945b}.flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:9px;align-items:center;margin:22px 0}.flow b{padding:15px 10px;background:var(--soft);border:1px solid var(--line);border-radius:9px;text-align:center}.flow i{color:var(--brand);font-size:22px;text-align:center}.codebox{position:relative;margin:14px 0 27px}.label{padding:7px 14px;border-radius:9px 9px 0 0;background:#294139;color:#dcece5;font:13px Consolas,monospace}.copy{position:absolute;right:9px;top:7px;border:0;border-radius:6px;background:#fff;color:#173b2f;padding:5px 10px;cursor:pointer}pre{margin:0;padding:20px;overflow:auto;border-radius:0 0 9px 9px;background:var(--code);color:#dcf6ea;font:13px/1.55 Consolas,monospace;white-space:pre}code{font-family:Consolas,monospace}:not(pre)>code{padding:2px 6px;border-radius:4px;background:#edf2ef;color:#bd392d}table{width:100%;border-collapse:collapse;margin:15px 0 22px}th,td{padding:11px 13px;border:1px solid var(--line);text-align:left;vertical-align:top}th{background:#edf4f0}ul,ol{padding-left:25px}.tag{display:inline-block;padding:2px 8px;border-radius:20px;background:#e8f5ef;color:#17664e;font-size:12px;font-weight:700}.footer{padding:23px 64px;background:#10251e;color:#cfe1da}@media(max-width:760px){.book{margin:0}.hero,.content,.footer{padding:28px 18px}.hero h1{font-size:30px}.flow{display:block}.flow b,.flow i{display:block;margin:8px 0}.flow i{transform:rotate(90deg)}h2{font-size:23px}pre{font-size:12px}}
+</style></head>
+<body><article class="book"><header class="hero"><small>PROJECT DOCUMENTATION</small><h1>Dynamic Wishlist System — A to Z বাংলা গাইড</h1><p>Laravel 13 API, Sanctum authentication এবং Nuxt 3 ব্যবহার করে database wishlist, product-card heart, live count, stock status, responsive page ও session synchronization কীভাবে যুক্ত হয়েছে—তার পূর্ণ documentation।</p></header>
+<main class="content">
+<div class="success"><strong>এই implementation-এর ফলাফল:</strong> প্রতিটি verified customer-এর wishlist আলাদা। Product Shop বা Details page থেকে save/remove হয়; database, Wishlist page, দুই header এবং Account dashboard-এর count একই shared state থেকে sync থাকে।</div>
+<nav class="toc"><strong>সূচিপত্র</strong><br><a href="#architecture">১. Architecture</a><a href="#database">২. Database</a><a href="#models">৩. Models</a><a href="#controller">৪. Controller</a><a href="#routes">৫. Routes</a><a href="#composable">৬. Composable</a><a href="#cards">৭. Product cards</a><a href="#page">৮. Wishlist page</a><a href="#counts">৯. Counts</a><a href="#auth">১০. Login/logout</a><a href="#stock">১১. Stock/Cart</a><a href="#security">১২. Security</a><a href="#commands">১৩. Commands/Test</a></nav>
+
+<h2 id="architecture">১. পুরো system-এর architecture</h2>
+<div class="flow"><b>Heart button</b><i>→</i><b>useWishlist()</b><i>→</i><b>Sanctum API</b><i>→</i><b>wishlists table</b></div>
+<p>Frontend-এর প্রতিটি component সরাসরি আলাদা API logic লেখে না। সবাই <code>useWishlist()</code> composable ব্যবহার করে। Composable API call করে এবং Nuxt <code>useState()</code>-এ items/count রাখে। তাই এক card-এ add করলে header count এবং wishlist page একই সঙ্গে update হয়।</p>
+<table><tr><th>Layer</th><th>File</th><th>কাজ</th></tr>
+<tr><td>Database</td><td><code>database/migrations/...create_wishlists_table.php</code></td><td>User-product সংযোগ স্থায়ীভাবে রাখে</td></tr>
+<tr><td>Model</td><td><code>Wishlist.php</code>, <code>User.php</code></td><td>Eloquent relation</td></tr>
+<tr><td>Controller</td><td><code>WishlistController.php</code></td><td>List, add, remove ও response বানায়</td></tr>
+<tr><td>API</td><td><code>routes/api.php</code></td><td>Authenticated endpoints</td></tr>
+<tr><td>Shared state</td><td><code>useWishlist.ts</code></td><td>CSRF, request, items, count, toggle</td></tr>
+<tr><td>Entry points</td><td><code>shop.vue</code>, <code>product.vue</code></td><td>Heart button</td></tr>
+<tr><td>Display</td><td><code>wishlist.vue</code></td><td>Saved products ও remove</td></tr>
+<tr><td>Counts</td><td><code>HomeHeader.vue</code>, <code>AppHeader.vue</code>, <code>account.vue</code></td><td>Live badge/count</td></tr></table>
+
+<h2 id="database">২. Database migration</h2>
+<div class="codebox"><div class="label">adminpanel/database/migrations/2026_09_12_130000_create_wishlists_table.php</div><button class="copy">Copy</button><pre><code>&lt;?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('wishlists', function (Blueprint $table) {
+            $table-&gt;id();
+            $table-&gt;foreignId('user_id')-&gt;constrained()-&gt;cascadeOnDelete();
+            $table-&gt;foreignId('product_id')-&gt;constrained()-&gt;cascadeOnDelete();
+            $table-&gt;timestamps();
+            $table-&gt;unique(['user_id', 'product_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('wishlists');
+    }
+};</code></pre></div>
+<h3>প্রতিটি column-এর মানে</h3><table><tr><th>Column/constraint</th><th>কেন প্রয়োজন</th></tr><tr><td><code>id</code></td><td>Wishlist row-এর primary key</td></tr><tr><td><code>user_id</code></td><td>কোন customer save করেছে</td></tr><tr><td><code>product_id</code></td><td>কোন product save হয়েছে</td></tr><tr><td><code>timestamps</code></td><td>কখন add হয়েছে; latest আগে দেখানো যায়</td></tr><tr><td><code>cascadeOnDelete()</code></td><td>User/product delete হলে orphan wishlist row থাকে না</td></tr><tr><td><code>unique(user_id, product_id)</code></td><td>এক user একই product দুইবার add করতে পারে না</td></tr></table>
+<div class="note"><strong>উদাহরণ:</strong> User 5 যদি Product 12 save করে row হবে <code>user_id=5, product_id=12</code>। User 8 একই Product 12 save করলে আলাদা row হবে। User 5 আবার Product 12 add করলে unique constraint duplicate আটকাবে।</div>
+
+<h2 id="models">৩. Model এবং relation</h2>
+<div class="codebox"><div class="label">adminpanel/app/Models/Wishlist.php</div><button class="copy">Copy</button><pre><code>&lt;?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Wishlist extends Model
+{
+    protected $fillable = ['user_id', 'product_id'];
+
+    public function user(): BelongsTo
+    {
+        return $this-&gt;belongsTo(User::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this-&gt;belongsTo(Product::class);
+    }
+}</code></pre></div>
+<div class="codebox"><div class="label">adminpanel/app/Models/User.php — class-এর ভিতরে</div><button class="copy">Copy</button><pre><code>public function wishlists(): HasMany
+{
+    return $this-&gt;hasMany(Wishlist::class);
+}</code></pre></div>
+<p><code>$request-&gt;user()-&gt;wishlists()</code> বললে Laravel current logged-in user-এর rows-ই query করে। এটাই ownership security-এর সহজ মূল অংশ।</p>
+
+<h2 id="controller">৪. WishlistController — সম্পূর্ণ backend logic</h2>
+<div class="codebox"><div class="label">adminpanel/app/Http/Controllers/Api/WishlistController.php</div><button class="copy">Copy</button><pre><code>&lt;?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Product;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class WishlistController extends Controller
+{
+    public function index(Request $request): JsonResponse
+    {
+        $items = $request-&gt;user()-&gt;wishlists()
+            -&gt;with([
+                'product.category:id,category_name,category_discount',
+                'product.variants' =&gt; fn ($query) =&gt; $query
+                    -&gt;where('status', true)
+                    -&gt;select('id', 'product_id', 'price', 'stock'),
+            ])
+            -&gt;latest('id')-&gt;get()
+            -&gt;filter(fn ($item) =&gt; $item-&gt;product &amp;&amp; $item-&gt;product-&gt;status)
+            -&gt;map(fn ($item) =&gt; $this-&gt;itemData($item-&gt;id, $item-&gt;product))
+            -&gt;values();
+
+        return response()-&gt;json([
+            'status' =&gt; true,
+            'count' =&gt; $items-&gt;count(),
+            'items' =&gt; $items,
+        ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $data = $request-&gt;validate([
+            'product_id' =&gt; ['required', 'integer', 'exists:products,id'],
+        ]);
+
+        $product = Product::query()
+            -&gt;whereKey($data['product_id'])
+            -&gt;where('status', true)
+            -&gt;firstOrFail();
+
+        $item = $request-&gt;user()-&gt;wishlists()-&gt;firstOrCreate([
+            'product_id' =&gt; $product-&gt;id,
+        ]);
+
+        return response()-&gt;json([
+            'status' =&gt; true,
+            'message' =&gt; $item-&gt;wasRecentlyCreated
+                ? 'Product added to your wishlist.'
+                : 'Product is already in your wishlist.',
+            'count' =&gt; $request-&gt;user()-&gt;wishlists()-&gt;count(),
+        ], $item-&gt;wasRecentlyCreated ? 201 : 200);
+    }
+
+    public function destroy(Request $request, int $product): JsonResponse
+    {
+        $request-&gt;user()-&gt;wishlists()
+            -&gt;where('product_id', $product)
+            -&gt;delete();
+
+        return response()-&gt;json([
+            'status' =&gt; true,
+            'message' =&gt; 'Product removed from your wishlist.',
+            'count' =&gt; $request-&gt;user()-&gt;wishlists()-&gt;count(),
+        ]);
+    }
+
+    private function itemData(int $wishlistId, Product $product): array
+    {
+        $variants = $product-&gt;variants;
+        $regularPrice = $variants-&gt;isNotEmpty()
+            ? $variants-&gt;map(fn ($variant) =&gt;
+                (float) $product-&gt;regularPriceForVariant($variant))-&gt;min()
+            : (float) $product-&gt;product_price;
+        $stock = $variants-&gt;isEmpty() ? null : (int) $variants-&gt;sum('stock');
+
+        return [
+            'id' =&gt; $wishlistId,
+            'product_id' =&gt; $product-&gt;id,
+            'name' =&gt; $product-&gt;product_name,
+            'category_name' =&gt; $product-&gt;category?-&gt;category_name ?? 'Products',
+            'image_url' =&gt; $product-&gt;image_url,
+            'regular_price' =&gt; number_format($regularPrice, 2, '.', ''),
+            'final_price' =&gt; $product-&gt;discountedPrice($regularPrice),
+            'has_discount' =&gt; $product-&gt;effective_discount &gt; 0,
+            'stock' =&gt; $stock,
+            'in_stock' =&gt; $stock === null || $stock &gt; 0,
+        ];
+    }
+}</code></pre></div>
+<h3>Method ধরে ব্যাখ্যা</h3><ul><li><code>index()</code>: current user-এর list, category ও active variants আনে; inactive/deleted product বাদ দেয়; price/stock response বানায়।</li><li><code>store()</code>: product ID validate করে, active product নিশ্চিত করে এবং <code>firstOrCreate()</code> দিয়ে duplicate ছাড়াই save করে।</li><li><code>destroy()</code>: URL-এর product ID শুধুমাত্র current user-এর wishlist থেকে delete করে।</li><li><code>itemData()</code>: frontend-এর প্রয়োজনীয় ছোট ও consistent JSON shape বানায়।</li></ul>
+
+<h2 id="routes">৫. Authenticated API routes</h2>
+<div class="codebox"><div class="label">adminpanel/routes/api.php — import</div><button class="copy">Copy</button><pre><code>use App\Http\Controllers\Api\WishlistController;</code></pre></div>
+<div class="codebox"><div class="label">auth:sanctum + verified group-এর ভিতরে</div><button class="copy">Copy</button><pre><code>Route::get('/wishlist', [WishlistController::class, 'index'])
+    -&gt;name('api.wishlist.index');
+Route::post('/wishlist', [WishlistController::class, 'store'])
+    -&gt;name('api.wishlist.store');
+Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy'])
+    -&gt;whereNumber('product')
+    -&gt;name('api.wishlist.destroy');</code></pre></div>
+<table><tr><th>Request</th><th>Frontend URL</th><th>কাজ</th></tr><tr><td><span class="tag">GET</span></td><td><code>/api/auth/wishlist</code></td><td>সব saved product</td></tr><tr><td><span class="tag">POST</span></td><td><code>/api/auth/wishlist</code><br>Body: <code>{ product_id: 3 }</code></td><td>Product add</td></tr><tr><td><span class="tag">DELETE</span></td><td><code>/api/auth/wishlist/3</code></td><td>Product 3 remove</td></tr></table>
+<p>Route group-এর prefix <code>auth</code> এবং global API prefix <code>api</code> মিলিয়ে URL হয় <code>/api/auth/wishlist</code>। Login ও verified email ছাড়া middleware request reject করে।</p>
+
+<h2 id="composable">৬. Nuxt useWishlist composable — shared brain</h2>
+<div class="codebox"><div class="label">frontend/app/composables/useWishlist.ts</div><button class="copy">Copy</button><pre><code>export type WishlistItem = {
+  id: number
+  product_id: number
+  name: string
+  category_name: string
+  image_url: string | null
+  regular_price: number
+  final_price: number
+  has_discount: boolean
+  stock: number | null
+  in_stock: boolean
+}
+
+type WishlistResponse = {
+  status: boolean
+  count: number
+  items?: WishlistItem[]
+  message?: string
+}
+
+export const useWishlist = () =&gt; {
+  const config = useRuntimeConfig()
+  const xsrfToken = useCookie&lt;string | null&gt;('XSRF-TOKEN')
+  const items = useState&lt;WishlistItem[]&gt;('wishlist-items', () =&gt; [])
+  const wishlistCount = useState&lt;number&gt;('wishlist-count', () =&gt; 0)
+  const wishlistLoaded = useState&lt;boolean&gt;('wishlist-loaded', () =&gt; false)
+
+  const csrf = async () =&gt; {
+    await $fetch('/sanctum/csrf-cookie', {
+      baseURL: config.public.backendBase,
+      credentials: 'include',
+    })
+    refreshCookie('XSRF-TOKEN')
+  }
+
+  const headers = () =&gt; xsrfToken.value
+    ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrfToken.value) }
+    : {}
+
+  const fetchWishlist = async (force = false) =&gt; {
+    if (!import.meta.client) return
+    if (wishlistLoaded.value &amp;&amp; !force) return items.value
+
+    try {
+      const response = await $fetch&lt;WishlistResponse&gt;('/auth/wishlist', {
+        baseURL: config.public.apiBase,
+        credentials: 'include',
+      })
+      items.value = response.items ?? []
+      wishlistCount.value = response.count
+    } catch (error: any) {
+      if (error?.status === 401 || error?.statusCode === 401) {
+        items.value = []
+        wishlistCount.value = 0
+      } else throw error
+    } finally {
+      wishlistLoaded.value = true
+    }
+    return items.value
+  }
+
+  const addToWishlist = async (productId: number) =&gt; {
+    await csrf()
+    const response = await $fetch&lt;WishlistResponse&gt;('/auth/wishlist', {
+      baseURL: config.public.apiBase,
+      method: 'POST', credentials: 'include', headers: headers(),
+      body: { product_id: productId },
+    })
+    wishlistCount.value = response.count
+    await fetchWishlist(true)
+    return response
+  }
+
+  const removeFromWishlist = async (productId: number) =&gt; {
+    await csrf()
+    const response = await $fetch&lt;WishlistResponse&gt;(`/auth/wishlist/${productId}`, {
+      baseURL: config.public.apiBase,
+      method: 'DELETE', credentials: 'include', headers: headers(),
+    })
+    items.value = items.value.filter(item =&gt; item.product_id !== productId)
+    wishlistCount.value = response.count
+    return response
+  }
+
+  const clearWishlist = () =&gt; {
+    items.value = []
+    wishlistCount.value = 0
+    wishlistLoaded.value = false
+  }
+
+  const hasProduct = (productId: number) =&gt;
+    items.value.some(item =&gt; item.product_id === productId)
+
+  const toggleWishlist = async (productId: number) =&gt; {
+    if (hasProduct(productId)) return removeFromWishlist(productId)
+    return addToWishlist(productId)
+  }
+
+  return { items, wishlistCount, wishlistLoaded, fetchWishlist,
+    addToWishlist, removeFromWishlist, toggleWishlist, hasProduct, clearWishlist }
+}</code></pre></div>
+<h3>Composable function map</h3><table><tr><th>Function</th><th>কখন ব্যবহার হয়</th></tr><tr><td><code>fetchWishlist()</code></td><td>Header/page প্রথম load</td></tr><tr><td><code>addToWishlist(id)</code></td><td>নতুন save</td></tr><tr><td><code>removeFromWishlist(id)</code></td><td>Remove button</td></tr><tr><td><code>hasProduct(id)</code></td><td>Heart filled হবে কি না</td></tr><tr><td><code>toggleWishlist(id)</code></td><td>একই heart দিয়ে add/remove</td></tr><tr><td><code>clearWishlist()</code></td><td>Logout-এর পরে browser state clear</td></tr></table>
+<div class="note"><strong><code>useState()</code> কেন?</strong> সাধারণ <code>ref()</code> হলে প্রতিটি component আলাদা count রাখত। Nuxt <code>useState('wishlist-count')</code> একই key-এর state সব component share করে। তাই Shop card add করার সঙ্গে header badge বদলায়।</div>
+
+<h2 id="cards">৭. Shop card এবং Product Details heart</h2>
+<h3>Shop page logic</h3>
+<div class="codebox"><div class="label">frontend/app/pages/shop.vue — script</div><button class="copy">Copy</button><pre><code>const { isAuthenticated } = useAuth()
+const { fetchWishlist, toggleWishlist, hasProduct } = useWishlist()
+const { success: showSuccess, error: showError } = useToast()
+const wishlistBusyId = ref(null)
+
+const changeWishlist = async (productId) =&gt; {
+  if (!isAuthenticated.value) {
+    await navigateTo({ path: '/login', query: { redirect: '/shop' } })
+    return
+  }
+  if (wishlistBusyId.value) return
+  wishlistBusyId.value = productId
+  const wasSaved = hasProduct(productId)
+  try {
+    await toggleWishlist(productId)
+    showSuccess('Wishlist updated', wasSaved
+      ? 'Product removed from your wishlist.'
+      : 'Product saved to your wishlist.')
+  } catch (error) {
+    showError('Wishlist unavailable', error?.data?.message ?? 'Please try again.')
+  } finally {
+    wishlistBusyId.value = null
+  }
+}
+
+onMounted(() =&gt; {
+  if (isAuthenticated.value) fetchWishlist().catch(() =&gt; null)
+})</code></pre></div>
+<div class="codebox"><div class="label">shop.vue — product card-এর ভিতরের button</div><button class="copy">Copy</button><pre><code>&lt;button class="shop-heart"
+  :class="{ active: hasProduct(product.id) }"
+  type="button"
+  :disabled="wishlistBusyId === product.id"
+  :aria-label="hasProduct(product.id) ? 'Remove from wishlist' : 'Add to wishlist'"
+  @click="changeWishlist(product.id)"&gt;
+  &lt;i class="bi"
+    :class="hasProduct(product.id) ? 'bi-heart-fill' : 'bi-heart'"&gt;&lt;/i&gt;
+&lt;/button&gt;</code></pre></div>
+<p><code>v-for="product in products"</code> card-এর current <code>product.id</code> function-এ যায়। <code>hasProduct()</code> shared items array-তে ID আছে কি না দেখে। থাকলে filled heart ও active CSS হয়। Busy ID একই button-এর double-click আটকায়।</p>
+<h3>Product Details page</h3>
+<div class="codebox"><div class="label">product.vue — মূল পার্থক্য</div><button class="copy">Copy</button><pre><code>const changeWishlist = async () =&gt; {
+  if (!productId.value) return
+  if (!isAuthenticated.value) {
+    await navigateTo({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  if (wishlistBusy.value) return
+  wishlistBusy.value = true
+  const wasSaved = hasProduct(productId.value)
+  try {
+    await toggleWishlist(productId.value)
+    showWishlistSuccess('Wishlist updated', wasSaved
+      ? 'Product removed from your wishlist.'
+      : 'Product saved to your wishlist.')
+  } finally {
+    wishlistBusy.value = false
+  }
+}</code></pre></div>
+<p>Shop page-এ প্রতিটি card-এর ID parameter হিসেবে আসে। Details page-এ URL থেকে পাওয়া reactive <code>productId.value</code> ব্যবহার হয়। Login redirect-এ <code>route.fullPath</code> রাখা হয়, তাই login-এর পর একই product-এ ফেরত আসা যায়।</p>
+
+<h2 id="page">৮. Dynamic Wishlist page</h2>
+<div class="codebox"><div class="label">wishlist.vue — data/load/remove</div><button class="copy">Copy</button><pre><code>const { authLoaded, isAuthenticated, fetchUser } = useAuth()
+const { items, wishlistCount, fetchWishlist, removeFromWishlist } = useWishlist()
+const { success: showSuccess, error: showError } = useToast()
+const loading = ref(true)
+const removingId = ref&lt;number | null&gt;(null)
+
+if (!authLoaded.value) await fetchUser().catch(() =&gt; null)
+if (!isAuthenticated.value) await navigateTo('/login?redirect=/wishlist')
+
+onMounted(async () =&gt; {
+  try {
+    await fetchWishlist(true)
+  } catch {
+    showError('Wishlist unavailable', 'Could not load your saved products.')
+  } finally {
+    loading.value = false
+  }
+})
+
+const removeItem = async (productId: number) =&gt; {
+  if (removingId.value) return
+  removingId.value = productId
+  try {
+    await removeFromWishlist(productId)
+    showSuccess('Wishlist updated', 'Product removed from your wishlist.')
+  } catch (error: any) {
+    showError('Could not remove product', error?.data?.message ?? 'Please try again.')
+  } finally {
+    removingId.value = null
+  }
+}</code></pre></div>
+<div class="codebox"><div class="label">wishlist.vue — dynamic loop-এর সহজ অংশ</div><button class="copy">Copy</button><pre><code>&lt;article v-for="item in items" :key="item.id" class="wishlist-item"&gt;
+  &lt;NuxtLink :to="{ path: '/product', query: { id: item.product_id } }"
+    class="wishlist-image wishlist-dynamic-image"
+    :style="{ backgroundImage: item.image_url ? `url(${item.image_url})` : 'none' }" /&gt;
+
+  &lt;small&gt;{{ item.category_name }}&lt;/small&gt;
+  &lt;NuxtLink :to="{ path: '/product', query: { id: item.product_id } }"&gt;
+    {{ item.name }}
+  &lt;/NuxtLink&gt;
+
+  &lt;div class="wishlist-price"&gt;{{ money(item.final_price) }}
+    &lt;del v-if="item.has_discount"&gt;{{ money(item.regular_price) }}&lt;/del&gt;
+  &lt;/div&gt;
+
+  &lt;div class="wishlist-stock" :class="item.in_stock ? 'in-stock' : 'out-stock'"&gt;
+    {{ stockText(item) }}
+  &lt;/div&gt;
+
+  &lt;NuxtLink class="wishlist-cart"
+    :to="{ path: '/product', query: { id: item.product_id } }"&gt;
+    View product
+  &lt;/NuxtLink&gt;
+
+  &lt;button type="button" @click="removeItem(item.product_id)"&gt;Remove&lt;/button&gt;
+&lt;/article&gt;
+
+&lt;div v-if="!loading &amp;&amp; !items.length" class="wishlist-empty show"&gt;
+  &lt;h2&gt;Your wishlist is empty&lt;/h2&gt;
+  &lt;NuxtLink to="/shop"&gt;Explore products&lt;/NuxtLink&gt;
+&lt;/div&gt;</code></pre></div>
+<p>Actual page-এ desktop table এবং mobile card একই markup ব্যবহার করে; CSS media query layout পরিবর্তন করে। তাই duplicate mobile HTML দরকার হয়নি। Share button mobile-এ Web Share API এবং desktop fallback-এ clipboard ব্যবহার করে।</p>
+
+<h2 id="counts">৯. Header এবং Account count</h2>
+<div class="codebox"><div class="label">HomeHeader.vue / AppHeader.vue</div><button class="copy">Copy</button><pre><code>const { wishlistCount, fetchWishlist } = useWishlist()
+
+onMounted(() =&gt; {
+  fetchWishlist().catch(() =&gt; null)
+})
+
+&lt;NuxtLink to="/wishlist"&gt;
+  &lt;i class="bi bi-heart"&gt;&lt;/i&gt;
+  &lt;span v-if="wishlistCount &gt; 0" class="badge bg-danger rounded-pill"&gt;
+    {{ wishlistCount }}
+  &lt;/span&gt;
+&lt;/NuxtLink&gt;</code></pre></div>
+<div class="codebox"><div class="label">account.vue</div><button class="copy">Copy</button><pre><code>const { wishlistCount, fetchWishlist } = useWishlist()
+
+onMounted(async () =&gt; {
+  await Promise.all([
+    fetchOrders(true),
+    fetchCart(true),
+    fetchAddresses(true),
+    fetchWishlist(true)
+  ])
+})
+
+&lt;NuxtLink to="/wishlist"&gt;
+  &lt;strong&gt;{{ wishlistCount }}&lt;/strong&gt;
+  &lt;small&gt;Wishlist items&lt;/small&gt;
+&lt;/NuxtLink&gt;</code></pre></div>
+
+<h2 id="auth">১০. Login ও logout synchronization</h2>
+<div class="codebox"><div class="label">frontend/app/composables/useAuth.ts</div><button class="copy">Copy</button><pre><code>// login সফল হওয়ার পরে
+await refreshShoppingCart()
+await useWishlist().fetchWishlist(true)
+
+// logout সফল হওয়ার পরে
+user.value = null
+useWishlist().clearWishlist()
+await refreshShoppingCart()</code></pre></div>
+<p>Login-এর আগে user A-এর state browser-এ থাকলে login-এর পরে <code>force=true</code> database থেকে current user-এর fresh data আনে। Logout-এ count/items clear না করলে header-এ আগের user-এর সংখ্যা দেখা যেতে পারত।</p>
+
+<h2 id="stock">১১. Wishlist, product card, stock এবং cart-এর সম্পর্ক</h2>
+<div class="warning"><strong>Wishlist stock reserve করে না।</strong> Wishlist মানে শুধু product মনে রাখা। Stock কমবে order place হলে; cancel হলে project-এর inventory logic অনুযায়ী stock ফেরত বাড়বে। Wishlist-এ 100 জন product save করলেও stock কমবে না।</div>
+<ul><li>Controller active variants-এর stock sum করে current stock status পাঠায়।</li><li><code>stock=0</code> হলে “Out of stock”; ১–৫ হলে “Only X left”; বেশি হলে “In stock”।</li><li>Wishlist row-তে price বা stock copy করে রাখা হয়নি, তাই page খুললে current product price/stock দেখায়।</li><li>Wishlist-এর button “View product”; সরাসরি “Add to cart” নয়। কারণ size/color variant product হলে customer-কে সঠিক variant select করতে হবে। ভুল/default variant cart-এ দেওয়া নিরাপদ নয়।</li><li>Product details page-এ গিয়ে variant ও quantity select করে existing <code>useCart()</code> flow-এ Add to Cart হয়।</li></ul>
+<div class="flow"><b>Wishlist item</b><i>→</i><b>View product</b><i>→</i><b>Variant + Qty</b><i>→</i><b>useCart()</b></div>
+
+<h2 id="security">১২. Security এবং reliability</h2>
+<ol><li><strong>Authentication:</strong> Routes <code>auth:sanctum</code>-এর ভিতরে।</li><li><strong>Email verification:</strong> <code>verified</code> middleware আছে।</li><li><strong>Ownership:</strong> সব query <code>$request-&gt;user()-&gt;wishlists()</code> থেকে শুরু। অন্য user-এর ID দিয়ে delete করা যায় না।</li><li><strong>Validation:</strong> Product ID integer এবং database-এ exists হতে হবে।</li><li><strong>Active product:</strong> Inactive product add করা যায় না এবং list-এ দেখানো হয় না।</li><li><strong>Duplicate protection:</strong> Database unique constraint + <code>firstOrCreate()</code>—দুই স্তর।</li><li><strong>CSRF:</strong> POST/DELETE-এর আগে Sanctum CSRF cookie নেওয়া হয় এবং decoded <code>X-XSRF-TOKEN</code> পাঠানো হয়।</li><li><strong>Cookie auth:</strong> <code>credentials:'include'</code> session cookie পাঠায়।</li><li><strong>Double click:</strong> Busy state চলাকালে button disabled থাকে।</li><li><strong>XSS:</strong> Vue-এর <code>{{ }}</code> text escaping ব্যবহার করা হয়েছে; unsafe <code>v-html</code> নেই।</li></ol>
+<div class="note"><strong>GET request-এ XSRF header কেন নেই?</strong> List শুধু data পড়ে, state পরিবর্তন করে না। POST ও DELETE state বদলায়, তাই সেখানে CSRF নেওয়া বাধ্যতামূলক।</div>
+
+<h2 id="commands">১৩. Commands, test এবং troubleshooting</h2>
+<div class="codebox"><div class="label">প্রয়োজনীয় commands</div><button class="copy">Copy</button><pre><code>cd C:\laragon\www\laravel_nuxt_project_ecommerce\adminpanel
+php artisan migrate
+php artisan route:list --path=wishlist
+php artisan optimize:clear
+php artisan serve
+
+cd C:\laragon\www\laravel_nuxt_project_ecommerce\frontend
+npm run dev
+npm run build</code></pre></div>
+<h3>Complete test checklist</h3><ol><li>Verified customer হিসেবে login করুন।</li><li>Shop card-এর empty heart click করুন—toast ও filled heart দেখুন।</li><li>Header count ১ বেড়েছে দেখুন।</li><li>একই heart আবার click—remove এবং count কমেছে দেখুন।</li><li>Product Details heart থেকেও add/remove করুন।</li><li><code>/wishlist</code>-এ image, name, current price ও stock দেখুন।</li><li>Remove click করে spinner, toast, item removal ও empty state দেখুন।</li><li>Account dashboard count মিলছে কিনা দেখুন।</li><li>Logout করে count clear হচ্ছে কিনা দেখুন।</li><li>অন্য customer login করে আগের user-এর wishlist দেখা যাচ্ছে না নিশ্চিত করুন।</li><li>Mobile 320px/375px/430px এবং desktop test করুন।</li><li>শেষে <code>npm run build</code> চালান।</li></ol>
+<table><tr><th>Problem</th><th>কারণ/সমাধান</th></tr><tr><td>Table not found</td><td><code>php artisan migrate</code></td></tr><tr><td>401</td><td>Login session নেই; frontend/backend domain ও credentials দেখুন</td></tr><tr><td>403</td><td>Email verified নয় বা Sanctum stateful domain সমস্যা</td></tr><tr><td>419 CSRF</td><td><code>/sanctum/csrf-cookie</code>, XSRF header, CORS ও cookie domain দেখুন</td></tr><tr><td>Heart বদলায় না</td><td><code>fetchWishlist()</code> হয়েছে এবং <code>hasProduct(product.id)</code> সঠিক ID পাচ্ছে কিনা দেখুন</td></tr><tr><td>Count ভুল</td><td><code>fetchWishlist(true)</code> চালিয়ে backend count refresh করুন</td></tr><tr><td>Mobile design পুরনো</td><td>Nuxt restart ও browser hard refresh করুন</td></tr></table>
+
+<h2>১৪. এক click-এর পূর্ণ উদাহরণ</h2>
+<ol><li>Customer Shop card-এর Product ID 3 heart click করে।</li><li><code>changeWishlist(3)</code> login check করে।</li><li><code>hasProduct(3)</code> false হওয়ায় <code>toggleWishlist(3)</code> → <code>addToWishlist(3)</code>।</li><li>Composable Sanctum CSRF cookie নেয়।</li><li><code>POST /api/auth/wishlist</code> body <code>{product_id:3}</code> পাঠায়।</li><li>Middleware logged-in verified user resolve করে।</li><li>Controller product validate করে এবং current user relation দিয়ে row save করে।</li><li>API নতুন count ফেরত দেয়; composable <code>wishlistCount.value</code> update করে list refresh করে।</li><li>Shared state বদলানোয় card filled heart, header badge এবং Account count update হয়।</li><li>Success toast customer-কে কাজ সফল হওয়ার feedback দেয়।</li></ol>
+<div class="success"><strong>মনে রাখার সহজ সূত্র:</strong> Table data রাখে → Model relation করে → Controller নিরাপদ কাজ করে → Route URL দেয় → Composable API ও shared state সামলায় → Card action পাঠায় → Wishlist/Header সেই state দেখায়।</div>
+</main><footer class="footer">Dynamic Wishlist System A–Z • বর্তমান project implementation অনুযায়ী প্রস্তুত</footer></article>
+<script>document.querySelectorAll('.copy').forEach(b=>b.onclick=async()=>{await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1200)})</script>
+</body></html>

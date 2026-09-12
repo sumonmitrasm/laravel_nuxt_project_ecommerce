@@ -4,6 +4,7 @@ const config = useRuntimeConfig()
 const { data } = await useCatalogMenu()
 const sections = computed(() => data.value?.categories ?? [])
 const { cartCount, fetchCart } = useCart()
+const { wishlistCount, fetchWishlist } = useWishlist()
 
 const searchText = ref('')
 const selectedCategory = ref('')
@@ -69,7 +70,10 @@ const submitSearch = () => {
 const closeSuggestions = () => setTimeout(() => { showSuggestions.value = false }, 150)
 
 onBeforeUnmount(() => clearTimeout(searchTimer))
-onMounted(() => fetchCart().catch(error => console.error('Cart load error:', error)))
+onMounted(() => {
+    fetchCart().catch(error => console.error('Cart load error:', error))
+    fetchWishlist().catch(() => null)
+})
 </script>
 
 <template>
@@ -111,7 +115,7 @@ onMounted(() => fetchCart().catch(error => console.error('Cart load error:', err
             </form>
             <div class="d-flex gap-2"><NuxtLink class="nav-icon d-none d-sm-grid" to="/login"><i
                         class="bi bi-person"></i></NuxtLink><NuxtLink class="nav-icon d-none d-sm-grid" to="/wishlist"><i
-                        class="bi bi-heart"></i><span class="badge bg-danger rounded-pill">2</span></NuxtLink><NuxtLink
+                        class="bi bi-heart"></i><span v-if="wishlistCount > 0" class="badge bg-danger rounded-pill">{{ wishlistCount }}</span></NuxtLink><NuxtLink
                     class="nav-icon" to="/cart"><i class="bi bi-cart3 fs-5"></i><span v-if="cartCount > 0"
                         class="badge bg-danger rounded-pill">{{ cartCount }}</span></NuxtLink></div>
         </div>

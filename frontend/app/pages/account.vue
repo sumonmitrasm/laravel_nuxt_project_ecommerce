@@ -8,7 +8,7 @@ const { defaultAddress, fetchAddresses } = useAddresses()
 const { orders: customerOrders, fetchOrders } = useOrders()
 const dashboardLoading = ref(true)
 const dashboardError = ref('')
-const wishlistCount = 0
+const { wishlistCount, fetchWishlist } = useWishlist()
 const money = (value: number | string) => `\u09F3${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 2 }).format(Number(value))}`
 const orders = computed(() => customerOrders.value.map(order => ({
   id: order.order_number,
@@ -145,7 +145,7 @@ const submitProfile = async () => {
 }
 onMounted(async () => {
   try {
-    await Promise.all([fetchOrders(true), fetchCart(true), fetchAddresses(true)])
+    await Promise.all([fetchOrders(true), fetchCart(true), fetchAddresses(true), fetchWishlist(true)])
   } catch (error: any) {
     dashboardError.value = error?.data?.message ?? 'Account information could not be loaded.'
   } finally {

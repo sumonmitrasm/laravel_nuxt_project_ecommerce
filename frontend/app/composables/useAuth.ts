@@ -64,6 +64,7 @@ export const useAuth = () => {
     user.value = response.user
     authLoaded.value = true
     await refreshShoppingCart()
+    await useWishlist().fetchWishlist(true)
     return response
   }
 
@@ -117,6 +118,7 @@ export const useAuth = () => {
 
     user.value = null
     authLoaded.value = true
+    useWishlist().clearWishlist()
     await refreshShoppingCart()
   }
 
