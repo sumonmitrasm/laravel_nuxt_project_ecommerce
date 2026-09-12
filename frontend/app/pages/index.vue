@@ -12,6 +12,22 @@ usePageSeo(pageSeo)
 
 const sections = computed(() => data.value?.categories ?? [])
 const sliders = computed(() => data.value?.sliders ?? [])
+const hotDeals = computed(() => data.value?.hot_deals ?? [])
+const dealCategories = computed(() => {
+  const categories = new Map()
+  hotDeals.value.forEach(product => categories.set(product.category_id, product.category_name))
+  return [...categories].map(([id, name]) => ({ id, name }))
+})
+const filteredHotDeals = computed(() => activeDealFilter.value === 'all'
+  ? hotDeals.value
+  : hotDeals.value.filter(product => product.category_id === activeDealFilter.value)
+)
+const dealsTrack = ref(null)
+const scrollDeals = direction => dealsTrack.value?.scrollBy({ left: direction * 280, behavior: 'smooth' })
+const money = value => `৳${Number(value || 0).toLocaleString('en-BD', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})}`
 const sliderFallbackIcons = [['bi-headphones','bi-smartwatch'],['bi-laptop','bi-mouse'],['bi-earbuds','bi-speaker']]
 const formatSliderLink = value => value || '/shop'
 const activeSectionId = ref(sections.value[0]?.id ?? null)
@@ -299,93 +315,37 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
             <div class="container">
                 <div class="deals-heading">
                     <h2>Hot Deals Products</h2>
-                    <div class="deal-tabs" role="tablist" aria-label="Filter hot deals"><button
-                            :class="{ active: activeDealFilter === 'all' }" type="button" @click="activeDealFilter = 'all'">All</button><button
-                            :class="{ active: activeDealFilter === 'electronics' }" type="button" @click="activeDealFilter = 'electronics'">Electronics</button><button
-                            :class="{ active: activeDealFilter === 'furniture' }" type="button" @click="activeDealFilter = 'furniture'">Furniture</button><button
-                            :class="{ active: activeDealFilter === 'clothes' }" type="button" @click="activeDealFilter = 'clothes'">Clothes</button><button
-                            :class="{ active: activeDealFilter === 'accessories' }" type="button" @click="activeDealFilter = 'accessories'">Accessories</button></div>
+                    <div v-if="dealCategories.length" class="deal-tabs" role="tablist" aria-label="Filter hot deals">
+                        <button type="button" :class="{ active: activeDealFilter === 'all' }" @click="activeDealFilter = 'all'">All</button>
+                        <button v-for="category in dealCategories" :key="category.id" type="button"
+                            :class="{ active: activeDealFilter === category.id }" @click="activeDealFilter = category.id">
+                            {{ category.name }}
+                        </button>
+                    </div>
                 </div>
-                <div class="deals-wrap"><button class="deal-arrow deal-prev" type="button" aria-label="Previous deals"
-                        disabled><i class="bi bi-chevron-left"></i></button>
-                    <div class="deals-track" data-deals-track="">
-                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'furniture' }">
-                            <div class="deal-media"><span class="deal-badge sale">Sale</span><img
-                                    src="/assets/images/product-4.svg" alt="Nordic wooden stool"><button
-                                    class="deal-add-cart" type="button" data-toast="Added to cart"><i
-                                        class="bi bi-cart3"></i><span>Add to cart</span></button></div>
-                            <small>Furniture</small>
-                            <h3><NuxtLink to="/product">Nordic Wooden Stool</NuxtLink></h3>
-                            <div class="deal-price">৳5,299 <del>৳6,500</del></div>
-                            <div class="deal-rating"><span>★★★★★</span> <small>(2 Reviews)</small></div>
-                        </article>
-                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'electronics' }">
+                <div v-if="pending" class="category-api-message">Loading hot deals...</div>
+                <div v-else-if="error" class="category-api-message category-api-error">Hot deals could not be loaded.</div>
+                <div v-else-if="filteredHotDeals.length" class="deals-wrap">
+                    <button class="deal-arrow deal-prev" type="button" aria-label="Previous deals" @click="scrollDeals(-1)"><i class="bi bi-chevron-left"></i></button>
+                    <div ref="dealsTrack" class="deals-track">
+                        <article v-for="product in filteredHotDeals" :key="product.id" class="deal-card">
                             <div class="deal-media">
-                                <div class="badge-stack"><span class="deal-badge top">Top</span><span
-                                        class="deal-badge sale">Sale</span></div><img src="/assets/images/product-1.svg"
-                                    alt="Pulse wireless headphones"><button class="deal-add-cart" type="button"
-                                    data-toast="Added to cart"><i class="bi bi-cart3"></i><span>Add to
-                                        cart</span></button>
+                                <span class="deal-badge sale">-{{ Number(product.discount) }}%</span>
+                                <NuxtLink :to="{ path: '/product', query: { id: product.id } }">
+                                    <img v-if="product.image_url" :src="product.image_url" :alt="product.name" loading="lazy">
+                                    <span v-else class="category-api-placeholder"><i class="bi bi-image"></i></span>
+                                </NuxtLink>
+                                <NuxtLink class="deal-add-cart" :to="{ path: '/product', query: { id: product.id } }"><i class="bi bi-eye"></i><span>View product</span></NuxtLink>
                             </div>
-                            <div class="deal-countdown" data-countdown="28800">
-                                <b><span>08</span><small>hours</small></b><em>:</em><b><span>00</span><small>mins</small></b><em>:</em><b><span>00</span><small>secs</small></b>
-                            </div><small>Electronics</small>
-                            <h3><NuxtLink to="/product">Pulse Wireless Headphones</NuxtLink></h3>
-                            <div class="deal-price">৳8,490 <del>৳9,900</del></div>
-                            <div class="deal-rating"><span>★★★★★</span> <small>(4 Reviews)</small></div>
-                            <div class="deal-colors"><i class="blue"></i><i class="coral"></i><i class="black"></i>
-                            </div>
+                            <small>{{ product.category_name }}</small>
+                            <h3><NuxtLink :to="{ path: '/product', query: { id: product.id } }">{{ product.name }}</NuxtLink></h3>
+                            <div class="deal-price">{{ money(product.final_price) }} <del>{{ money(product.regular_price) }}</del></div>
+                            <div class="deal-stock" :class="{ 'is-out': !product.in_stock }"><i class="bi" :class="product.in_stock ? 'bi-check-circle' : 'bi-x-circle'"></i> {{ product.in_stock ? 'In stock' : 'Out of stock' }}</div>
                         </article>
-                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'furniture' }">
-                            <div class="deal-media"><span class="deal-badge sale">Sale</span><img
-                                    src="/assets/images/product-3.svg" alt="Modern two seater sofa"><button
-                                    class="deal-add-cart" type="button" data-toast="Added to cart"><i
-                                        class="bi bi-cart3"></i><span>Add to cart</span></button></div>
-                            <small>Furniture</small>
-                            <h3><NuxtLink to="/product">Modern 2-Seater Sofa</NuxtLink></h3>
-                            <div class="deal-price">৳35,000 <del>৳42,000</del></div>
-                            <div class="deal-rating"><span>★★★★<i>★</i></span> <small>(6 Reviews)</small></div>
-                        </article>
-                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'clothes' }">
-                            <div class="deal-media"><span class="deal-badge sale">Sale</span><img
-                                    src="/assets/images/product-2.svg" alt="Premium biker jacket"><button
-                                    class="deal-add-cart" type="button" data-toast="Added to cart"><i
-                                        class="bi bi-cart3"></i><span>Add to cart</span></button></div>
-                            <small>Clothes</small>
-                            <h3><NuxtLink to="/product">Premium Biker Jacket</NuxtLink></h3>
-                            <div class="deal-price">৳12,400 <del>৳15,500</del></div>
-                            <div class="deal-rating"><span>★★★★<i>★</i></span> <small>(4 Reviews)</small></div>
-                            <div class="deal-colors"><i class="brown"></i><i class="grey"></i></div>
-                        </article>
-                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'electronics' }">
-                            <div class="deal-media">
-                                <div class="badge-stack"><span class="deal-badge top">Top</span><span
-                                        class="deal-badge sale">Sale</span></div><img src="/assets/images/product-4.svg"
-                                    alt="Smart 4K television"><button class="deal-add-cart" type="button"
-                                    data-toast="Added to cart"><i class="bi bi-cart3"></i><span>Add to
-                                        cart</span></button>
-                            </div>
-                            <div class="deal-countdown" data-countdown="23400">
-                                <b><span>06</span><small>hours</small></b><em>:</em><b><span>30</span><small>mins</small></b><em>:</em><b><span>00</span><small>secs</small></b>
-                            </div><small>Electronics</small>
-                            <h3><NuxtLink to="/product">Vision Class 4K Smart TV</NuxtLink></h3>
-                            <div class="deal-price">৳69,999 <del>৳79,999</del></div>
-                            <div class="deal-rating"><span>★★★★<i>★</i></span> <small>(10 Reviews)</small></div>
-                        </article>
-                        <article class="deal-card" :class="{ 'is-hidden': activeDealFilter !== 'all' && activeDealFilter !== 'accessories' }">
-                            <div class="deal-media"><span class="deal-badge top">Top</span><img
-                                    src="/assets/images/product-2.svg" alt="Orbit smart watch"><button
-                                    class="deal-add-cart" type="button" data-toast="Added to cart"><i
-                                        class="bi bi-cart3"></i><span>Add to cart</span></button></div>
-                            <small>Accessories</small>
-                            <h3><NuxtLink to="/product">Orbit Smart Watch S2</NuxtLink></h3>
-                            <div class="deal-price">৳6,990 <del>৳8,200</del></div>
-                            <div class="deal-rating"><span>★★★★★</span> <small>(8 Reviews)</small></div>
-                        </article>
-                    </div><button class="deal-arrow deal-next" type="button" aria-label="Next deals"><i
-                            class="bi bi-chevron-right"></i></button>
+                    </div>
+                    <button class="deal-arrow deal-next" type="button" aria-label="Next deals" @click="scrollDeals(1)"><i class="bi bi-chevron-right"></i></button>
                 </div>
-                <div class="deal-dots" aria-hidden="true"><span class="active"></span><span></span></div>
+                <div v-else class="category-api-message">No discounted products are available now.</div>
             </div>
         </section>
         <section class="container py-5 smart-picks-section">

@@ -44,11 +44,50 @@ class FrontController extends Controller
             'status' => true,
             'categories' => $sections,
             'sliders' => $sliders,
+            'hot_deals' => $this->hotDeals(),
             'site' => $this->seo->site(),
             'seo' => $this->seo->home(),
         ], 200);
     }
 
+    private function hotDeals(): array
+    {
+        return Product::query()
+            ->with([
+                'category:id,category_name,url,category_discount',
+                'variants' => fn ($query) => $query->where('status', true)
+                    ->select('id', 'product_id', 'price', 'stock'),
+            ])
+            ->where('status', true)
+            ->where(function ($query) {
+                $query->where('product_discount', '>', 0)
+                    ->orWhereHas('category', fn ($category) => $category->where('category_discount', '>', 0));
+            })
+            ->latest('id')
+            ->limit(12)
+            ->get()
+            ->map(function (Product $product) {
+                $regularPrice = $product->variants->isNotEmpty()
+                    ? $product->variants->map(fn ($variant) => (float) $product->regularPriceForVariant($variant))->min()
+                    : (float) $product->product_price;
+
+                return [
+                    'id' => $product->id,
+                    'name' => $product->product_name,
+                    'image_url' => $product->image_url,
+                    'category_id' => $product->category_id,
+                    'category_name' => $product->category?->category_name ?? 'Products',
+                    'category_url' => $product->category?->url,
+                    'discount' => $product->effective_discount,
+                    'regular_price' => number_format($regularPrice, 2, '.', ''),
+                    'final_price' => $product->discountedPrice($regularPrice),
+                    'in_stock' => $product->variants->isEmpty()
+                        || $product->variants->contains(fn ($variant) => (int) $variant->stock > 0),
+                ];
+            })
+            ->values()
+            ->all();
+    }
     public function listing(Request $request, string $url): JsonResponse
     {
         $categoryDetails = Category::categoryDetails($url);
