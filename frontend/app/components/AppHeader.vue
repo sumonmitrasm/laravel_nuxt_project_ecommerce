@@ -1,5 +1,6 @@
 <script setup>
 const { cartCount, fetchCart } = useCart()
+const { wishlistCount, fetchWishlist } = useWishlist()
 const { authLoaded, isAuthenticated, fetchUser } = useAuth()
 const router = useRouter()
 const config = useRuntimeConfig()
@@ -56,7 +57,10 @@ if (!authLoaded.value) {
 }
 
 onBeforeUnmount(() => clearTimeout(searchTimer))
-onMounted(() => fetchCart().catch(error => console.error('Cart load error:', error)))
+onMounted(() => {
+    fetchCart().catch(error => console.error('Cart load error:', error))
+    if (isAuthenticated.value) fetchWishlist().catch(() => null)
+})
 </script>
 
 <template>
@@ -67,7 +71,7 @@ onMounted(() => fetchCart().catch(error => console.error('Cart load error:', err
                 ><span>English <i class="bi bi-chevron-down"></i></span>
                 <div class="ms-auto">
                     <a href="tel:+0123456789"><i class="bi bi-telephone"></i> Call: +0123 456 789</a
-                    ><NuxtLink to="/wishlist"><i class="bi bi-heart"></i> Wishlist (2)</NuxtLink
+                    ><NuxtLink to="/wishlist"><i class="bi bi-heart"></i> Wishlist ({{ wishlistCount }})</NuxtLink
                     ><NuxtLink class="topbar-link" to="/about">About us</NuxtLink
                     ><NuxtLink class="topbar-link" to="/contact">Contact us</NuxtLink
                     ><NuxtLink v-if="isAuthenticated" to="/account"><i class="bi bi-person"></i> My Account</NuxtLink
@@ -128,7 +132,7 @@ onMounted(() => fetchCart().catch(error => console.error('Cart load error:', err
                             </div>
                         </div>
                     </div>
-                    <NuxtLink class="nav-icon d-none d-sm-grid" to="/wishlist"><i class="bi bi-heart"></i></NuxtLink
+                    <NuxtLink class="nav-icon d-none d-sm-grid" to="/wishlist"><i class="bi bi-heart"></i><span v-if="wishlistCount > 0" class="badge bg-danger rounded-pill">{{ wishlistCount }}</span></NuxtLink
                     ><NuxtLink class="nav-icon" to="/cart"
                         ><i class="bi bi-cart3"></i><span v-if="cartCount > 0" class="badge bg-danger rounded-pill">{{ cartCount }}</span></NuxtLink
                     >

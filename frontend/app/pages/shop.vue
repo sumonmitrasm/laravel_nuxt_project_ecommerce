@@ -2,6 +2,32 @@
 const route = useRoute()
 const router = useRouter()
 const config = useRuntimeConfig()
+const { isAuthenticated } = useAuth()
+const { fetchWishlist, toggleWishlist, hasProduct } = useWishlist()
+const { success: showSuccess, error: showError } = useToast()
+const wishlistBusyId = ref(null)
+
+const changeWishlist = async (productId) => {
+    if (!isAuthenticated.value) {
+        await navigateTo({ path: '/login', query: { redirect: '/shop' } })
+        return
+    }
+    if (wishlistBusyId.value) return
+    wishlistBusyId.value = productId
+    const wasSaved = hasProduct(productId)
+    try {
+        await toggleWishlist(productId)
+        showSuccess('Wishlist updated', wasSaved ? 'Product removed from your wishlist.' : 'Product saved to your wishlist.')
+    } catch (error) {
+        showError('Wishlist unavailable', error?.data?.message ?? 'Please try again.')
+    } finally {
+        wishlistBusyId.value = null
+    }
+}
+
+onMounted(() => {
+    if (isAuthenticated.value) fetchWishlist().catch(() => null)
+})
 const { data: catalogData } = await useCatalogMenu()
 const siteName = computed(() => catalogData.value?.site?.name || 'NovaCart')
 const searchTerm = computed(() => {
@@ -497,8 +523,8 @@ const productBadge = product => {
                                     backgroundColor: '#faf7f4'
                                 }"></NuxtLink><em v-if="productBadge(product)" class="product-label"
                                     :class="productBadge(product).className">{{ productBadge(product).text
-                                    }}</em><button class="shop-heart" type="button" aria-label="Add to wishlist">
-                                    <i class="bi bi-heart"></i>
+                                    }}</em><button class="shop-heart" :class="{ active: hasProduct(product.id) }" type="button" :disabled="wishlistBusyId === product.id" :aria-label="hasProduct(product.id) ? 'Remove from wishlist' : 'Add to wishlist'" @click="changeWishlist(product.id)">
+                                    <i class="bi" :class="hasProduct(product.id) ? 'bi-heart-fill' : 'bi-heart'"></i>
                                 </button><NuxtLink class="shop-cart"
                                     :to="{ path: '/product', query: { id: product.id } }"><i
                                         class="bi bi-eye"></i> View product</NuxtLink>

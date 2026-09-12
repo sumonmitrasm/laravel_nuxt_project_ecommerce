@@ -28,6 +28,10 @@ type ProductDetailResponse = {
 const route = useRoute()
 const config = useRuntimeConfig()
 const { addToCart } = useCart()
+const { isAuthenticated } = useAuth()
+const { fetchWishlist, toggleWishlist, hasProduct } = useWishlist()
+const { success: showWishlistSuccess, error: showWishlistError } = useToast()
+const wishlistBusy = ref(false)
 const productPage = ref<HTMLElement | null>(null)
 const interactionCleanups: Array<() => void> = []
 const selectedValues = reactive<Record<number, number>>({})
@@ -54,6 +58,24 @@ const { data, status, error } = await useAsyncData<ProductDetailResponse>(
 )
 
 const product = computed<any>(() => data.value?.product ?? null)
+const changeWishlist = async () => {
+    if (!productId.value) return
+    if (!isAuthenticated.value) {
+        await navigateTo({ path: '/login', query: { redirect: route.fullPath } })
+        return
+    }
+    if (wishlistBusy.value) return
+    wishlistBusy.value = true
+    const wasSaved = hasProduct(productId.value)
+    try {
+        await toggleWishlist(productId.value)
+        showWishlistSuccess('Wishlist updated', wasSaved ? 'Product removed from your wishlist.' : 'Product saved to your wishlist.')
+    } catch (error: any) {
+        showWishlistError('Wishlist unavailable', error?.data?.message ?? 'Please try again.')
+    } finally {
+        wishlistBusy.value = false
+    }
+}
 const pageSeo = computed(() => data.value?.seo)
 
 usePageSeo(pageSeo)
@@ -189,6 +211,7 @@ const submitCart = async (buyNow = false) => {
 onBeforeUnmount(() => interactionCleanups.splice(0).forEach(cleanup => cleanup()))
 
 onMounted(() => {
+    if (isAuthenticated.value) fetchWishlist().catch(() => null)
     const page = productPage.value
     if (!page) return
     const mainImage = page.querySelector<HTMLImageElement>('[data-product-main]')
@@ -265,7 +288,7 @@ onMounted(() => {
                             <div class="product-purchase-row">
                                 <div class="product-qty qty"><button type="button" :disabled="quantity <= 1" @click="changeQuantity(-1)">−</button><input v-model.number="quantity" type="number" min="1" :max="maximumQuantity" aria-label="Quantity" @change="normalizeQuantity" @blur="normalizeQuantity"><button type="button" :disabled="quantity >= maximumQuantity" @click="changeQuantity(1)">+</button></div>
                                 <button class="product-add-cart" type="button" :disabled="addingToCart || !productAvailable" @click="submitCart(false)"><i class="bi bi-cart3"></i> Add to cart</button>
-                                <button class="product-action" type="button" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button>
+                                <button class="product-action" :class="{ active: productId && hasProduct(productId) }" type="button" :disabled="wishlistBusy" :aria-label="productId && hasProduct(productId) ? 'Remove from wishlist' : 'Add to wishlist'" @click="changeWishlist"><i class="bi" :class="productId && hasProduct(productId) ? 'bi-heart-fill' : 'bi-heart'"></i></button>
                             </div>
                             <button class="buy-now" type="button" :disabled="addingToCart || !productAvailable" @click="submitCart(true)">Buy it now</button>
                             <div class="product-meta"><span><strong>Category:</strong> {{ product.category?.category_name }}</span><span><strong>Brand:</strong> {{ product.brand?.name ?? 'No Brand' }}</span></div>
