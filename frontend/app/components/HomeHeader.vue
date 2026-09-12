@@ -124,8 +124,8 @@ onMounted(() => {
         <div class="container d-flex align-items-center"><NuxtLink class="btn btn-brand rounded-0 px-4 py-3"
                 to="/#heroCarousel"><i class="bi bi-grid me-2"></i>Browse Categories</NuxtLink>
             <ul class="nav">
-                <li><NuxtLink class="nav-link text-dark" to="/shop">New Arrivals</NuxtLink></li>
-                <li><NuxtLink class="nav-link text-dark" to="/shop">Best Sellers</NuxtLink></li>
+                <li><NuxtLink class="nav-link text-dark" :to="{ path: '/shop', query: { sort: 'newest' } }">New Arrivals</NuxtLink></li>
+                <li><NuxtLink class="nav-link text-dark" :to="{ path: '/shop', query: { sort: 'best_selling' } }">Best Sellers</NuxtLink></li>
                 <li><NuxtLink class="nav-link text-dark" to="/shop">Offers</NuxtLink></li>
                 <li><NuxtLink class="nav-link text-dark" to="/compare">Compare</NuxtLink></li>
                 <li class="nav-item dropdown"><NuxtLink class="nav-link text-dark dropdown-toggle" to="/blog"

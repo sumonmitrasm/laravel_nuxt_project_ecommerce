@@ -229,6 +229,7 @@ class FrontController extends Controller
                 }
             })
             ->when($priceRange !== [], fn ($query) => $this->applyPriceFilter($query, $priceRange))
+            ->tap(fn ($query) => $this->applyCollectionFilter($query, $sort))
             ->tap(fn ($query) => $this->applySorting($query, $sort))
             ->paginate(8)
             ->withQueryString();
@@ -264,6 +265,7 @@ class FrontController extends Controller
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
             ->when(trim((string) $request->query('q', '')), fn ($query, $term) => $this->applySearch($query, $term))
             ->when($priceRange !== [], fn ($query) => $this->applyPriceFilter($query, $priceRange))
+            ->tap(fn ($query) => $this->applyCollectionFilter($query, $sort))
             ->tap(fn ($query) => $this->applySorting($query, $sort))
             ->paginate(8)
             ->withQueryString();
@@ -329,11 +331,32 @@ class FrontController extends Controller
     {
         $sort = (string) $request->query('sort', 'popular');
 
-        return in_array($sort, ['popular', 'newest', 'price_asc', 'price_desc'], true)
+        return in_array($sort, ['popular', 'newest', 'best_selling', 'price_asc', 'price_desc'], true)
             ? $sort
             : 'popular';
     }
 
+    private function applyCollectionFilter($query, string $sort): void
+    {
+        if ($sort === 'newest') {
+            $query->where('products.created_at', '>=', now()->subDays(30));
+        }
+
+        if ($sort === 'best_selling') {
+            $query->whereHas('orderItems', function ($items) {
+                $items->whereHas('order', function ($order) {
+                    $order->where('order_status', '!=', 'cancelled')
+                        ->where(function ($payment) {
+                            $payment->where('payment_status', 'paid')
+                                ->orWhere(function ($cod) {
+                                    $cod->where('payment_method', 'cod')
+                                        ->where('order_status', 'delivered');
+                                });
+                        });
+                });
+            });
+        }
+    }
     private function applySorting($query, string $sort): void
     {
         if ($sort === 'newest') {
@@ -342,6 +365,22 @@ class FrontController extends Controller
             return;
         }
 
+        if ($sort === 'best_selling') {
+            $query->withSum([
+                'orderItems as sold_quantity' => fn ($items) => $items->whereHas('order', function ($order) {
+                    $order->where('order_status', '!=', 'cancelled')
+                        ->where(function ($payment) {
+                            $payment->where('payment_status', 'paid')
+                                ->orWhere(fn ($cod) => $cod->where('payment_method', 'cod')
+                                    ->where('order_status', 'delivered'));
+                        });
+                }),
+            ], 'quantity')
+                ->orderByDesc('sold_quantity')
+                ->orderByDesc('products.id');
+
+            return;
+        }
         if (in_array($sort, ['price_asc', 'price_desc'], true)) {
             $discount = 'COALESCE(NULLIF(products.product_discount, 0), (SELECT category_discount FROM categories WHERE categories.id = products.category_id), 0)';
             $regularPrice = 'COALESCE((SELECT MIN(COALESCE(product_variants.price, products.product_price)) FROM product_variants WHERE product_variants.product_id = products.id AND product_variants.status = 1), products.product_price)';

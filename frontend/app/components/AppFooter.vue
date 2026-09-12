@@ -168,8 +168,8 @@ onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
                 </div>
             </nav>
             <div class="mobile-nav-label">Discover</div>
-            <div class="mobile-menu-links"><NuxtLink to="/shop">New Arrivals <i class="bi bi-arrow-right"></i></NuxtLink><NuxtLink
-                    to="/shop">Best Sellers <i class="bi bi-arrow-right"></i></NuxtLink><NuxtLink to="/shop">Offers <i
+            <div class="mobile-menu-links"><NuxtLink :to="{ path: '/shop', query: { sort: 'newest' } }">New Arrivals <i class="bi bi-arrow-right"></i></NuxtLink><NuxtLink
+                     :to="{ path: '/shop', query: { sort: 'best_selling' } }">Best Sellers <i class="bi bi-arrow-right"></i></NuxtLink><NuxtLink to="/shop">Offers <i
                         class="bi bi-arrow-right"></i></NuxtLink><NuxtLink to="/compare">Compare <i
                         class="bi bi-arrow-right"></i></NuxtLink></div>
         </div>
