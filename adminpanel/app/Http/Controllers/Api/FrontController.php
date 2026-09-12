@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\HomeSlider;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use App\Models\Section;
@@ -45,6 +46,7 @@ class FrontController extends Controller
             'categories' => $sections,
             'sliders' => $sliders,
             'hot_deals' => $this->hotDeals(),
+            'trending_products' => $this->trendingProducts(),
             'site' => $this->seo->site(),
             'seo' => $this->seo->home(),
         ], 200);
@@ -87,6 +89,64 @@ class FrontController extends Controller
             })
             ->values()
             ->all();
+    }
+    private function trendingProducts(): array
+    {
+        $productQuery = fn () => Product::query()->with([
+            'category:id,category_name,category_discount',
+            'variants' => fn ($query) => $query->where('status', true)
+                ->select('id', 'product_id', 'price', 'stock'),
+        ])->where('status', true);
+
+        $bestSellingIds = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->whereNotNull('order_items.product_id')
+            ->where('orders.order_status', '!=', 'cancelled')
+            ->where(function ($query) {
+                $query->where('orders.payment_status', 'paid')
+                    ->orWhere(fn ($order) => $order->where('orders.payment_method', 'cod')
+                        ->where('orders.order_status', 'delivered'));
+            })
+            ->groupBy('order_items.product_id')
+            ->orderByRaw('SUM(order_items.quantity) DESC')
+            ->limit(4)
+            ->pluck('order_items.product_id');
+
+        $featured = $productQuery()->where('is_featured', 'Yes')->latest('id')->limit(4)->get();
+        $bestSelling = $productQuery()->whereIn('id', $bestSellingIds)->get()
+            ->sortBy(fn ($product) => $bestSellingIds->search($product->id))->values();
+        $onSale = $productQuery()->where(function ($query) {
+            $query->where('product_discount', '>', 0)
+                ->orWhereHas('category', fn ($category) => $category->where('category_discount', '>', 0));
+        })->latest('id')->limit(4)->get();
+
+        return [
+            'featured' => $this->productCards($featured, 'Featured'),
+            'best_selling' => $this->productCards($bestSelling, 'Best seller'),
+            'on_sale' => $this->productCards($onSale, 'Sale'),
+        ];
+    }
+
+    private function productCards($products, string $badge): array
+    {
+        return $products->map(function (Product $product) use ($badge) {
+            $regularPrice = $product->variants->isNotEmpty()
+                ? $product->variants->map(fn ($variant) => (float) $product->regularPriceForVariant($variant))->min()
+                : (float) $product->product_price;
+
+            return [
+                'id' => $product->id,
+                'name' => $product->product_name,
+                'image_url' => $product->image_url,
+                'category_name' => $product->category?->category_name ?? 'Products',
+                'badge' => $badge,
+                'regular_price' => number_format($regularPrice, 2, '.', ''),
+                'final_price' => $product->discountedPrice($regularPrice),
+                'has_discount' => $product->effective_discount > 0,
+                'in_stock' => $product->variants->isEmpty()
+                    || $product->variants->contains(fn ($variant) => (int) $variant->stock > 0),
+            ];
+        })->values()->all();
     }
     public function listing(Request $request, string $url): JsonResponse
     {
