@@ -361,7 +361,7 @@ class CartController extends Controller
                         : self::MAX_ITEM_QUANTITY,
                     'stock' => $variant?->stock,
                     'available' => (bool) $product->status
-                        && (! $variant || $variant->status),
+                        && (! $variant || ($variant->status && $variant->stock > 0)),
                     'options' => $variant?->values
                         ->map(fn ($value) => [
                             'name' => $value->attribute?->name,

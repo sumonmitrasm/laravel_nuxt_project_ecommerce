@@ -15,6 +15,7 @@ use App\Http\Controllers\ShippingMethodController;
 use App\Http\Controllers\HomeSliderController;
 use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\AdminNotificationController;
+use App\Http\Controllers\InventoryController;
 
 Route::get('/clear-cache', function() {
     Artisan::call('view:clear');
@@ -90,6 +91,8 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         //>>>>>>>>>>>>>>>>>>>>>>>>Brand activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         //>>>>>>>>>>>>>>>>>>>>>>>>Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('products', [ProductController::class, 'index'])->name('products');
+        Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::patch('inventory/{variant}', [InventoryController::class, 'adjust'])->name('inventory.adjust');
         Route::post('product', [ProductController::class, 'store'])->name('admin-product.store');
         Route::get('product/{product}', [ProductController::class, 'show'])->name('admin-product.show');
         Route::put('product/{product}', [ProductController::class, 'update'])->name('admin-product.update');

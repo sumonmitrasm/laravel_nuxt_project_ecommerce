@@ -231,6 +231,13 @@
                 });
             };
 
+            $(document).on('submit', '[data-stock-adjust]', function (event) {
+                event.preventDefault(); var $form=$(this), $button=$form.find('button').prop('disabled',true);
+                $.ajax({url:$form.attr('action'),method:'POST',data:$form.serialize(),headers:{Accept:'application/json'}})
+                .done(function(r){window.loadAjaxPage(window.location.href,false);setTimeout(function(){crudToast('success',r.message)},200)})
+                .fail(function(x){var e=x.responseJSON&&x.responseJSON.errors;crudToast('error',e?Object.values(e).flat()[0]:(x.responseJSON&&x.responseJSON.message)||'Stock update failed.')})
+                .always(function(){$button.prop('disabled',false)});
+            });
             // Product attribute/value forms submit without a full browser reload.
             $(document).on('submit', '[data-product-attribute-form]', function (event) {
                 event.preventDefault();

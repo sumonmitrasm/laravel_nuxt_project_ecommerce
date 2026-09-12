@@ -131,11 +131,9 @@ class OrderController extends Controller
             $order->load('items');
             foreach ($order->items as $item) {
                 if ($item->product_variant_id) {
-                    ProductVariant::query()
-                        ->whereKey($item->product_variant_id)
-                        ->lockForUpdate()
-                        ->first()
-                        ?->increment('stock', $item->quantity);
+                    app(\App\Services\InventoryService::class)->restoreForCancelledOrder(
+                        $item->product_variant_id, $item->quantity, $order, 'user', $user->id
+                    );
                 }
             }
 
@@ -271,7 +269,11 @@ class OrderController extends Controller
                     'discount_amount' => round(($item['regular_price'] - $item['unit_price']) * $item['quantity'], 2),
                     'line_total' => $item['line_total'],
                 ]);
-                if ($variant) $variant->decrement('stock', $item['quantity']);
+                if ($variant) {
+                    app(\App\Services\InventoryService::class)->decreaseForOrder(
+                        $variant, $item['quantity'], $order, $user->id
+                    );
+                }
             }
 
             $order->address()->create([

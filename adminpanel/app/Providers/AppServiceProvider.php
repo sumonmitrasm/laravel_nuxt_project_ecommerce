@@ -54,7 +54,7 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer('admin.layout.header', function ($view) {
             $query = AdminNotification::query()->where('admin_id', Auth::guard('admin')->id());
-            $view->with('adminNotifications', (clone $query)->latest()->limit(5)->get())
+            $view->with('adminNotifications', (clone $query)->with('variant:id,sku')->latest()->limit(5)->get())
                 ->with('unreadAdminNotificationCount', (clone $query)->whereNull('read_at')->count());
         });
     }

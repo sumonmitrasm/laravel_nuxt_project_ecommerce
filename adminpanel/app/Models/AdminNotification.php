@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AdminNotification extends Model
 {
-    protected $fillable = ['admin_id', 'order_id', 'type', 'title', 'message', 'read_at'];
+    protected $fillable = ['admin_id', 'order_id', 'product_variant_id', 'type', 'title', 'message', 'read_at'];
 
     protected function casts(): array
     {
@@ -16,4 +16,5 @@ class AdminNotification extends Model
 
     public function admin(): BelongsTo { return $this->belongsTo(Admin::class); }
     public function order(): BelongsTo { return $this->belongsTo(Order::class); }
+    public function variant(): BelongsTo { return $this->belongsTo(ProductVariant::class, 'product_variant_id'); }
 }

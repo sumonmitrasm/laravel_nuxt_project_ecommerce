@@ -83,7 +83,7 @@
                     </li>
                 @endif
                 @if ($canManageProducts || $canManageAttributes || $canManageCoupons || $canManageShippingMethods)
-                <li class="slide {{ request()->routeIs('products') || request()->routeIs('product-attributes*') || request()->routeIs('coupons') || request()->routeIs('shipping-methods') ? 'is-expanded' : '' }}">
+                <li class="slide {{ request()->routeIs('products') || request()->routeIs('inventory.*') || request()->routeIs('product-attributes*') || request()->routeIs('coupons') || request()->routeIs('shipping-methods') ? 'is-expanded' : '' }}">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -97,6 +97,7 @@
                             <a href="javascript:void(0)">Products</a>
                         </li>
                          @if ($canManageProducts)<li><a href="{{ route('products') }}" class="slide-item {{ request()->routeIs('products') ? 'active' : '' }}">Products</a></li>@endif
+                         @if ($canManageProducts)<li><a href="{{ route('inventory.index') }}" class="slide-item {{ request()->routeIs('inventory.*') ? 'active' : '' }}">Inventory</a></li>@endif
                          @if ($canManageAttributes)<li><a href="{{ route('product-attributes') }}" class="slide-item {{ request()->routeIs('product-attributes*') ? 'active' : '' }}">Attributes</a></li>@endif
                          @if ($canManageCoupons)<li><a href="{{ route('coupons') }}" class="slide-item {{ request()->routeIs('coupons') ? 'active' : '' }}">Coupons</a></li>@endif
                          @if ($canManageShippingMethods)<li><a href="{{ route('shipping-methods') }}" class="slide-item {{ request()->routeIs('shipping-methods') ? 'active' : '' }}">Shipping Methods</a></li>@endif

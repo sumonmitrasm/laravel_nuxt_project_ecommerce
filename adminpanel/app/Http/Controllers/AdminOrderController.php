@@ -171,8 +171,10 @@ class AdminOrderController extends Controller
                 $lockedOrder->load('items');
                 foreach ($lockedOrder->items as $item) {
                     if ($item->product_variant_id) {
-                        ProductVariant::query()->whereKey($item->product_variant_id)
-                            ->lockForUpdate()->first()?->increment('stock', $item->quantity);
+                        app(\App\Services\InventoryService::class)->restoreForCancelledOrder(
+                            $item->product_variant_id, $item->quantity, $lockedOrder,
+                            'admin', Auth::guard('admin')->id()
+                        );
                     }
                 }
 

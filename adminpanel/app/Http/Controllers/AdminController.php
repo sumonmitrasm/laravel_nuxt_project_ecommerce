@@ -44,8 +44,8 @@ class AdminController extends Controller
         $statusCounts = $withinPeriod(Order::query())->selectRaw('order_status, COUNT(*) as total')->whereIn('order_status', ['pending', 'processing', 'shipped'])->groupBy('order_status')->pluck('total', 'order_status');
         $newCustomers = User::query()->when($from, fn ($query) => $query->whereBetween('created_at', [$from, $to]))->count();
         $recentOrders = $withinPeriod(Order::query())->with('user:id,name,email')->withCount('items')->latest('placed_at')->limit(8)->get();
-        $lowStockProducts = ProductVariant::query()->with('product:id,product_name,product_image')->where('status', true)->where('stock', '<=', 5)->orderBy('stock')->limit(8)->get();
-        $lowStockCount = ProductVariant::query()->where('status', true)->where('stock', '<=', 5)->count();
+        $lowStockProducts = ProductVariant::query()->with('product:id,product_name,product_image')->where('status', true)->whereColumn('stock', '<=', 'low_stock_threshold')->orderBy('stock')->limit(8)->get();
+        $lowStockCount = ProductVariant::query()->where('status', true)->whereColumn('stock', '<=', 'low_stock_threshold')->count();
 
         if ($period === 'today') {
             $rows = $recognizedOrders()->whereBetween('placed_at', [$from, $to])->selectRaw('HOUR(placed_at) as chart_key, SUM(grand_total) as revenue')->groupByRaw('HOUR(placed_at)')->pluck('revenue', 'chart_key');
