@@ -84,7 +84,7 @@ const queryPrice = name => computed(() => {
 
 const selectedMinPrice = queryPrice('min_price')
 const selectedMaxPrice = queryPrice('max_price')
-const allowedSorts = ['popular', 'newest', 'price_asc', 'price_desc']
+const allowedSorts = ['popular', 'newest', 'best_selling', 'price_asc', 'price_desc']
 const selectedSort = computed(() => {
     const value = Array.isArray(route.query.sort) ? route.query.sort[0] : route.query.sort
     return allowedSorts.includes(value) ? value : 'popular'
@@ -178,10 +178,18 @@ const isCategorySelected = url => categoryUrl.value === url
 const selectCategory = async url => {
     await replaceFilterQuery({ category: isCategorySelected(url) ? undefined : url, page: undefined })
 }
-const heroTitle = computed(() => category.value?.category_name ?? 'Explore the Collection')
-const heroSubtitle = computed(() => category.value
-    ? `Discover products selected from ${category.value.category_name}`
-    : 'Fresh finds, thoughtful choices and something new for every day')
+const heroTitle = computed(() => {
+    if (category.value) return category.value.category_name
+    if (selectedSort.value === 'newest') return 'New Arrivals'
+    if (selectedSort.value === 'best_selling') return 'Best Sellers'
+    return 'Explore the Collection'
+})
+const heroSubtitle = computed(() => {
+    if (category.value) return `Discover products selected from ${category.value.category_name}`
+    if (selectedSort.value === 'newest') return 'Products added during the last 30 days'
+    if (selectedSort.value === 'best_selling') return 'Products customers are buying most'
+    return 'Fresh finds, thoughtful choices and something new for every day'
+})
 
 const breadcrumbs = computed(() =>
     data.value?.breadcrumbs ?? []
@@ -502,7 +510,8 @@ const productBadge = product => {
                             <label for="sortProducts">Sort by:</label><select id="sortProducts" :value="selectedSort"
                                 @change="updateSort">
                                 <option value="popular">Most Popular</option>
-                                <option value="newest">Newest</option>
+                                <option value="newest">New Arrivals</option>
+                                <option value="best_selling">Best Selling</option>
                                 <option value="price_asc">Price: Low to High</option>
                                 <option value="price_desc">Price: High to Low</option>
                             </select><button class="active" aria-label="Grid view">
