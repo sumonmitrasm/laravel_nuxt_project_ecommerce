@@ -6,6 +6,12 @@ definePageMeta({
 const activeDealFilter = ref('all')
 const activeTrendingFilter = ref('featured')
 const { data, pending, error } = await useCatalogMenu()
+const config = useRuntimeConfig()
+const { data: recommendedData, pending: recommendedPending, error: recommendedError } = await useFetch('/recommended-products', {
+  baseURL: config.public.apiBase,
+  query: { page: 1 },
+  key: 'recommended-products-first-page'
+})
 const pageSeo = computed(() => data.value?.seo)
 
 usePageSeo(pageSeo)
@@ -15,6 +21,30 @@ const sliders = computed(() => data.value?.sliders ?? [])
 const hotDeals = computed(() => data.value?.hot_deals ?? [])
 const trendingGroups = computed(() => data.value?.trending_products ?? {})
 const trendingProducts = computed(() => trendingGroups.value[activeTrendingFilter.value] ?? [])
+const recommendedProducts = ref([...(recommendedData.value?.products ?? [])])
+const recommendedPage = ref(recommendedData.value?.pagination?.current_page ?? 1)
+const recommendedLastPage = ref(recommendedData.value?.pagination?.last_page ?? 1)
+const recommendedTotal = ref(recommendedData.value?.pagination?.total ?? recommendedProducts.value.length)
+const loadingMoreProducts = ref(false)
+const hasMoreProducts = computed(() => recommendedPage.value < recommendedLastPage.value)
+
+const loadMoreProducts = async () => {
+  if (!hasMoreProducts.value || loadingMoreProducts.value) return
+
+  loadingMoreProducts.value = true
+  try {
+    const response = await $fetch('/recommended-products', {
+      baseURL: config.public.apiBase,
+      query: { page: recommendedPage.value + 1 }
+    })
+    recommendedProducts.value.push(...response.products)
+    recommendedPage.value = response.pagination.current_page
+    recommendedLastPage.value = response.pagination.last_page
+    recommendedTotal.value = response.pagination.total
+  } finally {
+    loadingMoreProducts.value = false
+  }
+}
 const dealCategories = computed(() => {
   const categories = new Map()
   hotDeals.value.forEach(product => categories.set(product.category_id, product.category_name))
@@ -26,7 +56,7 @@ const filteredHotDeals = computed(() => activeDealFilter.value === 'all'
 )
 const dealsTrack = ref(null)
 const scrollDeals = direction => dealsTrack.value?.scrollBy({ left: direction * 280, behavior: 'smooth' })
-const money = value => `৳${Number(value || 0).toLocaleString('en-BD', {
+const money = value => `\u09F3${Number(value || 0).toLocaleString('en-BD', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
 })}`
@@ -388,25 +418,36 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
         </section>
         <section class="more-products-section">
             <div class="container">
-                <div class="more-products-head"><div><small>Explore more</small><h2>Products you may love</h2><p>Fresh finds selected across our most popular categories.</p></div><NuxtLink to="/shop">Shop all products <i class="bi bi-arrow-right"></i></NuxtLink></div>
-                <div class="more-products-grid">
-                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:0;--my:0"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Computers</small><h3><NuxtLink to="/product">NovaBook Air Laptop</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(5)</small></div><div class="more-product-price">৳74,900</div></div></article>
-                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:1;--my:0"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Smartphones</small><h3><NuxtLink to="/product">Nova X Pro Smartphone</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(6)</small></div><div class="more-product-price">৳54,500</div></div></article>
-                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:2;--my:0"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Audio</small><h3><NuxtLink to="/product">Pulse Wireless Headphones</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(7)</small></div><div class="more-product-price">৳8,490</div></div></article>
-                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:3;--my:0"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Wearables</small><h3><NuxtLink to="/product">Orbit Smart Watch S2</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(8)</small></div><div class="more-product-price">৳6,990</div></div></article>
-                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:0;--my:1"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Televisions</small><h3><NuxtLink to="/product">Vision Class 4K Smart TV</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(9)</small></div><div class="more-product-price">৳69,999</div></div></article>
-                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:1;--my:1"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Fashion</small><h3><NuxtLink to="/product">Everyday Leather Tote</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(10)</small></div><div class="more-product-price">৳4,850</div></div></article>
-                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:2;--my:1"></span><em class="popular">Popular</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Furniture</small><h3><NuxtLink to="/product">Nordic Lounge Chair</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(11)</small></div><div class="more-product-price">৳18,900</div></div></article>
-                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:3;--my:1"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Kitchen</small><h3><NuxtLink to="/product">Pro Kitchen Blender</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(12)</small></div><div class="more-product-price">৳7,250</div></div></article>
-                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:0;--my:2"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Gaming</small><h3><NuxtLink to="/product">Nova Gaming Controller</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(5)</small></div><div class="more-product-price">৳4,390</div></div></article>
-                    <article class="more-product-card" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:1;--my:2"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Cameras</small><h3><NuxtLink to="/product">Pocket Mirrorless Camera</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(6)</small></div><div class="more-product-price">৳42,800</div></div></article>
-                    <article class="more-product-card more-product-hidden" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:2;--my:2"></span><em class="popular">Popular</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Sports</small><h3><NuxtLink to="/product">Aero Cycling Helmet</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(7)</small></div><div class="more-product-price">৳3,750</div></div></article>
-                    <article class="more-product-card more-product-hidden" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:3;--my:2"></span><em class="sale">Sale</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Gifts</small><h3><NuxtLink to="/product">Signature Gift Box</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(8)</small></div><div class="more-product-price">৳2,490</div></div></article>
-                    <article class="more-product-card more-product-hidden" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:0;--my:3"></span><em class="new">New</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Office</small><h3><NuxtLink to="/product">Compact Office Printer</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(9)</small></div><div class="more-product-price">৳16,500</div></div></article>
-                    <article class="more-product-card more-product-hidden" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:1;--my:3"></span><em class="popular">Popular</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Baby & Kids</small><h3><NuxtLink to="/product">Wooden Learning Set</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(10)</small></div><div class="more-product-price">৳3,150</div></div></article>
-                    <article class="more-product-card more-product-hidden" data-more-product><NuxtLink class="more-product-media" to="/product"><span style="--mx:2;--my:3"></span><em class="top">Top</em><button type="button" class="more-product-heart" aria-label="Add to wishlist"><i class="bi bi-heart"></i></button><button type="button" class="more-product-cart" data-toast="Added to cart"><i class="bi bi-cart3"></i> Add to cart</button></NuxtLink><div class="more-product-info"><small>Automotive</small><h3><NuxtLink to="/product">Smart City Car Kit</NuxtLink></h3><div class="more-product-rating"><span>★★★★★</span><small>(11)</small></div><div class="more-product-price">৳8,900</div></div></article>
+                <div class="more-products-head">
+                    <div><small>Explore more</small><h2>Products you may love</h2><p>Fresh products selected from our latest collection.</p></div>
+                    <NuxtLink to="/shop">Shop all products <i class="bi bi-arrow-right"></i></NuxtLink>
                 </div>
-                <div class="more-products-action"><button type="button" data-view-more-products><span>View more products</span><i class="bi bi-chevron-down"></i></button><small>Showing 10 of 15 products</small></div>
+                <div v-if="recommendedProducts.length" class="more-products-grid">
+                    <article v-for="product in recommendedProducts" :key="product.id" class="more-product-card">
+                        <NuxtLink class="more-product-media" :to="{ path: '/product', query: { id: product.id } }">
+                            <img v-if="product.image_url" :src="product.image_url" :alt="product.name" loading="lazy">
+                            <div v-else class="more-product-placeholder"><i class="bi bi-image"></i></div>
+                            <em :class="product.badge === 'Sale' ? 'sale' : product.badge === 'Featured' ? 'top' : 'new'">{{ product.badge }}</em>
+                            <div class="more-product-cart"><i class="bi bi-eye"></i> View product</div>
+                        </NuxtLink>
+                        <div class="more-product-info">
+                            <small>{{ product.category_name }}</small>
+                            <h3><NuxtLink :to="{ path: '/product', query: { id: product.id } }">{{ product.name }}</NuxtLink></h3>
+                            <div class="more-product-stock" :class="{ 'is-out': !product.in_stock }">{{ product.in_stock ? 'In stock' : 'Out of stock' }}</div>
+                            <div class="more-product-price">{{ money(product.final_price) }} <del v-if="product.has_discount">{{ money(product.regular_price) }}</del></div>
+                        </div>
+                    </article>
+                </div>
+                <div v-else-if="recommendedPending" class="category-api-message">Loading products...</div>
+                <div v-else-if="recommendedError" class="category-api-message category-api-error">Products could not be loaded.</div>
+                <div v-else class="category-api-message">No products are available now.</div>
+                <div v-if="hasMoreProducts" class="more-products-action">
+                    <button type="button" :disabled="loadingMoreProducts" @click="loadMoreProducts">
+                        <span>{{ loadingMoreProducts ? 'Loading products...' : 'View more products' }}</span>
+                        <i class="bi" :class="loadingMoreProducts ? 'bi-arrow-repeat' : 'bi-chevron-down'"></i>
+                    </button>
+                    <small>Showing {{ recommendedProducts.length }} of {{ recommendedTotal }} products</small>
+                </div>
             </div>
         </section>
         <section class="container pb-5">

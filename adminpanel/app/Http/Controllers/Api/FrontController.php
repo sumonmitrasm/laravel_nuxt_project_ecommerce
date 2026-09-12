@@ -127,9 +127,28 @@ class FrontController extends Controller
         ];
     }
 
+    public function recommendedProducts(): JsonResponse
+    {
+        $products = Product::query()
+            ->with([
+                'category:id,category_name,category_discount',
+                'variants' => fn ($query) => $query->where('status', true)
+                    ->select('id', 'product_id', 'price', 'stock'),
+            ])
+            ->where('status', true)
+            ->latest('id')
+            ->paginate(10);
+
+        return response()->json([
+            'status' => true,
+            'products' => $this->productCards($products->getCollection(), ''),
+            'pagination' => $this->paginationData($products),
+        ]);
+    }
     private function productCards($products, string $badge): array
     {
         return $products->map(function (Product $product) use ($badge) {
+            $resolvedBadge = $badge ?: ($product->effective_discount > 0 ? 'Sale' : ($product->is_featured === 'Yes' ? 'Featured' : 'New'));
             $regularPrice = $product->variants->isNotEmpty()
                 ? $product->variants->map(fn ($variant) => (float) $product->regularPriceForVariant($variant))->min()
                 : (float) $product->product_price;
@@ -139,7 +158,7 @@ class FrontController extends Controller
                 'name' => $product->product_name,
                 'image_url' => $product->image_url,
                 'category_name' => $product->category?->category_name ?? 'Products',
-                'badge' => $badge,
+                'badge' => $resolvedBadge,
                 'regular_price' => number_format($regularPrice, 2, '.', ''),
                 'final_price' => $product->discountedPrice($regularPrice),
                 'has_discount' => $product->effective_discount > 0,
