@@ -4,6 +4,10 @@ const router = useRouter()
 const config = useRuntimeConfig()
 const { data: catalogData } = await useCatalogMenu()
 const siteName = computed(() => catalogData.value?.site?.name || 'NovaCart')
+const searchTerm = computed(() => {
+    const value = Array.isArray(route.query.q) ? route.query.q[0] : route.query.q
+    return value?.toString().trim() ?? ''
+})
 
 const categoryUrl = computed(() => {
     const value = route.query.category
@@ -81,14 +85,15 @@ const {
                     ...(attributeQuery.value ? { attribute: attributeQuery.value } : {}),
                     ...(selectedMinPrice.value !== null ? { min_price: selectedMinPrice.value } : {}),
                     ...(selectedMaxPrice.value !== null ? { max_price: selectedMaxPrice.value } : {}),
-                    ...(selectedSort.value !== 'popular' ? { sort: selectedSort.value } : {})
+                    ...(selectedSort.value !== 'popular' ? { sort: selectedSort.value } : {}),
+                    ...(searchTerm.value ? { q: searchTerm.value } : {})
                 }
             }
         )
     },
 
     {
-        watch: [categoryUrl, currentPage, brandQuery, attributeQuery, selectedMinPrice, selectedMaxPrice, selectedSort]
+        watch: [categoryUrl, currentPage, brandQuery, attributeQuery, selectedMinPrice, selectedMaxPrice, selectedSort, searchTerm]
     }
 )
 

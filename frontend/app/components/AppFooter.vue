@@ -1,7 +1,65 @@
 <script setup>
+const config = useRuntimeConfig()
 const { data } = await useCatalogMenu()
 const sections = computed(() => data.value?.categories ?? [])
 const mobileSectionId = section => `mobile-section-${section.id}`
+const mobileSearchText = ref('')
+const mobileSuggestions = ref([])
+const mobileSearching = ref(false)
+const mobileSearchOpen = ref(false)
+let mobileSearchTimer
+
+const money = value => `\u09F3${Number(value || 0).toLocaleString('en-BD', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+})}`
+
+const closeMobileMenu = () => {
+    mobileSearchOpen.value = false
+    document.querySelector('#menu [data-bs-dismiss="offcanvas"]')?.click()
+}
+
+watch(mobileSearchText, term => {
+    clearTimeout(mobileSearchTimer)
+    const query = term.trim()
+
+    if (query.length < 2) {
+        mobileSuggestions.value = []
+        mobileSearchOpen.value = false
+        mobileSearching.value = false
+        return
+    }
+
+    mobileSearchOpen.value = true
+    mobileSearching.value = true
+
+    mobileSearchTimer = setTimeout(async () => {
+        try {
+            const response = await $fetch('/search', {
+                baseURL: config.public.apiBase,
+                query: { q: query }
+            })
+            mobileSuggestions.value = response.products ?? []
+        } catch {
+            mobileSuggestions.value = []
+        } finally {
+            mobileSearching.value = false
+        }
+    }, 350)
+})
+
+const submitMobileSearch = () => {
+    const query = mobileSearchText.value.trim()
+
+    if (!query) {
+        return
+    }
+
+    navigateTo({ path: '/shop', query: { q: query } })
+    closeMobileMenu()
+}
+
+onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
 </script>
 
 <template>
@@ -32,8 +90,24 @@ const mobileSectionId = section => `mobile-section-${section.id}`
         <div class="mobile-menu-head"><NuxtLink class="mobile-menu-brand" to="/">NOVA<span>CART</span></NuxtLink><button
                 class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
         <div class="mobile-menu-body">
-      <form class="mobile-search" @submit.prevent="navigateTo('/shop')"><input type="search" placeholder="Search products here..."><button type="submit"
-                    aria-label="Search"><i class="bi bi-search"></i></button></form>
+      <form class="mobile-search" @submit.prevent="submitMobileSearch">
+                <input v-model="mobileSearchText" type="search" autocomplete="off" placeholder="Search products here..." aria-label="Search products">
+                <button type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+            </form>
+            <div v-if="mobileSearchOpen" class="mobile-search-results">
+                <div v-if="mobileSearching" class="mobile-search-message">Searching...</div>
+                <template v-else-if="mobileSuggestions.length">
+                    <NuxtLink v-for="product in mobileSuggestions" :key="product.id"
+                        :to="{ path: '/product', query: { id: product.id } }" class="mobile-search-result" @click="closeMobileMenu">
+                        <img v-if="product.image_url" :src="product.image_url" :alt="product.name">
+                        <span v-else class="mobile-search-image"><i class="bi bi-image"></i></span>
+                        <span><small>{{ product.category_name }}</small><strong>{{ product.name }}</strong></span>
+                        <b>{{ money(product.final_price) }}</b>
+                    </NuxtLink>
+                    <button class="mobile-search-all" type="button" @click="submitMobileSearch">View all results <i class="bi bi-arrow-right"></i></button>
+                </template>
+                <div v-else class="mobile-search-message">No matching products found.</div>
+            </div>
             <div class="mobile-quick"><NuxtLink to="/login"><i class="bi bi-person"></i><span>Account</span></NuxtLink><NuxtLink
                     to="/wishlist"><i class="bi bi-heart"></i><span>Wishlist</span></NuxtLink><NuxtLink to="/cart"><i
                         class="bi bi-cart3"></i><span>Cart</span></NuxtLink></div>
@@ -115,4 +189,10 @@ const mobileSectionId = section => `mobile-section-${section.id}`
 
 <style scoped>
 .mobile-nav-group>button span img{width:20px;height:20px;margin-right:1px;border-radius:4px;object-fit:cover}
+.mobile-search-results{max-height:260px;margin:-10px 0 14px;overflow-y:auto;border:1px solid #e5e9e7;border-radius:6px;background:#fff;box-shadow:0 10px 25px rgba(20,35,29,.12)}
+.mobile-search-result{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:9px;align-items:center;padding:8px;border-bottom:1px solid #eef1ef;color:#17211d;text-decoration:none}
+.mobile-search-result img,.mobile-search-image{width:42px;height:42px;object-fit:contain;border-radius:4px;background:#f4f6f5}
+.mobile-search-image{display:grid;place-items:center}
+.mobile-search-result small,.mobile-search-result strong{display:block}.mobile-search-result small{color:#919a96;font-size:.58rem}.mobile-search-result strong{overflow:hidden;font-size:.68rem;text-overflow:ellipsis;white-space:nowrap}.mobile-search-result b{color:#ff5a3c;font-size:.64rem;white-space:nowrap}
+.mobile-search-message{padding:18px;text-align:center;color:#7d8782;font-size:.68rem}.mobile-search-all{width:100%;padding:10px;border:0;background:#f5f8f6;color:#17211d;font-size:.65rem;font-weight:700}
 </style>

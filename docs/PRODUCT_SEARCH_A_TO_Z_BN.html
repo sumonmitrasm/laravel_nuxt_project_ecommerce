@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Product Search System — A to Z বাংলা গাইড</title>
+  <style>
+    :root{--ink:#17221e;--brand:#ff5948;--green:#12362b;--soft:#f4f7f5;--line:#dce5e0;--code:#101c18;--blue:#eaf3ff}
+    *{box-sizing:border-box} body{margin:0;background:#eef3f0;color:var(--ink);font:16px/1.7 system-ui,"Noto Sans Bengali",sans-serif}
+    .page{max-width:1120px;margin:32px auto;background:#fff;border-radius:18px;box-shadow:0 18px 55px #193b2b18;overflow:hidden}
+    header{padding:54px 58px;background:linear-gradient(135deg,#102b23,#194d3d);color:#fff} header small{color:#ff9b91;font-weight:800;letter-spacing:.12em}
+    h1{font-size:42px;line-height:1.15;margin:10px 0} header p{max-width:760px;color:#dcebe5;margin:0}
+    main{padding:42px 58px 65px} h2{margin:48px 0 16px;border-bottom:2px solid var(--line);padding-bottom:8px;color:var(--green)}
+    h3{margin-top:28px}.lead,.note,.warn{padding:16px 19px;border-radius:10px;margin:18px 0}.lead{background:var(--soft);border-left:5px solid var(--green)}
+    .note{background:var(--blue);border-left:5px solid #3b82f6}.warn{background:#fff7e7;border-left:5px solid #f59e0b}
+    nav{padding:20px 24px;background:#f7faf8;border:1px solid var(--line);border-radius:12px} nav a{display:inline-block;margin:4px 14px 4px 0;color:#145e49;text-decoration:none;font-weight:700}
+    code{font-family:Consolas,monospace} :not(pre)>code{background:#edf2ef;padding:2px 6px;border-radius:5px;color:#b52b20}
+    .code{position:relative;margin:14px 0 25px}.code-label{background:#263b34;color:#d8e9e2;padding:7px 13px;border-radius:9px 9px 0 0;font-size:13px}
+    pre{margin:0;padding:20px;background:var(--code);color:#def7ec;overflow:auto;border-radius:0 0 9px 9px;line-height:1.55;font-size:13px;white-space:pre}
+    .copy{position:absolute;right:10px;top:8px;border:0;border-radius:6px;padding:5px 10px;cursor:pointer;background:#fff;color:#17392e}
+    table{width:100%;border-collapse:collapse;margin:15px 0}th,td{padding:11px;border:1px solid var(--line);text-align:left;vertical-align:top}th{background:#edf4f0}
+    .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:center}.flow div{background:var(--soft);padding:12px;text-align:center;border-radius:8px;font-weight:700}.flow span{text-align:center;color:var(--brand);font-size:22px}
+    ul,ol{padding-left:24px} footer{padding:22px 58px;background:#102b23;color:#dcebe5}@media(max-width:750px){.page{margin:0;border-radius:0}header,main,footer{padding:28px 20px}h1{font-size:30px}.flow{display:block}.flow span{display:block;transform:rotate(90deg)}}
+  </style>
+</head>
+<body><article class="page">
+<header><small>AJKERPROSONGO ECOMMERCE</small><h1>Product Search System — A to Z</h1><p>Laravel API + Nuxt 3 desktop header + account/shop header + mobile menu + পূর্ণ Shop result—বর্তমান project-এর সম্পূর্ণ বাংলা documentation।</p></header>
+<main>
+  <div class="lead"><strong>শেষ ফলাফল:</strong> Customer ২ বা তার বেশি অক্ষর লিখলে 350ms পরে সর্বোচ্চ ৬টি live suggestion পায়। Enter/Search/View all দিলে URL হয় <code>/shop?q=লেখা</code>; Shop page সেই query দিয়ে backend থেকে paginated result আনে।</div>
+  <nav><strong>সূচিপত্র:</strong><br><a href="#flow">১. Flow</a><a href="#files">২. Files</a><a href="#backend">৩. Laravel</a><a href="#home">৪. Home desktop</a><a href="#quick">৫. Account/Shop</a><a href="#mobile">৬. Mobile</a><a href="#shop">৭. Shop result</a><a href="#style">৮. CSS</a><a href="#security">৯. Security</a><a href="#test">১০. Test</a></nav>
+
+  <h2 id="flow">১. Search কীভাবে কাজ করে</h2>
+  <div class="flow"><div>User লেখে</div><span>→</span><div>350ms অপেক্ষা</div><span>→</span><div>GET /api/search?q=t-shirt</div><span>→</span><div>Laravel DB query</div><span>→</span><div>Suggestion দেখায়</div></div>
+  <ol><li><code>v-model</code> input-এর লেখা reactive variable-এ রাখে।</li><li><code>watch()</code> লেখা বদলানো ধরে।</li><li>২ অক্ষরের কম হলে request যায় না।</li><li><code>setTimeout(..., 350)</code> দ্রুত typing থামা পর্যন্ত অপেক্ষা করে—এটাই debounce।</li><li>API product name, code, brand ও category-তে match খোঁজে।</li><li>Suggestion click করলে product page; submit করলে Shop result page।</li></ol>
+
+  <h2 id="files">২. কোন file কী কাজ করে</h2>
+  <table><tr><th>File</th><th>দায়িত্ব</th></tr>
+    <tr><td><code>adminpanel/routes/api.php</code></td><td>Search API URL তৈরি করে</td></tr>
+    <tr><td><code>adminpanel/app/Http/Controllers/Api/FrontController.php</code></td><td>Validation, database search, JSON result</td></tr>
+    <tr><td><code>frontend/nuxt.config.ts</code></td><td>Laravel API base URL</td></tr>
+    <tr><td><code>frontend/app/components/HomeHeader.vue</code></td><td>Homepage desktop search + category</td></tr>
+    <tr><td><code>frontend/app/components/AppHeader.vue</code></td><td>Account/Shop pages-এর icon search</td></tr>
+    <tr><td><code>frontend/app/components/AppFooter.vue</code></td><td>Mobile offcanvas search</td></tr>
+    <tr><td><code>frontend/app/pages/shop.vue</code></td><td>URL-এর <code>q</code> পড়ে পূর্ণ result দেখায়</td></tr>
+    <tr><td><code>frontend/public/assets/css/style.css</code></td><td>সব search dropdown-এর design</td></tr>
+  </table>
+
+  <h2 id="backend">৩. Laravel backend</h2>
+  <h3>Step 3.1 — API route</h3>
+  <div class="code"><div class="code-label">adminpanel/routes/api.php</div><button class="copy">Copy</button><pre><code>Route::get('/search', [FrontController::class, 'search'])
+    ->middleware('throttle:60,1')
+    ->name('api.search');</code></pre></div>
+  <p><code>GET</code> কারণ search শুধু data পড়ে। <code>throttle:60,1</code> মানে একই client প্রতি ১ মিনিটে সর্বোচ্চ ৬০টি request দিতে পারবে। এটি bot/abuse কমায়। সাধারণ customer-এর typing-এ 350ms debounce থাকায় limit সমস্যা হওয়ার কথা নয়।</p>
+
+  <h3>Step 3.2 — Live suggestion method</h3>
+  <div class="code"><div class="code-label">FrontController.php</div><button class="copy">Copy</button><pre><code>public function search(Request $request): JsonResponse
+{
+    $term = trim((string) $request->query('q', ''));
+
+    if (mb_strlen($term) &lt; 2) {
+        return response()->json(['status' =&gt; true, 'products' =&gt; []]);
+    }
+
+    $products = Product::query()
+        -&gt;with([
+            'category:id,category_name,category_discount',
+            'variants' =&gt; fn ($query) =&gt; $query-&gt;where('status', true)
+                -&gt;select('id', 'product_id', 'price', 'stock'),
+        ])
+        -&gt;where('status', true)
+        -&gt;when($request-&gt;query('category'), fn ($query, $category) =&gt;
+            $query-&gt;whereHas('category', fn ($categoryQuery) =&gt;
+                $categoryQuery-&gt;where('url', $category)))
+        -&gt;where(fn ($query) =&gt; $this-&gt;applySearch($query, $term))
+        -&gt;limit(6)
+        -&gt;get();
+
+    return response()-&gt;json([
+        'status' =&gt; true,
+        'products' =&gt; $this-&gt;productCards($products, ''),
+    ]);
+}</code></pre></div>
+  <p><code>status=true</code> শুধু active product আনে। <code>limit(6)</code> dropdown ছোট ও দ্রুত রাখে। <code>with()</code> related data একসাথে আনে, তাই অপ্রয়োজনীয় extra query কমে।</p>
+
+  <h3>Step 3.3 — Reusable matching query</h3>
+  <div class="code"><div class="code-label">FrontController.php</div><button class="copy">Copy</button><pre><code>private function applySearch($query, string $term): void
+{
+    $query-&gt;where(function ($search) use ($term) {
+        $search-&gt;where('product_name', 'like', "%{$term}%")
+            -&gt;orWhere('product_code', 'like', "%{$term}%")
+            -&gt;orWhereHas('brand', fn ($brand) =&gt;
+                $brand-&gt;where('name', 'like', "%{$term}%"))
+            -&gt;orWhereHas('category', fn ($category) =&gt;
+                $category-&gt;where('category_name', 'like', "%{$term}%"));
+    });
+}</code></pre></div>
+  <div class="note"><strong>কেন আলাদা function?</strong> Live suggestion, all products এবং category listing—তিন জায়গায় একই matching rule ব্যবহার হয়। Rule বদলাতে তাই শুধু এক জায়গা edit করতে হবে।</div>
+
+  <h2 id="home">৪. Homepage desktop search</h2>
+  <div class="code"><div class="code-label">HomeHeader.vue — সহজ logic</div><button class="copy">Copy</button><pre><code>const config = useRuntimeConfig()
+const searchText = ref('')
+const selectedCategory = ref('')
+const suggestions = ref([])
+const searching = ref(false)
+const showSuggestions = ref(false)
+let searchTimer
+
+watch([searchText, selectedCategory], ([term]) =&gt; {
+    clearTimeout(searchTimer)
+    const query = term.trim()
+
+    if (query.length &lt; 2) {
+        suggestions.value = []
+        searching.value = false
+        return
+    }
+
+    searching.value = true
+    searchTimer = setTimeout(async () =&gt; {
+        const params = { q: query }
+        if (selectedCategory.value) params.category = selectedCategory.value
+
+        try {
+            const response = await $fetch('/search', {
+                baseURL: config.public.apiBase,
+                query: params
+            })
+            suggestions.value = response.products ?? []
+            showSuggestions.value = true
+        } catch {
+            suggestions.value = []
+        } finally {
+            searching.value = false
+        }
+    }, 350)
+})
+
+const submitSearch = () =&gt; {
+    const params = {}
+    const query = searchText.value.trim()
+    if (query) params.q = query
+    if (selectedCategory.value) params.category = selectedCategory.value
+    showSuggestions.value = false
+    navigateTo({ path: '/shop', query: params })
+}
+
+onBeforeUnmount(() =&gt; clearTimeout(searchTimer))</code></pre></div>
+  <p><code>clearTimeout()</code> আগের pending request বাতিল করে। <code>onBeforeUnmount()</code> component বন্ধ হলে timer পরিষ্কার করে। <code>finally</code> success/error দুই ক্ষেত্রেই loading বন্ধ করে।</p>
+
+  <h2 id="quick">৫. Account/Shop desktop icon search</h2>
+  <div class="code"><div class="code-label">AppHeader.vue — script-এর মূল অংশ</div><button class="copy">Copy</button><pre><code>const router = useRouter()
+const config = useRuntimeConfig()
+const searchOpen = ref(false)
+const searchText = ref('')
+const suggestions = ref([])
+const searching = ref(false)
+let searchTimer
+
+watch(searchText, term =&gt; {
+    clearTimeout(searchTimer)
+    const query = term.trim()
+
+    if (query.length &lt; 2) {
+        suggestions.value = []
+        searching.value = false
+        return
+    }
+
+    searching.value = true
+    searchTimer = setTimeout(async () =&gt; {
+        try {
+            const response = await $fetch('/search', {
+                baseURL: config.public.apiBase,
+                query: { q: query }
+            })
+            suggestions.value = response.products ?? []
+        } catch {
+            suggestions.value = []
+        } finally {
+            searching.value = false
+        }
+    }, 350)
+})
+
+const submitSearch = () =&gt; {
+    const query = searchText.value.trim()
+    if (!query) return
+    searchOpen.value = false
+    router.push({ path: '/shop', query: { q: query } })
+}</code></pre></div>
+  <div class="code"><div class="code-label">AppHeader.vue — template</div><button class="copy">Copy</button><pre><code>&lt;button class="nav-icon" type="button" @click="searchOpen = !searchOpen"&gt;
+  &lt;i class="bi" :class="searchOpen ? 'bi-x-lg' : 'bi-search'"&gt;&lt;/i&gt;
+&lt;/button&gt;
+
+&lt;div v-if="searchOpen" class="header-quick-search-panel"&gt;
+  &lt;form class="header-quick-search-form" @submit.prevent="submitSearch"&gt;
+    &lt;input v-model="searchText" type="search" autocomplete="off"
+      placeholder="What are you looking for?"&gt;
+    &lt;button type="submit"&gt;&lt;i class="bi bi-search"&gt;&lt;/i&gt;&lt;/button&gt;
+  &lt;/form&gt;
+
+  &lt;div v-if="searchText.trim().length &gt;= 2" class="header-quick-results"&gt;
+    &lt;div v-if="searching" class="header-quick-message"&gt;Searching...&lt;/div&gt;
+    &lt;template v-else-if="suggestions.length"&gt;
+      &lt;NuxtLink v-for="product in suggestions" :key="product.id"
+        :to="{ path: '/product', query: { id: product.id } }"
+        class="header-quick-result" @click="searchOpen = false"&gt;
+        &lt;img v-if="product.image_url" :src="product.image_url" :alt="product.name"&gt;
+        &lt;span&gt;&lt;small&gt;{{ product.category_name }}&lt;/small&gt;
+          &lt;strong&gt;{{ product.name }}&lt;/strong&gt;&lt;/span&gt;
+        &lt;b&gt;{{ money(product.final_price) }}&lt;/b&gt;
+      &lt;/NuxtLink&gt;
+      &lt;button class="header-quick-all" type="button" @click="submitSearch"&gt;
+        View all results →
+      &lt;/button&gt;
+    &lt;/template&gt;
+    &lt;div v-else class="header-quick-message"&gt;No matching products found.&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre></div>
+
+  <h2 id="mobile">৬. Mobile menu search</h2>
+  <p>Mobile search একই `/api/search` endpoint ব্যবহার করে। শুধু variable-এর নাম <code>mobileSearchText</code>, <code>mobileSuggestions</code> ইত্যাদি—যাতে desktop component-এর সঙ্গে conflict না হয়।</p>
+  <div class="code"><div class="code-label">AppFooter.vue — submit</div><button class="copy">Copy</button><pre><code>const submitMobileSearch = () =&gt; {
+    const query = mobileSearchText.value.trim()
+    if (!query) return
+
+    navigateTo({ path: '/shop', query: { q: query } })
+    closeMobileMenu()
+}
+
+const closeMobileMenu = () =&gt; {
+    mobileSearchOpen.value = false
+    document.querySelector('#menu [data-bs-dismiss="offcanvas"]')?.click()
+}</code></pre></div>
+  <p>Result আসার জন্য mobile template-এ input form-এর ঠিক পরেই <code>mobile-search-results</code> রাখতে হবে। Parent container-এ এমন <code>overflow:hidden</code> দেওয়া যাবে না যাতে dropdown কেটে যায়।</p>
+
+  <h2 id="shop">৭. Shop page-এ সম্পূর্ণ result</h2>
+  <div class="code"><div class="code-label">shop.vue</div><button class="copy">Copy</button><pre><code>const route = useRoute()
+
+const searchTerm = computed(() =&gt; {
+    const value = Array.isArray(route.query.q)
+        ? route.query.q[0]
+        : route.query.q
+
+    return value?.toString().trim() ?? ''
+})
+
+const { data } = await useAsyncData(
+    'shop-products',
+    () =&gt; $fetch('/products', {
+        baseURL: config.public.apiBase,
+        query: {
+            page: currentPage.value,
+            q: searchTerm.value || undefined
+        }
+    }),
+    { watch: [currentPage, searchTerm] }
+)</code></pre></div>
+  <p>URL <code>/shop?q=t-shirt</code> হলে <code>route.query.q</code> থেকে “t-shirt” পাওয়া যায়। <code>watch: [searchTerm]</code> থাকার কারণে SPA navigation-এ page reload ছাড়াই নতুন result fetch হয়। Backend-এর <code>products()</code> method একই <code>applySearch()</code> ব্যবহার করে এবং প্রতি page-এ ৮টি product দেয়।</p>
+  <div class="note"><strong>দুই endpoint কেন?</strong> <code>/search</code> দ্রুত dropdown-এর সর্বোচ্চ ৬টি result। <code>/products</code> হচ্ছে filter, sort ও pagination-সহ পূর্ণ Shop listing।</div>
+
+  <h2 id="style">৮. গুরুত্বপূর্ণ CSS design</h2>
+  <div class="code"><div class="code-label">style.css — Account/Shop panel</div><button class="copy">Copy</button><pre><code>.header-quick-search-panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: 0;
+  width: 410px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e1e7e4;
+  border-radius: 10px;
+  box-shadow: 0 18px 45px rgba(20, 45, 36, .16);
+  z-index: 1050;
+}
+.header-quick-results { max-height: 350px; overflow-y: auto; }
+.header-quick-result {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  text-decoration: none;
+}
+.header-quick-result:hover { background: #f4f7f5; }
+@media (max-width: 575.98px) {
+  .header-quick-search-panel { width: min(360px, calc(100vw - 24px)); }
+}</code></pre></div>
+
+  <h2 id="security">৯. Security ও performance</h2>
+  <ul><li>Search হলো read-only <code>GET</code>; তাই CSRF/XSRF token লাগে না।</li><li>Eloquent query binding ব্যবহার করায় raw SQL injection-এর ঝুঁকি এড়ানো হয়েছে।</li><li>২ অক্ষরের minimum check frontend ও backend—দুই জায়গাতেই আছে।</li><li><code>throttle:60,1</code> abusive request সীমিত করে।</li><li><code>limit(6)</code> live dropdown দ্রুত রাখে; পূর্ণ result pagination ব্যবহার করে।</li><li>শুধু active product এবং active variant নেওয়া হয়।</li><li>Production-এ <code>nuxt.config.ts</code>-এ hard-coded localhost না রেখে environment variable ব্যবহার করা ভালো।</li></ul>
+
+  <h2 id="test">১০. Run ও test checklist</h2>
+  <div class="code"><div class="code-label">Terminal commands</div><button class="copy">Copy</button><pre><code>cd adminpanel
+php artisan optimize:clear
+php artisan route:list --path=search
+php artisan serve
+
+cd frontend
+npm run dev
+npm run build</code></pre></div>
+  <ol><li>Browser-এ <code>http://127.0.0.1:8000/api/search?q=t-shirt</code> খুলে JSON দেখুন।</li><li>১ অক্ষরে dropdown না আসা এবং ২ অক্ষরে আসা পরীক্ষা করুন।</li><li>Product name, product code, brand এবং category লিখে আলাদাভাবে test করুন।</li><li>Suggestion click করে সঠিক product ID খুলছে কি না দেখুন।</li><li>Enter ও “View all results” click-এ <code>/shop?q=...</code> হচ্ছে কি না দেখুন।</li><li>Home desktop, Account/Shop header এবং mobile offcanvas—তিন জায়গা পরীক্ষা করুন।</li><li>কিছু না পেলে “No matching products found” দেখায় কি না দেখুন।</li><li>শেষে <code>npm run build</code> সফল হওয়া নিশ্চিত করুন।</li></ol>
+  <h3>Common সমস্যা</h3>
+  <table><tr><th>সমস্যা</th><th>সমাধান</th></tr><tr><td>404</td><td><code>apiBase</code> এবং Laravel route দেখুন</td></tr><tr><td>CORS error</td><td>Laravel CORS-এ Nuxt origin অনুমোদিত কিনা দেখুন</td></tr><tr><td>Desktop কাজ করে, mobile করে না</td><td>Mobile input-এ <code>v-model="mobileSearchText"</code> এবং result block আছে কিনা দেখুন</td></tr><tr><td>Result আছে কিন্তু dropdown দেখা যায় না</td><td><code>z-index</code>, parent <code>position</code> ও <code>overflow</code> পরীক্ষা করুন</td></tr><tr><td>429 Too Many Requests</td><td>অতিরিক্ত request হচ্ছে; debounce চালু আছে কিনা দেখুন অথবা কিছুক্ষণ অপেক্ষা করুন</td></tr><tr><td>পুরনো CSS দেখা যায়</td><td><code>Ctrl+F5</code> এবং Nuxt restart করুন</td></tr></table>
+  <div class="warn"><strong>পরিবর্তনের নিয়ম:</strong> Search matching field বদলাতে <code>applySearch()</code>; suggestion সংখ্যা বদলাতে <code>limit(6)</code>; typing delay বদলাতে frontend-এর <code>350</code>; Shop page size বদলাতে backend-এর <code>paginate(8)</code> edit করবেন।</div>
+</main>
+<footer>এই document বর্তমান Laravel + Nuxt project-এর search code অনুযায়ী প্রস্তুত করা হয়েছে।</footer>
+</article>
+<script>document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',async()=>{const t=b.parentElement.querySelector('code').innerText;await navigator.clipboard.writeText(t);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1200)}));</script>
+</body></html>

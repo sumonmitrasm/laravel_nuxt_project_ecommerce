@@ -167,6 +167,32 @@ class FrontController extends Controller
             ];
         })->values()->all();
     }
+    public function search(Request $request): JsonResponse
+    {
+        $term = trim((string) $request->query('q', ''));
+
+        if (mb_strlen($term) < 2) {
+            return response()->json(['status' => true, 'products' => []]);
+        }
+
+        $products = Product::query()
+            ->with([
+                'category:id,category_name,category_discount',
+                'variants' => fn ($query) => $query->where('status', true)
+                    ->select('id', 'product_id', 'price', 'stock'),
+            ])
+            ->where('status', true)
+            ->when($request->query('category'), fn ($query, $category) =>
+                $query->whereHas('category', fn ($categoryQuery) => $categoryQuery->where('url', $category)))
+            ->where(fn ($query) => $this->applySearch($query, $term))
+            ->limit(6)
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'products' => $this->productCards($products, ''),
+        ]);
+    }
     public function listing(Request $request, string $url): JsonResponse
     {
         $categoryDetails = Category::categoryDetails($url);
@@ -192,6 +218,7 @@ class FrontController extends Controller
             ->whereIn('category_id', $categoryDetails['catIds'])
             ->where('status', true)
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
+            ->when(trim((string) $request->query('q', '')), fn ($query, $term) => $this->applySearch($query, $term))
             ->when($attributeValueGroups !== [], function ($query) use ($attributeValueGroups) {
                 foreach ($attributeValueGroups as $valueIds) {
                     $query->where(function ($attributeQuery) use ($valueIds) {
@@ -235,6 +262,7 @@ class FrontController extends Controller
         ])
             ->where('status', true)
             ->when($brandIds !== [], fn ($query) => $query->whereIn('brand_id', $brandIds))
+            ->when(trim((string) $request->query('q', '')), fn ($query, $term) => $this->applySearch($query, $term))
             ->when($priceRange !== [], fn ($query) => $this->applyPriceFilter($query, $priceRange))
             ->tap(fn ($query) => $this->applySorting($query, $sort))
             ->paginate(8)
@@ -256,6 +284,15 @@ class FrontController extends Controller
         ], 200);
     }
 
+    private function applySearch($query, string $term): void
+    {
+        $query->where(function ($search) use ($term) {
+            $search->where('product_name', 'like', "%{$term}%")
+                ->orWhere('product_code', 'like', "%{$term}%")
+                ->orWhereHas('brand', fn ($brand) => $brand->where('name', 'like', "%{$term}%"))
+                ->orWhereHas('category', fn ($category) => $category->where('category_name', 'like', "%{$term}%"));
+        });
+    }
     private function selectedBrandIds(Request $request): array
     {
         $brands = $request->query('brand', '');
