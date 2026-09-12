@@ -6759,3 +6759,79 @@ body {
     width: 100%;
     height: 100%;
 }
+/* Keep dynamic Trending badges readable */
+.smart-picks-section .smart-badge {
+    width: auto;
+    min-width: 58px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-size: .52rem;
+    line-height: 1;
+}
+/* Refined Trending promo card */
+.trending-promo {
+    min-height: 400px;
+    padding: 28px 24px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: linear-gradient(145deg, #10251f 0%, #19372e 100%);
+}
+
+.trending-promo-copy {
+    position: relative;
+    z-index: 1;
+}
+
+.trending-promo-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 24px;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255, 91, 75, .16);
+    color: #ff6b5b;
+    font-size: 1.15rem;
+}
+
+.trending-promo small {
+    color: #9fc2b5;
+    font-size: .68rem;
+    font-weight: 700;
+}
+
+.trending-promo h3 {
+    max-width: 100%;
+    margin: 12px 0 14px;
+    font-size: 1.35rem;
+    line-height: 1.25;
+    letter-spacing: -.02em;
+}
+
+.trending-promo p {
+    max-width: 100%;
+    margin: 0;
+    color: #bdd0c9;
+    font-size: .8rem;
+    line-height: 1.65;
+}
+
+.trending-promo a {
+    margin: 0 -24px -28px;
+    padding: 15px 24px;
+    background: #ff5b4b;
+    letter-spacing: .03em;
+}
+
+.trending-promo::after {
+    right: -88px;
+    bottom: 52px;
+    opacity: .65;
+}
+
+@media(max-width:767.98px) {
+    .trending-promo {
+        min-height: 260px;
+    }
+}

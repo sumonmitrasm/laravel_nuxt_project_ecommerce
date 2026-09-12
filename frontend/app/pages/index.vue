@@ -4,7 +4,7 @@ definePageMeta({
 })
 
 const activeDealFilter = ref('all')
-const activeTrendingFilter = ref('all')
+const activeTrendingFilter = ref('featured')
 const { data, pending, error } = await useCatalogMenu()
 const pageSeo = computed(() => data.value?.seo)
 
@@ -13,6 +13,8 @@ usePageSeo(pageSeo)
 const sections = computed(() => data.value?.categories ?? [])
 const sliders = computed(() => data.value?.sliders ?? [])
 const hotDeals = computed(() => data.value?.hot_deals ?? [])
+const trendingGroups = computed(() => data.value?.trending_products ?? {})
+const trendingProducts = computed(() => trendingGroups.value[activeTrendingFilter.value] ?? [])
 const dealCategories = computed(() => {
   const categories = new Map()
   hotDeals.value.forEach(product => categories.set(product.category_id, product.category_name))
@@ -351,77 +353,37 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
         <section class="container py-5 smart-picks-section">
             <div class="d-flex justify-content-between align-items-end mb-4 smart-picks-heading">
                 <div>
-                    <div class="eyebrow">This week’s favourites</div>
+                    <div class="eyebrow">Popular choices</div>
                     <h2 class="section-title">Trending Products</h2>
                 </div>
-                <div class="trending-tabs"><button :class="{ active: activeTrendingFilter === 'all' }" type="button" @click="activeTrendingFilter = 'all'">Top
-                        Rated</button><button :class="{ active: activeTrendingFilter === 'selling' }" type="button" @click="activeTrendingFilter = 'selling'">Best Selling</button><button
-                        :class="{ active: activeTrendingFilter === 'sale' }" type="button" @click="activeTrendingFilter = 'sale'">On Sale</button></div>
+                <div class="trending-tabs" role="tablist" aria-label="Trending products">
+                    <button type="button" :class="{ active: activeTrendingFilter === 'featured' }" @click="activeTrendingFilter = 'featured'">Featured</button>
+                    <button type="button" :class="{ active: activeTrendingFilter === 'best_selling' }" @click="activeTrendingFilter = 'best_selling'">Best Selling</button>
+                    <button type="button" :class="{ active: activeTrendingFilter === 'on_sale' }" @click="activeTrendingFilter = 'on_sale'">On Sale</button>
+                </div>
             </div>
             <div class="row g-3" id="products">
                 <div class="trending-promo">
-                    <div><small>Smart technology</small>
-                        <h3>Your everyday essentials, upgraded.</h3>
-                        <p>Selected devices at prices worth discovering.</p>
-                    </div><NuxtLink to="/shop">Shop now <i class="bi bi-arrow-right"></i></NuxtLink>
+                    <div class="trending-promo-copy"><span class="trending-promo-icon"><i class="bi bi-stars"></i></span><small>Trending now</small><h3>Popular picks at better prices.</h3><p>Explore products customers are choosing today.</p></div>
+                    <NuxtLink to="/shop">Explore products <i class="bi bi-arrow-right"></i></NuxtLink>
                 </div>
-                <div class="col-6 col-lg-3" :class="{ 'trending-muted': activeTrendingFilter !== 'all' && activeTrendingFilter !== 'selling' }">
-                    <div class="product-card card h-100 p-2"><NuxtLink to="/product" class="product-media"><img
-                                src="/assets/images/product-1.svg" alt="Wireless headphones"><span
-                                class="smart-badge">Best seller</span><button class="smart-wishlist" type="button"
-                                aria-label="Add to wishlist"><i class="bi bi-heart"></i></button></NuxtLink>
-                        <div class="card-body">
-                            <div class="smart-rating"><span>★★★★★</span><small> 4.8</small></div><small
-                                class="text-secondary">Audio</small>
-                            <h6 class="mt-1"><NuxtLink class="text-dark text-decoration-none" to="/product">Pulse
-                                    Wireless Headphones</NuxtLink></h6>
-                            <div><span class="price">৳8,490</span> <span class="old-price">৳9,900</span></div><button
-                                class="btn btn-dark w-100 mt-3" data-toast="Added to cart">Add to cart</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3" :class="{ 'trending-muted': activeTrendingFilter !== 'all' && activeTrendingFilter !== 'sale' }">
+                <div v-for="product in trendingProducts" :key="product.id" class="col-6 col-lg-3">
                     <div class="product-card card h-100 p-2">
-                        <div class="product-media"><img src="/assets/images/product-2.svg" alt="Smartwatch"><span
-                                class="smart-badge">Popular</span><button class="smart-wishlist" type="button"
-                                aria-label="Add to wishlist"><i class="bi bi-heart"></i></button></div>
-                        <div class="card-body">
-                            <div class="smart-rating"><span>★★★★★</span><small> 4.8</small></div><small
-                                class="text-secondary">Wearables</small>
-                            <h6 class="mt-1">Orbit Smart Watch S2</h6>
-                            <div><span class="price">৳6,990</span></div><button class="btn btn-dark w-100 mt-3"
-                                data-toast="Added to cart">Add to cart</button>
+                        <NuxtLink :to="{ path: '/product', query: { id: product.id } }" class="product-media">
+                            <img v-if="product.image_url" :src="product.image_url" :alt="product.name" loading="lazy">
+                            <span v-else class="category-api-placeholder"><i class="bi bi-image"></i></span>
+                            <span class="smart-badge">{{ product.badge }}</span>
+                        </NuxtLink>
+                        <div class="card-body d-flex flex-column">
+                            <small class="text-secondary">{{ product.category_name }}</small>
+                            <h6 class="mt-1"><NuxtLink class="text-dark text-decoration-none" :to="{ path: '/product', query: { id: product.id } }">{{ product.name }}</NuxtLink></h6>
+                            <div class="mt-auto"><span class="price">{{ money(product.final_price) }}</span> <span v-if="product.has_discount" class="old-price">{{ money(product.regular_price) }}</span></div>
+                            <NuxtLink v-if="product.in_stock" class="btn btn-dark w-100 mt-3" :to="{ path: '/product', query: { id: product.id } }">View product <i class="bi bi-arrow-right ms-1"></i></NuxtLink>
+                            <button v-else class="btn btn-secondary w-100 mt-3" type="button" disabled>Out of stock</button>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-lg-3" :class="{ 'trending-muted': activeTrendingFilter !== 'all' && activeTrendingFilter !== 'selling' }">
-                    <div class="product-card card h-100 p-2">
-                        <div class="product-media"><img src="/assets/images/product-3.svg" alt="Speaker"><span
-                                class="smart-badge">Popular</span><button class="smart-wishlist" type="button"
-                                aria-label="Add to wishlist"><i class="bi bi-heart"></i></button></div>
-                        <div class="card-body">
-                            <div class="smart-rating"><span>★★★★★</span><small> 4.8</small></div><small
-                                class="text-secondary">Audio</small>
-                            <h6 class="mt-1">Room Mini Speaker</h6>
-                            <div><span class="price">৳3,450</span></div><button class="btn btn-dark w-100 mt-3"
-                                data-toast="Added to cart">Add to cart</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3" :class="{ 'trending-muted': activeTrendingFilter !== 'all' }">
-                    <div class="product-card card h-100 p-2">
-                        <div class="product-media"><img src="/assets/images/product-4.svg" alt="Camera"><span
-                                class="smart-badge">New</span><button class="smart-wishlist" type="button"
-                                aria-label="Add to wishlist"><i class="bi bi-heart"></i></button></div>
-                        <div class="card-body">
-                            <div class="smart-rating"><span>★★★★★</span><small> 4.8</small></div><small
-                                class="text-secondary">Camera</small>
-                            <h6 class="mt-1">Pocket Action Camera</h6>
-                            <div><span class="price">৳14,800</span></div><button class="btn btn-dark w-100 mt-3"
-                                data-toast="Added to cart">Add to cart</button>
-                        </div>
-                    </div>
-                </div>
+                <div v-if="!pending && !trendingProducts.length" class="col trending-empty">No products found in this group.</div>
             </div>
         </section>
         <section class="more-products-section">
