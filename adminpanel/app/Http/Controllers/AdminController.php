@@ -39,6 +39,8 @@ class AdminController extends Controller
         $withinPeriod = fn ($query) => $query->when($from, fn ($query) => $query->whereBetween('placed_at', [$from, $to]));
         $todaySales = (float) $recognizedOrders()->whereBetween('placed_at', [$now->copy()->startOfDay(), $now->copy()->endOfDay()])->sum('grand_total');
         $periodSales = (float) $withinPeriod($recognizedOrders())->sum('grand_total');
+        $periodOrderCount = (int) $withinPeriod($recognizedOrders())->count();
+        $periodAverage = $periodOrderCount > 0 ? $periodSales / $periodOrderCount : 0;
         $statusCounts = $withinPeriod(Order::query())->selectRaw('order_status, COUNT(*) as total')->whereIn('order_status', ['pending', 'processing', 'shipped'])->groupBy('order_status')->pluck('total', 'order_status');
         $newCustomers = User::query()->when($from, fn ($query) => $query->whereBetween('created_at', [$from, $to]))->count();
         $recentOrders = $withinPeriod(Order::query())->with('user:id,name,email')->withCount('items')->latest('placed_at')->limit(8)->get();
@@ -50,7 +52,7 @@ class AdminController extends Controller
             $revenueChart = collect(range(0, 23))->map(fn ($hour) => ['label' => str_pad($hour, 2, '0', STR_PAD_LEFT).':00', 'revenue' => (float) ($rows[$hour] ?? 0)]);
         } elseif (in_array($period, ['7_days', 'month'], true)) {
             $rows = $recognizedOrders()->whereBetween('placed_at', [$from, $to])->selectRaw('DATE(placed_at) as chart_key, SUM(grand_total) as revenue')->groupByRaw('DATE(placed_at)')->pluck('revenue', 'chart_key');
-            $days = $from->copy()->startOfDay()->daysUntil($to->copy()->startOfDay()->addDay());
+            $days = $from->copy()->startOfDay()->daysUntil($to->copy()->startOfDay());
             $revenueChart = collect($days)->map(fn ($date) => ['label' => $date->format('d M'), 'revenue' => (float) ($rows[$date->format('Y-m-d')] ?? 0)]);
         } elseif ($period === 'year') {
             $rows = $recognizedOrders()->whereBetween('placed_at', [$from, $to])->selectRaw('MONTH(placed_at) as chart_key, SUM(grand_total) as revenue')->groupByRaw('MONTH(placed_at)')->pluck('revenue', 'chart_key');
@@ -64,7 +66,7 @@ class AdminController extends Controller
                 $query->where('orders.payment_status', 'paid')->orWhere(fn ($query) => $query->where('orders.payment_method', 'cod')->where('orders.order_status', 'delivered'));
             })->when($from, fn ($query) => $query->whereBetween('orders.placed_at', [$from, $to]))
             ->selectRaw('categories.id, categories.category_name, SUM(order_items.quantity) as units_sold, SUM(order_items.line_total) as product_sales')->groupBy('categories.id', 'categories.category_name')->orderByDesc('product_sales')->limit(6)->get();
-        return view('admin.dashboard', compact('period', 'periodLabel', 'todaySales', 'periodSales', 'statusCounts', 'newCustomers', 'recentOrders', 'lowStockProducts', 'lowStockCount', 'revenueChart', 'topCategories'));
+        return view('admin.dashboard', compact('period', 'periodLabel', 'todaySales', 'periodSales', 'periodOrderCount', 'periodAverage', 'statusCounts', 'newCustomers', 'recentOrders', 'lowStockProducts', 'lowStockCount', 'revenueChart', 'topCategories'));
     }
     public function login(Request $request)
     {
