@@ -12,7 +12,7 @@ class AdminNotificationController extends Controller
     {
         $notifications = AdminNotification::query()
             ->where('admin_id', Auth::guard('admin')->id())
-            ->with('order:id,order_number')
+            ->with(['order:id,order_number', 'variant:id,sku'])
             ->latest()->paginate(20);
 
         return view('admin.notification.index', ['title' => 'Notifications', 'notifications' => $notifications]);
@@ -25,7 +25,7 @@ class AdminNotificationController extends Controller
 
         return response()->json([
             'message' => 'Notification marked as read.',
-            'redirect_url' => $notification->order_id ? route('admin-orders.show', $notification->order_id) : route('admin-notifications.index'),
+            'redirect_url' => $notification->order_id ? route('admin-orders.show', $notification->order_id) : ($notification->product_variant_id ? route('inventory.index', ['search' => $notification->variant?->sku]) : route('admin-notifications.index')),
         ]);
     }
 

@@ -65,7 +65,8 @@ class AdminPermissionMiddleware
             'admin-brand.update', 'admin-brand.status' => ['brand', 'edit'],
             'admin-brand.delete' => ['brand', 'delete'],
 
-            'products', 'admin-product.show' => ['product', 'view'],
+            'products', 'admin-product.show', 'inventory.index' => ['product', 'view'],
+            'inventory.adjust' => ['product', 'edit'],
             'product-attributes' => ['attribute', 'view'],
             'product-attributes.store' => ['attribute', 'add'],
             'product-attributes.values.store' => ['attribute', 'edit'],
