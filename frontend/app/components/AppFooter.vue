@@ -19,6 +19,18 @@ const closeMobileMenu = () => {
     document.querySelector('#menu [data-bs-dismiss="offcanvas"]')?.click()
 }
 
+const handleMobileMenuClick = (event) => {
+    if (event.target instanceof Element && event.target.closest('a')) {
+        closeMobileMenu()
+    }
+}
+
+const handleCategoryMenuClick = (event) => {
+    if (event.target instanceof Element && event.target.closest('a')) {
+        document.querySelector('#categories [data-bs-dismiss="offcanvas"]')?.click()
+    }
+}
+
 watch(mobileSearchText, term => {
     clearTimeout(mobileSearchTimer)
     const query = term.trim()
@@ -86,7 +98,7 @@ onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
             </div>
         </div>
     </footer>
-    <div class="offcanvas offcanvas-start" id="menu">
+    <div class="offcanvas offcanvas-start" id="menu" @click="handleMobileMenuClick">
         <div class="mobile-menu-head"><NuxtLink class="mobile-menu-brand" to="/">NOVA<span>CART</span></NuxtLink><button
                 class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
         <div class="mobile-menu-body">
@@ -98,7 +110,7 @@ onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
                 <div v-if="mobileSearching" class="mobile-search-message">Searching...</div>
                 <template v-else-if="mobileSuggestions.length">
                     <NuxtLink v-for="product in mobileSuggestions" :key="product.id"
-                        :to="{ path: '/product', query: { id: product.id } }" class="mobile-search-result" @click="closeMobileMenu">
+                        :to="{ path: '/product', query: { id: product.id } }" class="mobile-search-result">
                         <img v-if="product.image_url" :src="product.image_url" :alt="product.name">
                         <span v-else class="mobile-search-image"><i class="bi bi-image"></i></span>
                         <span><small>{{ product.category_name }}</small><strong>{{ product.name }}</strong></span>
@@ -165,7 +177,7 @@ onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
             <div><small>Need help?</small><strong>Customer support</strong></div>
         </div>
     </div>
-    <div class="offcanvas offcanvas-start" id="categories">
+    <div class="offcanvas offcanvas-start" id="categories" @click="handleCategoryMenuClick">
         <div class="offcanvas-header">
             <h5>Categories</h5><button class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
