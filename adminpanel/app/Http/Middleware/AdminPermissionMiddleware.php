@@ -57,6 +57,10 @@ class AdminPermissionMiddleware
             'admin-setting.update', 'admin-setting.status' => ['setting', 'edit'],
             'admin-setting.delete' => ['setting', 'delete'],
 
+            'blogs', 'admin-blog.show' => ['blog', 'view'],
+            'admin-blog.store' => ['blog', 'add'],
+            'admin-blog.update', 'admin-blog.status' => ['blog', 'edit'],
+            'admin-blog.delete' => ['blog', 'delete'],
             'tags', 'admin-tag.show' => ['tag', 'view'],
             'admin-tag.store' => ['tag', 'add'],
             'admin-tag.update', 'admin-tag.status' => ['tag', 'edit'],

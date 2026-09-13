@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Tag extends Model
 {
@@ -15,4 +16,8 @@ class Tag extends Model
     protected $casts = [
         'status' => 'boolean',
     ];
-}
+
+    public function blogs(): BelongsToMany
+    {
+        return $this->belongsToMany(Blog::class);
+    }}

@@ -13,13 +13,7 @@
                 ></NuxtLink>
             </div>
         </section>
-        <div class="blog-topic-bar">
-            <div class="container">
-                <NuxtLink class="active" to="/blog">All stories</NuxtLink><NuxtLink to="/tags#technology">Technology</NuxtLink
-                ><NuxtLink to="/tags#home">Home &amp; Living</NuxtLink><NuxtLink to="/tags#style">Style</NuxtLink
-                ><NuxtLink to="/tags#guides">Buying guides</NuxtLink>
-            </div>
-        </div>
+       
         <section class="container blog-content" id="latest">
             <div class="blog-section-head">
                 <div>
@@ -86,22 +80,6 @@
                 ><NuxtLink to="/blog?page=2" aria-label="Next page"><i class="bi bi-arrow-right"></i></NuxtLink>
             </nav>
         </section>
-        <section class="blog-newsletter">
-            <div class="container">
-                <div>
-                    <span>THE WEEKLY EDIT</span>
-                    <h2>Good ideas, delivered.</h2>
-                    <p>A concise edit of products, guides and inspiration. No clutter.</p>
-                </div>
-                <form>
-                    <label class="visually-hidden" for="blogEmail">Email address</label
-                    ><input id="blogEmail" type="email" placeholder="Your email address" required /><button
-                        type="submit"
-                    >
-                        Subscribe <i class="bi bi-arrow-right"></i>
-                    </button>
-                </form>
-            </div>
-        </section>
+        
     </main>
 </template>
