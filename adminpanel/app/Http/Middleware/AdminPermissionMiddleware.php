@@ -50,6 +50,8 @@ class AdminPermissionMiddleware
             'admin-category.update', 'admin-category.status' => ['category', 'edit'],
             'admin-category.delete' => ['category', 'delete'],
 
+            'admin-about.edit' => ['setting', 'view'],
+            'admin-about.update' => ['setting', 'edit'],
             'settings', 'admin-setting.show' => ['setting', 'view'],
             'admin-setting.store' => ['setting', 'add'],
             'admin-setting.update', 'admin-setting.status' => ['setting', 'edit'],

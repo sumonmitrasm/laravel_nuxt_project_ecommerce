@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\District;
+use App\Models\AboutPage;
+use App\Models\User;
 use App\Models\HomeSlider;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -52,6 +55,45 @@ class FrontController extends Controller
         ], 200);
     }
 
+    public function about(): JsonResponse
+    {
+        $about = Cache::remember(
+            'api.about.v1',
+            now()->addHours(6),
+            fn () => AboutPage::query()->first()?->toArray() ?? [],
+        );
+
+        $seo = $this->seo->about();
+        $seo['title'] = $about['meta_title'] ?? $seo['title'];
+        $seo['description'] = $about['meta_description'] ?? $seo['description'];
+
+        return response()->json([
+            'status' => true,
+            'content' => [
+                'hero_title' => $about['hero_title'] ?? null,
+                'hero_highlight' => $about['hero_highlight'] ?? null,
+                'hero_text' => $about['hero_text'] ?? null,
+                'intro_title' => $about['intro_title'] ?? null,
+                'intro_text' => $about['intro_text'] ?? null,
+                'promise_title' => $about['promise_title'] ?? null,
+                'promise_text' => $about['promise_text'] ?? null,
+                'cta_title' => $about['cta_title'] ?? null,
+                'return_days' => $about['return_days'] ?? 7,
+                'values' => [
+                    ['title' => $about['value_1_title'] ?? null, 'text' => $about['value_1_text'] ?? null],
+                    ['title' => $about['value_2_title'] ?? null, 'text' => $about['value_2_text'] ?? null],
+                    ['title' => $about['value_3_title'] ?? null, 'text' => $about['value_3_text'] ?? null],
+                    ['title' => $about['value_4_title'] ?? null, 'text' => $about['value_4_text'] ?? null],
+                ],
+            ],
+            'stats' => [
+                'customers' => User::query()->count(),
+                'products' => Product::query()->where('status', true)->count(),
+                'districts' => District::query()->count(),
+            ],
+            'seo' => $seo,
+        ]);
+    }
     private function hotDeals(): array
     {
         return Product::query()

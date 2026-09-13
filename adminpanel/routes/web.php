@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\AboutPageController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\ProductController;
@@ -66,6 +67,8 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('admin-category.delete');
         //>>>>>>>>>>>>>>>>>>>>>>>>Category activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         //>>>>>>>>>>>>>>>>>>>>>>>>General Settings<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        Route::get('about-page', [AboutPageController::class, 'edit'])->name('admin-about.edit');
+        Route::put('about-page', [AboutPageController::class, 'update'])->name('admin-about.update');
         Route::get('settings', [SettingController::class, 'settings'])->name('settings');
         Route::post('settings', [SettingController::class, 'store'])->name('admin-setting.store');
         Route::get('setting/{setting}', [SettingController::class, 'show'])->name('admin-setting.show');

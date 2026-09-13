@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/menu', [FrontController::class, 'menu'])->name('api.menu');
+Route::get('/about', [FrontController::class, 'about'])->name('api.about');
 Route::get('/products', [FrontController::class, 'products'])->name('api.products');
 Route::get('/search', [FrontController::class, 'search'])->middleware('throttle:60,1')->name('api.search');
 Route::get('/recommended-products', [FrontController::class, 'recommendedProducts'])->name('api.recommended-products');
