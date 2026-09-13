@@ -31,6 +31,14 @@ class PageSeo
         return $this->build(canonical: $this->frontendUrl('/shop'));
     }
 
+    public function about(): array
+    {
+        return $this->build(
+            title: 'About Us',
+            canonical: $this->frontendUrl('/about'),
+        );
+    }
+
     public function category(Category $category): array
     {
         return $this->build(

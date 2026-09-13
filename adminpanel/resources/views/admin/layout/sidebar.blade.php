@@ -123,6 +123,15 @@
                     </ul>
                 </li>
                 @endif
+                <li class="slide">
+                    <a href="{{ route('admin-about.edit') }}" class="side-menu__item {{ request()->routeIs('admin-about.*') ? 'active' : '' }}">
+                        <svg class="side-menu__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                            <polyline points="13 2 13 9 20 9"></polyline>
+                        </svg>
+                        <span class="side-menu__label">About</span>
+                    </a>
+                </li>
                 @if ($canManageSettings || $canManageTags || $canManageBrands)
                 <li class="slide {{ request()->routeIs('settings') || request()->routeIs('tags') || request()->routeIs('brands') ? 'is-expanded' : '' }}">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
@@ -152,23 +161,6 @@
                     </ul>
                 </li>
                 @endif
-
-                <li class="slide">
-                    <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
-                        <svg class="side-menu__icon" xmlns="http://www.w3.org/2000/svg" width="24"
-                            height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
-                            <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
-                        </svg>
-                        <span class="side-menu__label">Charts</span><i class="angle fe fe-chevron-right"></i></a>
-                    <ul class="slide-menu">
-                        <li class="side-menu-label1">
-                            <a href="javascript:void(0)">Charts</a>
-                        </li>
-                        <li><a href="chart-chartist.html" class="slide-item">Chartjs Charts</a></li>
-                    </ul>
-                </li>
                 <li class="slide">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg class="side-menu__icon" xmlns="http://www.w3.org/2000/svg" width="24"
@@ -221,23 +213,7 @@
 
                     </ul>
                 </li>
-                <li class="slide">
-                    <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
-                        <svg class="side-menu__icon" xmlns="http://www.w3.org/2000/svg" width="24"
-                            height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                            <polyline points="13 2 13 9 20 9"></polyline>
-                        </svg>
-                        <span class="side-menu__label">Pages</span><i class="angle fe fe-chevron-right"></i></a>
-                    <ul class="slide-menu">
-                        <li class="side-menu-label1">
-                            <a href="javascript:void(0)">Pages</a>
-                        </li>
 
-                        <li><a href="about.html" class="slide-item"> About Us</a></li>
-                    </ul>
-                </li>
                 <li class="slide">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
