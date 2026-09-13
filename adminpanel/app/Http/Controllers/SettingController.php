@@ -170,5 +170,6 @@ class SettingController extends Controller
         Cache::forget('general_setting');
         Cache::forget('general_setting.v2');
         Cache::forget('api.general-setting.seo.v1');
+        Cache::forget('api.general-setting.seo.v2');
     }
 }

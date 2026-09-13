@@ -17,6 +17,7 @@ class PageSeo
         return [
             'name' => trim((string) (($setting['side_name'] ?? null) ?: 'NovaCart')),
             'logo' => $this->settingLogo($setting),
+            'phone' => trim((string) (($setting['phone'] ?? null) ?: ($setting['perronal_phone'] ?? null))),
         ];
     }
 
@@ -98,7 +99,7 @@ class PageSeo
     private function setting(): ?array
     {
         return Cache::remember(
-            'api.general-setting.seo.v1',
+            'api.general-setting.seo.v2',
             now()->addHours(6),
             fn () => Setting::query()->where('status', true)->latest('id')->first()?->toArray(),
         );
