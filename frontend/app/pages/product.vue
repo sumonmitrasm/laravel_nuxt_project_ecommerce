@@ -1,5 +1,16 @@
 <script setup lang="ts">
 import type { PageSeoData } from '~/composables/usePageSeo'
+definePageMeta({
+    middleware: (to) => {
+        const value = Array.isArray(to.query.id) ? to.query.id[0] : to.query.id
+        const id = Number.parseInt(value?.toString() ?? '', 10)
+
+        // Product details require a valid product ID.
+        if (!Number.isInteger(id) || id < 1) {
+            return navigateTo('/shop', { replace: true })
+        }
+    }
+})
 type AttributeValue = {
     id: number
     attribute_id: number

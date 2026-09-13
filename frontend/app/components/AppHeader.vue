@@ -4,6 +4,9 @@ const { wishlistCount, fetchWishlist } = useWishlist()
 const { authLoaded, isAuthenticated, fetchUser } = useAuth()
 const router = useRouter()
 const config = useRuntimeConfig()
+const { data: catalogData } = await useCatalogMenu()
+const sitePhone = computed(() => catalogData.value?.site?.phone || '')
+const phoneLink = computed(() => 'tel:' + sitePhone.value.replace(/[^+\d]/g, ''))
 const searchOpen = ref(false)
 const searchText = ref('')
 const suggestions = ref([])
@@ -67,10 +70,9 @@ onMounted(() => {
     <header>
         <div class="shop-topbar">
             <div class="container">
-                <span>USD <i class="bi bi-chevron-down"></i></span
-                ><span>English <i class="bi bi-chevron-down"></i></span>
+                <span>English <i class="bi bi-chevron-down"></i></span>
                 <div class="ms-auto">
-                    <a href="tel:+0123456789"><i class="bi bi-telephone"></i> Call: +0123 456 789</a
+                    <a v-if="sitePhone" :href="phoneLink"><i class="bi bi-telephone"></i> Call: {{ sitePhone }}</a
                     ><NuxtLink to="/wishlist"><i class="bi bi-heart"></i> Wishlist ({{ wishlistCount }})</NuxtLink
                     ><NuxtLink class="topbar-link" to="/about">About us</NuxtLink
                     ><NuxtLink class="topbar-link" to="/contact">Contact us</NuxtLink
@@ -96,7 +98,7 @@ onMounted(() => {
                 ><SiteLogo class="navbar-brand fs-3" />
                 <div class="shop-main-nav d-none d-lg-flex">
                     <NuxtLink to="/">Home</NuxtLink><NuxtLink to="/shop">Shop</NuxtLink
-                    ><NuxtLink to="/product">Product</NuxtLink
+                    ><span class="shop-nav-dropdown"><button type="button" class="nav-placeholder">Product <i class="bi bi-chevron-down"></i></button><span><NuxtLink to="/shop">All products</NuxtLink><NuxtLink :to="{ path: '/shop', query: { sort: 'newest' } }">New arrivals</NuxtLink><NuxtLink :to="{ path: '/shop', query: { sort: 'best_selling' } }">Best sellers</NuxtLink></span></span
                     ><button type="button" class="nav-placeholder">Pages</button
                     ><span class="shop-nav-dropdown"
                         ><NuxtLink to="/blog">Blog <i class="bi bi-chevron-down"></i></NuxtLink

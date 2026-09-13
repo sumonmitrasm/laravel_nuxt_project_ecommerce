@@ -126,8 +126,8 @@ onMounted(() => {
             <ul class="nav">
                 <li><NuxtLink class="nav-link text-dark" :to="{ path: '/shop', query: { sort: 'newest' } }">New Arrivals</NuxtLink></li>
                 <li><NuxtLink class="nav-link text-dark" :to="{ path: '/shop', query: { sort: 'best_selling' } }">Best Sellers</NuxtLink></li>
-                <li><NuxtLink class="nav-link text-dark" to="/shop">Offers</NuxtLink></li>
-                <li><NuxtLink class="nav-link text-dark" to="/compare">Compare</NuxtLink></li>
+                <li><NuxtLink class="nav-link text-dark" to="/shop">Shop</NuxtLink></li>
+                <!-- <li><NuxtLink class="nav-link text-dark" to="/compare">Compare</NuxtLink></li> -->
                 <li class="nav-item dropdown"><NuxtLink class="nav-link text-dark dropdown-toggle" to="/blog"
                         data-bs-toggle="dropdown" aria-expanded="false">Blog</NuxtLink>
                     <ul class="dropdown-menu blog-nav-menu">
