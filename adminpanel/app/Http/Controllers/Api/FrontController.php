@@ -20,6 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Models\Blog;
 
 class FrontController extends Controller
 {
@@ -720,4 +721,75 @@ class FrontController extends Controller
             'seo' => $this->seo->product($product),
         ], 200);
     }
+
+    public function blog(Request $request): JsonResponse
+    {
+        $blogs = Blog::query()
+            ->select(['id', 'title', 'slug', 'image', 'excerpt', 'published_at'])
+            ->where('status', true)
+            ->latest('published_at')
+            ->paginate(6);
+
+        $blogs->getCollection()->transform(function ($blog) {
+            $blog->image_url = $blog->image
+                ? asset('admin/blogimage/'.basename($blog->image))
+                : null;
+
+            return $blog;
+        });
+
+        return response()->json([
+            'status' => true,
+            'blogs' => $blogs,
+        ]);
+    }
+    public function blogDetails(int $id, string $slug): JsonResponse
+    {
+        $blog = Blog::query()
+            ->with([
+                'author:id,name',
+                'tags:id,name,slug',
+            ])
+            ->whereKey($id)
+            ->where('slug', $slug)
+            ->where('status', true)
+            ->firstOrFail();
+
+        $imageUrl = $blog->image
+            ? asset('admin/blogimage/'.basename($blog->image))
+            : null;
+
+        return response()->json([
+            'status' => true,
+            'blog' => [
+                'id' => $blog->id,
+                'title' => $blog->title,
+                'slug' => $blog->slug,
+                'excerpt' => $blog->excerpt,
+                'content' => $blog->content,
+                'image_url' => $imageUrl,
+                'published_at' => $blog->published_at,
+                'author' => $blog->author ? [
+                    'id' => $blog->author->id,
+                    'name' => $blog->author->name,
+                ] : null,
+                'tags' => $blog->tags->map(fn ($tag) => [
+                    'id' => $tag->id,
+                    'name' => $tag->name,
+                    'slug' => $tag->slug,
+                ])->values(),
+            ],
+            'seo' => [
+                'title' => $blog->meta_title ?: $blog->title,
+                'description' => $blog->meta_description ?: $blog->excerpt,
+                'keywords' => $blog->meta_keywords,
+                'robots' => $blog->meta_robot ?: 'index, follow',
+                'canonical' => rtrim((string) config('app.frontend_url'), '/')
+                    .'/blog/'.$blog->slug,
+                'image' => $imageUrl,
+                'type' => 'article',
+            ],
+        ]);
+    }
+
 }

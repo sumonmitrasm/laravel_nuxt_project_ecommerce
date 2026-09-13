@@ -30,6 +30,12 @@ Route::prefix('locations')->group(function () {
     Route::get('/districts/{district}/upazilas', [LocationController::class, 'upazilas'])->whereNumber('district');
 });
 
+//blog routes
+Route::get('/blog', [FrontController::class, 'blog'])->name('api.blog');
+Route::get('/blog/{id}/{slug}', [FrontController::class, 'blogDetails'])->whereNumber('id')->name('api.blog.details');
+Route::get('/tags', [FrontController::class, 'tags'])->name('api.tags');
+Route::get('/tags/{slug}', [FrontController::class, 'tagDetails'])->name('api.tags.details');
+
 Route::prefix('cart')->group(function () {
     Route::get('/', [CartController::class, 'index'])->name('api.cart.index');
     Route::post('/items', [CartController::class, 'store'])->name('api.cart.items.store');
