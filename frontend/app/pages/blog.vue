@@ -1,20 +1,45 @@
+<script setup>
+const config = useRuntimeConfig()
+const route = useRoute()
+
+const page = computed(() => Number(route.query.page || 1))
+
+const { data, pending, error } = await useFetch(`${config.public.apiBase}/blog`, {
+    query: { page }
+})
+
+const blogs = computed(() => data.value?.blogs?.data || [])
+const pagination = computed(() => data.value?.blogs || {})
+
+const formatDate = (date) => {
+    if (!date) return ''
+
+    return new Date(date).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    })
+}
+</script>
+
 <template>
     <main>
         <section class="blog-masthead">
             <div class="container">
                 <div>
                     <span class="blog-eyebrow">NOVACART JOURNAL</span>
-                    <h1>Ideas for better<br />everyday living.</h1>
-                    <p>Useful buying guides, fresh product stories and thoughtful inspiration—curated by our team.</p>
+                    <h1>Ideas for better<br>everyday living.</h1>
+                    <p>Useful buying guides, fresh product stories and thoughtful inspiration curated by our team.</p>
                 </div>
-                <NuxtLink class="blog-feature" to="/blog#latest"
-                    ><span>Editor’s pick</span><strong>How to build a smarter workspace in 2026</strong
-                    ><em>8 min read <i class="bi bi-arrow-up-right"></i></em
-                ></NuxtLink>
+                <NuxtLink class="blog-feature" to="/blog#latest">
+                    <span>Editor's pick</span>
+                    <strong>Fresh stories, useful guides and product inspiration</strong>
+                    <em>Explore now <i class="bi bi-arrow-up-right"></i></em>
+                </NuxtLink>
             </div>
         </section>
-       
-        <section class="container blog-content" id="latest">
+
+        <section id="latest" class="container blog-content">
             <div class="blog-section-head">
                 <div>
                     <span>THE LATEST</span>
@@ -22,64 +47,50 @@
                 </div>
                 <p>Practical advice and considered recommendations from people who care about the details.</p>
             </div>
-            <div class="blog-grid">
+
+            <p v-if="pending" class="blog-message">Loading blogs...</p>
+            <p v-else-if="error" class="blog-message">Blogs could not be loaded.</p>
+
+            <div v-else-if="blogs.length" class="blog-grid">
                 <article class="blog-card blog-card-lead">
-                    <NuxtLink class="blog-card-image tone-lilac" to="/blog?article=laptop-guide"
-                        ><i class="bi bi-laptop"></i><span>Technology</span></NuxtLink
-                    >
+                    <NuxtLink class="blog-card-image" :to="`/blog/${blogs[0].id}/${blogs[0].slug}`">
+                        <img v-if="blogs[0].image_url" :src="blogs[0].image_url" :alt="blogs[0].title">
+                        <i v-else class="bi bi-image"></i>
+                    </NuxtLink>
                     <div class="blog-card-body">
-                        <div class="blog-meta">Technology <i></i> 8 min read</div>
-                        <h3><NuxtLink to="/blog?article=laptop-guide">A practical guide to choosing your next everyday laptop</NuxtLink></h3>
-                        <p>Performance, battery life and display quality explained without the unnecessary jargon.</p>
-                        <NuxtLink class="blog-read" to="/blog?article=laptop-guide">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
+                        <div class="blog-meta">Blog <i></i> {{ formatDate(blogs[0].published_at) }}</div>
+                        <h3><NuxtLink :to="`/blog/${blogs[0].id}/${blogs[0].slug}`">{{ blogs[0].title }}</NuxtLink></h3>
+                        <p>{{ blogs[0].excerpt }}</p>
+                        <NuxtLink class="blog-read" :to="`/blog/${blogs[0].id}/${blogs[0].slug}`">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
                     </div>
                 </article>
-                <article class="blog-card">
-                    <NuxtLink class="blog-card-image tone-mint" to="/blog?article=wireless-headphones"><i class="bi bi-headphones"></i><span>Audio</span></NuxtLink>
-                    <div class="blog-card-body">
-                        <div class="blog-meta">Buying guide <i></i> 6 min read</div>
-                        <h3><NuxtLink to="/blog?article=wireless-headphones">What really matters when buying wireless headphones</NuxtLink></h3>
-                        <p>Comfort, codecs and battery life—the features that make a real difference.</p>
-                        <NuxtLink class="blog-read" to="/blog?article=wireless-headphones">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
-                    </div>
-                </article>
-                <article class="blog-card">
-                    <NuxtLink class="blog-card-image tone-peach" to="/blog?article=calmer-home"
-                        ><i class="bi bi-house-heart"></i><span>Home</span></NuxtLink
-                    >
-                    <div class="blog-card-body">
-                        <div class="blog-meta">Home &amp; Living <i></i> 5 min read</div>
-                        <h3><NuxtLink to="/blog?article=calmer-home">Seven small upgrades that make a home feel calmer</NuxtLink></h3>
-                        <p>Simple lighting, storage and comfort ideas for rooms of every size.</p>
-                        <NuxtLink class="blog-read" to="/blog?article=calmer-home">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
-                    </div>
-                </article>
-                <article class="blog-card">
-                    <NuxtLink class="blog-card-image tone-blue" to="/blog?article=smartwatch-features"
-                        ><i class="bi bi-smartwatch"></i><span>Wearables</span></NuxtLink
-                    >
-                    <div class="blog-card-body">
-                        <div class="blog-meta">Technology <i></i> 7 min read</div>
-                        <h3><NuxtLink to="/blog?article=smartwatch-features">Smartwatch features you will actually use every day</NuxtLink></h3>
-                        <p>A realistic look at health, notifications and battery performance.</p>
-                        <NuxtLink class="blog-read" to="/blog?article=smartwatch-features">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
-                    </div>
-                </article>
-                <article class="blog-card">
-                    <NuxtLink class="blog-card-image tone-sand" to="/blog?article=versatile-wardrobe"><i class="bi bi-bag"></i><span>Style</span></NuxtLink>
-                    <div class="blog-card-body">
-                        <div class="blog-meta">Style <i></i> 4 min read</div>
-                        <h3><NuxtLink to="/blog?article=versatile-wardrobe">Build a versatile wardrobe with fewer, better pieces</NuxtLink></h3>
-                        <p>Timeless essentials that work harder and stay relevant longer.</p>
-                        <NuxtLink class="blog-read" to="/blog?article=versatile-wardrobe">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
-                    </div>
-                </article>
+
+                <div class="blog-grid-right">
+                    <article v-for="blog in blogs.slice(1, 3)" :key="blog.id" class="blog-card">
+                        <NuxtLink class="blog-card-image" :to="`/blog/${blog.id}/${blog.slug}`">
+                            <img v-if="blog.image_url" :src="blog.image_url" :alt="blog.title">
+                            <i v-else class="bi bi-image"></i>
+                        </NuxtLink>
+                        <div class="blog-card-body">
+                            <div class="blog-meta">Blog <i></i> {{ formatDate(blog.published_at) }}</div>
+                            <h3><NuxtLink :to="`/blog/${blog.id}/${blog.slug}`">{{ blog.title }}</NuxtLink></h3>
+                            <p>{{ blog.excerpt }}</p>
+                            <NuxtLink class="blog-read" :to="`/blog/${blog.id}/${blog.slug}`">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
+                        </div>
+                    </article>
+                </div>
             </div>
-            <nav class="blog-pagination" aria-label="Blog pages">
-                <NuxtLink class="active" to="/blog?page=1">1</NuxtLink><NuxtLink to="/blog?page=2">2</NuxtLink><NuxtLink to="/blog?page=3">3</NuxtLink
-                ><NuxtLink to="/blog?page=2" aria-label="Next page"><i class="bi bi-arrow-right"></i></NuxtLink>
+
+            <p v-else class="blog-message">No blogs found.</p>
+
+            <nav v-if="pagination.last_page > 1" class="blog-pagination" aria-label="Blog pages">
+                <NuxtLink
+                    v-for="pageNumber in pagination.last_page"
+                    :key="pageNumber"
+                    :class="{ active: pageNumber === pagination.current_page }"
+                    :to="`/blog?page=${pageNumber}`"
+                >{{ pageNumber }}</NuxtLink>
             </nav>
         </section>
-        
     </main>
 </template>
