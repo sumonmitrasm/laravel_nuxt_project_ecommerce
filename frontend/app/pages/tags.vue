@@ -5,14 +5,7 @@
                 <span class="blog-eyebrow">EXPLORE THE JOURNAL</span>
                 <h1>Find your next idea.</h1>
                 <p>Browse helpful stories by the topics you care about.</p>
-                <form class="tag-search" action="blog.html">
-                    <i class="bi bi-search"></i
-                    ><input
-                        type="search"
-                        placeholder="Search articles and topics"
-                        aria-label="Search articles"
-                    /><button>Search</button>
-                </form>
+             
             </div>
         </section>
         <section class="container tag-directory">

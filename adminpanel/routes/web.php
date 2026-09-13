@@ -9,6 +9,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\AboutPageController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\BrandController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductAttributeController;
 use App\Http\Controllers\CouponController;
@@ -77,6 +78,12 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::delete('setting/{setting}', [SettingController::class, 'destroy'])->name('admin-setting.delete');
         //>>>>>>>>>>>>>>>>>>>>>>>>General Settings<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         //>>>>>>>>>>>>>>>>>>>>>>>>Tags activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        Route::get('blogs', [BlogController::class, 'index'])->name('blogs');
+        Route::post('blogs', [BlogController::class, 'store'])->name('admin-blog.store');
+        Route::get('blogs/{blog}', [BlogController::class, 'show'])->name('admin-blog.show');
+        Route::put('blogs/{blog}', [BlogController::class, 'update'])->name('admin-blog.update');
+        Route::patch('blogs/{blog}/status', [BlogController::class, 'updateStatus'])->name('admin-blog.status');
+        Route::delete('blogs/{blog}', [BlogController::class, 'destroy'])->name('admin-blog.delete');
         Route::get('tags', [TagController::class, 'index'])->name('tags');
         Route::post('tag', [TagController::class, 'store'])->name('admin-tag.store');
         Route::get('tag/{tag}', [TagController::class, 'show'])->name('admin-tag.show');

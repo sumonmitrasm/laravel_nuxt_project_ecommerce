@@ -29,6 +29,7 @@
                             $canManageShippingMethods = $admin?->hasModuleAccess('shipping_method', 'view');
                             $canManageHomeSliders = $admin?->hasModuleAccess('home_slider', 'view');
                             $canManageOrders = $admin?->hasModuleAccess('order', 'view');
+                            $canManageBlogs = $admin?->hasModuleAccess('blog', 'view');
                         @endphp
                         <img src="{{ $admin && $admin->image
                             ? asset('admin/adminimage/' . $admin->image)
@@ -154,31 +155,14 @@
                         <li class="side-menu-label1">
                             <a href="javascript:void(0)">Utilities</a>
                         </li>
-                        @if ($canManageTags)<li><a href="{{ route('tags') }}" class="slide-item {{ request()->routeIs('tags') ? 'active' : '' }}">Tags</a></li>@endif
                         @if ($canManageBrands)<li><a href="{{ route('brands') }}" class="slide-item {{ request()->routeIs('brands') ? 'active' : '' }}">Brands</a></li>@endif
                         @if ($canManageSettings)<li><a href="{{ route('settings') }}" class="slide-item {{ request()->routeIs('settings') ? 'active' : '' }}">General Settings</a></li>@endif
 
                     </ul>
                 </li>
                 @endif
-                <li class="slide">
-                    <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
-                        <svg class="side-menu__icon" xmlns="http://www.w3.org/2000/svg" width="24"
-                            height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="3" y1="9" x2="21" y2="9"></line>
-                            <line x1="9" y1="21" x2="9" y2="9"></line>
-                        </svg>
-                        <span class="side-menu__label">Tables</span><i class="angle fe fe-chevron-right"></i></a>
-                    <ul class="slide-menu">
-                        <li class="side-menu-label1">
-                            <a href="javascript:void(0)">Tables</a>
-                        </li>
-                        <li><a href="tables.html" class="slide-item">Default table</a></li>
-                    </ul>
-                </li>
-                <li class="slide">
+                @if ($canManageTags || $canManageBlogs)
+                <li class="slide {{ request()->routeIs('tags') || request()->routeIs('blogs', 'admin-blog.*') ? 'is-expanded' : '' }}">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -188,15 +172,16 @@
                             <rect x="14" y="14" width="7" height="7"></rect>
                             <rect x="3" y="14" width="7" height="7"></rect>
                         </svg>
-                        <span class="side-menu__label">Elements</span><i class="angle fe fe-chevron-right"></i></a>
+                        <span class="side-menu__label">Blogs</span><i class="angle fe fe-chevron-right"></i></a>
                     <ul class="slide-menu">
                         <li class="side-menu-label1">
-                            <a href="javascript:void(0)">Elements</a>
+                            <a href="javascript:void(0)">Blogs</a>
                         </li>
-                        <li><a href="accordion.html" class="slide-item"> Accordion</a></li>
-
+                        @if ($canManageBlogs)<li><a href="{{ route('blogs') }}" class="slide-item {{ request()->routeIs('blogs', 'admin-blog.*') ? 'active' : '' }}">Blogs</a></li>@endif
+                        @if ($canManageTags)<li><a href="{{ route('tags') }}" class="slide-item {{ request()->routeIs('tags') ? 'active' : '' }}">Tags</a></li>@endif
                     </ul>
                 </li>
+                @endif
                 <li class="slide">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
