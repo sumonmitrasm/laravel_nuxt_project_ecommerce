@@ -53,29 +53,29 @@ const formatDate = (date) => {
 
             <div v-else-if="blogs.length" class="blog-grid">
                 <article class="blog-card blog-card-lead">
-                    <NuxtLink class="blog-card-image" :to="`/blog/${blogs[0].id}/${blogs[0].slug}`">
+                    <NuxtLink class="blog-card-image" :to="`/blogDetail?id=${blogs[0].id}&slug=${blogs[0].slug}`">
                         <img v-if="blogs[0].image_url" :src="blogs[0].image_url" :alt="blogs[0].title">
                         <i v-else class="bi bi-image"></i>
                     </NuxtLink>
                     <div class="blog-card-body">
                         <div class="blog-meta">Blog <i></i> {{ formatDate(blogs[0].published_at) }}</div>
-                        <h3><NuxtLink :to="`/blog/${blogs[0].id}/${blogs[0].slug}`">{{ blogs[0].title }}</NuxtLink></h3>
+                        <h3><NuxtLink :to="`/blogDetail?id=${blogs[0].id}&slug=${blogs[0].slug}`">{{ blogs[0].title }}</NuxtLink></h3>
                         <p>{{ blogs[0].excerpt }}</p>
-                        <NuxtLink class="blog-read" :to="`/blog/${blogs[0].id}/${blogs[0].slug}`">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
+                        <NuxtLink class="blog-read" :to="`/blogDetail?id=${blogs[0].id}&slug=${blogs[0].slug}`">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
                     </div>
                 </article>
 
                 <div class="blog-grid-right">
                     <article v-for="blog in blogs.slice(1, 3)" :key="blog.id" class="blog-card">
-                        <NuxtLink class="blog-card-image" :to="`/blog/${blog.id}/${blog.slug}`">
+                        <NuxtLink class="blog-card-image" :to="`/blogDetail?id=${blog.id}&slug=${blog.slug}`">
                             <img v-if="blog.image_url" :src="blog.image_url" :alt="blog.title">
                             <i v-else class="bi bi-image"></i>
                         </NuxtLink>
                         <div class="blog-card-body">
                             <div class="blog-meta">Blog <i></i> {{ formatDate(blog.published_at) }}</div>
-                            <h3><NuxtLink :to="`/blog/${blog.id}/${blog.slug}`">{{ blog.title }}</NuxtLink></h3>
+                            <h3><NuxtLink :to="`/blogDetail?id=${blog.id}&slug=${blog.slug}`">{{ blog.title }}</NuxtLink></h3>
                             <p>{{ blog.excerpt }}</p>
-                            <NuxtLink class="blog-read" :to="`/blog/${blog.id}/${blog.slug}`">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
+                            <NuxtLink class="blog-read" :to="`/blogDetail?id=${blog.id}&slug=${blog.slug}`">Read story <i class="bi bi-arrow-right"></i></NuxtLink>
                         </div>
                     </article>
                 </div>

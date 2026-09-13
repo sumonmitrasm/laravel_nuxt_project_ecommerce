@@ -7,6 +7,19 @@
     $canEditBlog = $admin?->hasModuleAccess('blog', 'edit');
     $canDeleteBlog = $admin?->hasModuleAccess('blog', 'delete');
 @endphp
+<style>
+    .blog-admin-table { width: 100%; min-width: 1050px; table-layout: fixed; }
+    .blog-admin-table .blog-column { width: 50%; }
+    .blog-admin-table .author-column { width: 13%; }
+    .blog-admin-table .date-column { width: 18%; }
+    .blog-admin-table .status-column { width: 9%; }
+    .blog-admin-table .action-column { width: 10%; }
+    .blog-admin-table .blog-cell-wrap,
+    .blog-admin-table .blog-copy { min-width: 0; }
+    .blog-admin-table .blog-title { max-width: 100%; display: -webkit-box; overflow: hidden; white-space: normal; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.4; }
+    .blog-admin-table .blog-slug { max-width: 100%; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .blog-admin-table .blog-tags { white-space: normal; }
+</style>
 <div class="app-content main-content">
     <div class="side-app"><div class="container-fluid main-container">
         <div class="page-header"><div class="page-leftheader"><h4 class="page-title">{{ $title }}</h4></div></div>
@@ -17,15 +30,14 @@
             <div class="card-body">
                 <div class="mb-3 d-flex align-items-center gap-2"><label class="mb-0">Show</label><select class="form-select form-select-sm w-auto" data-server-per-page>@foreach ([10,20,50,100] as $size)<option value="{{ $size }}" {{ (int) request('per_page',10) === $size ? 'selected' : '' }}>{{ $size }}</option>@endforeach</select><span>entries</span></div>
                 <div class="table-responsive">
-                    <table class="table table-bordered text-nowrap" data-server-pagination>
-                        <thead><tr><th>#</th><th>Blog</th><th>Author</th><th>Publish date</th><th>Status</th><th class="text-center">Action</th></tr></thead>
+                    <table class="table table-bordered text-nowrap blog-admin-table" data-server-pagination>
+                        <thead><tr><th class="blog-column">Blog</th><th class="author-column">Author</th><th class="date-column">Publish date</th><th class="status-column">Status</th><th class="text-center action-column">Action</th></tr></thead>
                         <tbody>
                         @forelse ($blogs as $blog)
                             <tr>
-                                <td>{{ $blog->id }}</td>
-                                <td><div class="d-flex align-items-center gap-2">
+                                <td><div class="d-flex align-items-center gap-2 blog-cell-wrap">
                                     @if ($blog->image)<img src="{{ asset('admin/blogimage/'.$blog->image) }}" alt="{{ $blog->title }}" class="rounded border" style="width:46px;height:38px;object-fit:cover">@else<span class="avatar avatar-sm bg-primary-transparent"><i class="fe fe-file-text"></i></span>@endif
-                                    <div><div class="fw-semibold">{{ $blog->title }}</div><small class="text-muted">{{ $blog->slug }}</small>@if ($blog->tags->isNotEmpty())<div class="mt-1">@foreach ($blog->tags as $tag)<span class="badge bg-primary-transparent text-primary me-1">{{ $tag->name }}</span>@endforeach</div>@endif</div>
+                                    <div class="blog-copy"><div class="fw-semibold blog-title" title="{{ $blog->title }}">{{ $blog->title }}</div><small class="text-muted blog-slug" title="{{ $blog->slug }}">{{ $blog->slug }}</small>@if ($blog->tags->isNotEmpty())<div class="mt-1 blog-tags">@foreach ($blog->tags as $tag)<span class="badge bg-primary-transparent text-primary me-1">{{ $tag->name }}</span>@endforeach</div>@endif</div>
                                 </div></td>
                                 <td>{{ $blog->author?->name ?: '—' }}</td>
                                 <td>{{ $blog->published_at?->format('d M Y, h:i A') ?: 'Not scheduled' }}</td>
@@ -36,7 +48,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="text-center text-muted py-5">No blogs found.</td></tr>
+                            <tr><td colspan="5" class="text-center text-muted py-5">No blogs found.</td></tr>
                         @endforelse
                         </tbody>
                     </table>
