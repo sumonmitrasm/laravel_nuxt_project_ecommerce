@@ -72,15 +72,6 @@
                     <i class="bi bi-arrow-up-right"></i
                 ></NuxtLink>
             </div>
-            <div class="popular-tags">
-                <h2>Popular tags</h2>
-                <div>
-                    <NuxtLink to="/blog?tag=smart-home">#smart-home</NuxtLink><NuxtLink to="/blog?tag=work-from-home">#work-from-home</NuxtLink
-                    ><NuxtLink to="/blog?tag=new-arrivals">#new-arrivals</NuxtLink><NuxtLink to="/blog?tag=audio">#audio</NuxtLink
-                    ><NuxtLink to="/blog?tag=gift-ideas">#gift-ideas</NuxtLink><NuxtLink to="/blog?tag=sustainable-style">#sustainable-style</NuxtLink
-                    ><NuxtLink to="/blog?tag=productivity">#productivity</NuxtLink><NuxtLink to="/blog?tag=under-10000">#under-10000</NuxtLink>
-                </div>
-            </div>
         </section>
     </main>
 </template>

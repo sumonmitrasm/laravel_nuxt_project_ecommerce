@@ -1,46 +1,73 @@
+<script setup>
+const config = useRuntimeConfig()
+const route = useRoute()
+
+const id = route.query.id
+const slug = route.query.slug
+
+const { data, pending, error } = await useFetch(
+    `${config.public.apiBase}/blog/${id}/${slug}`
+)
+
+const blog = computed(() => data.value?.blog || null)
+const tags = computed(() => blog.value?.tags || [])
+const seo = computed(() => data.value?.seo || {})
+// console.log('query', route.query)
+// console.log('id', route.query.id)
+// console.log('slug', route.query.slug)
+console.log('blog', blog.value)
+console.log('tags', tags.value)
+console.log('seo', seo.value)
+const formatDate = (date) => {
+    if (!date) return ''
+
+    return new Date(date).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    })
+}
+
+useHead(() => ({
+    title: seo.value.title,
+    meta: [
+        { name: 'description', content: seo.value.description },
+        { name: 'keywords', content: seo.value.keywords },
+        { name: 'robots', content: seo.value.robots },
+        { property: 'og:title', content: seo.value.title },
+        { property: 'og:description', content: seo.value.description },
+        { property: 'og:image', content: seo.value.image },
+        { property: 'og:type', content: seo.value.type }
+    ],
+    link: [
+        { rel: 'canonical', href: seo.value.canonical }
+    ]
+}))
+</script>
 <template>
     <main class="magazine-page">
         <div class="container magazine-layout">
             <article class="article-card">
                
-                <h1>Secrets Your Parents Never Told You About Fashion</h1>
+                <h5>{{ blog.title }}</h5>
 
                 <div class="post-meta">
                     <span><i class="bi bi-person-circle"></i> By John Doe</span>
-                    <span><i class="bi bi-calendar3"></i> 12 August 2026</span>
-                    <span><i class="bi bi-chat-dots"></i> 6 Comments</span>
-                    <span><i class="bi bi-clock"></i> 5 Minute Read</span>
+                    <span><i class="bi bi-calendar3"></i> {{ formatDate(blog.published_at) }}</span>
+                    <span><i class="bi bi-clock"></i> {{ blog.author.name }}</span>
                 </div>
 
-                <img class="post-cover" src="/assets/images/hero-audio-premium.png" alt="Featured blog image">
+                <img class="post-cover" v-if="blog.image_url" :src="blog.image_url" :alt="blog.title">
 
                 <div class="post-content">
-                    <p>
-                        Fashion is more than the clothes we wear. It is a simple way to express personality, confidence and creativity. The right choices can make everyday dressing easier and more enjoyable.
-                    </p>
-                    <p>
-                        You do not need a crowded wardrobe to look good. A few comfortable and versatile pieces can create many useful combinations when colour, fit and quality work together.
-                    </p>
 
                     <blockquote>
-                        Personal style begins when you choose what feels right for you, rather than following every new trend.
+                        {{ blog.excerpt }}
                     </blockquote>
 
                     <p>
-                        Start with the pieces you use most often. Keep them easy to combine, then add one or two distinctive items that bring colour and character to your outfit.
+                        {{ blog.content }}
                     </p>
-
-                    <h2>The Ultimate Guide To Fashion</h2>
-                    <p>
-                        Good style is built slowly. Pay attention to fabric, comfort and fit before labels. Choose items that suit your daily routine and take care of them so they continue to look their best.
-                    </p>
-
-                    <div class="post-gallery">
-                        <img src="/assets/images/product-1.svg" alt="Fashion inspiration one">
-                        <img src="/assets/images/product-2.svg" alt="Fashion inspiration two">
-                        <img src="/assets/images/product-3.svg" alt="Fashion inspiration three">
-                        <img src="/assets/images/product-4.svg" alt="Fashion inspiration four">
-                    </div>
                 </div>
             </article>
 
@@ -84,10 +111,14 @@
 
                 <section class="sidebar-box">
                     <h3>Tag Cloud</h3>
-                    <div class="tag-cloud">
-                        <a href="#">FASHION</a><a href="#">HEALTH</a><a href="#">TECHNOLOGY</a>
-                        <a href="#">LIFESTYLE</a><a href="#">FOOD</a><a href="#">SPORT</a>
-                        <a href="#">PHOTOGRAPHY</a><a href="#">TRAVEL</a><a href="#">STYLE</a>
+                    <div v-if="tags.length" class="tag-cloud">
+                        <NuxtLink
+                            v-for="tag in tags"
+                            :key="tag.id"
+                            :to="`/tags?id=${tag.id}&slug=${blog.slug}`"
+                        >
+                            {{ tag.name }}
+                        </NuxtLink>
                     </div>
                 </section>
             </aside>
