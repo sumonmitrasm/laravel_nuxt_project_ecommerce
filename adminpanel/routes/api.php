@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ShippingMethodController;
 use App\Http\Controllers\Api\SslCommerzController;
 use App\Http\Controllers\Api\UserAddressController;
 use App\Http\Controllers\Api\WishlistController;
+use App\Http\Controllers\Api\ProductReviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/menu', [FrontController::class, 'menu'])->name('api.menu');
@@ -18,6 +19,8 @@ Route::get('/search', [FrontController::class, 'search'])->middleware('throttle:
 Route::get('/recommended-products', [FrontController::class, 'recommendedProducts'])->name('api.recommended-products');
 Route::get('/listing/{url}', [FrontController::class, 'listing'])->name('api.listing');
 Route::get('/detail/{id}', [FrontController::class, 'details'])->whereNumber('id')->name('api.detail');
+Route::get('/products/{product}/reviews', [ProductReviewController::class, 'index'])->whereNumber('product');
+Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->middleware(['auth:sanctum', 'verified'])->whereNumber('product');
 Route::get('/shipping-methods', [ShippingMethodController::class, 'index'])->name('api.shipping-methods');
 Route::post('/payments/sslcommerz/success', [SslCommerzController::class, 'success'])->name('sslcommerz.success');
 Route::post('/payments/sslcommerz/fail', [SslCommerzController::class, 'fail'])->name('sslcommerz.fail');
@@ -73,5 +76,6 @@ Route::prefix('auth')->group(function () {
         Route::get('/wishlist', [WishlistController::class, 'index'])->name('api.wishlist.index');
         Route::post('/wishlist', [WishlistController::class, 'store'])->name('api.wishlist.store');
         Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy'])->whereNumber('product')->name('api.wishlist.destroy');
+
     });
 });
