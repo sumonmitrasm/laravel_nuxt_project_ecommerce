@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 const router = useRouter()
 const config = useRuntimeConfig()
 const { data } = await useCatalogMenu()
@@ -79,8 +79,14 @@ onMounted(() => {
 <template>
   <header>
      <div class="topbar py-2">
-        <div class="container d-flex justify-content-between"><span>Free delivery over ৳3,000</span><span>Help Center ·
-                Track Order</span></div>
+        <div class="container d-flex justify-content-end">
+            <!-- <span>Free delivery over ৳3,000</span> -->
+            <span>
+                <NuxtLink to="/contact">Help Center</NuxtLink>
+                ·
+                <NuxtLink :to="{ path: '/account', query: { section: 'orders' } }">Track Order</NuxtLink>
+            </span>
+        </div>
     </div>
     <nav class="navbar navbar-expand-lg bg-white py-3 sticky-top shadow-sm">
         <div class="container"><button class="navbar-toggler border-0" data-bs-toggle="offcanvas"
@@ -140,3 +146,4 @@ onMounted(() => {
     </div>
   </header>
 </template>
+

@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --brand: #ff5a3c;
     --ink: #17211d;
     --soft: #f6f2ea;
@@ -16,6 +16,15 @@ body {
     color: #d8e4de;
     font-size: .86rem
 }
+.topbar a {
+    color: #fff;
+    text-decoration: none
+}
+
+.topbar a:hover {
+    color: #d8e4de
+}
+
 
 .navbar-brand {
     font-weight: 900;
@@ -1107,7 +1116,7 @@ body {
 }
 
 .smart-picks-section .card-body .btn::after {
-    content: " →";
+    content: " â†’";
     margin-left: 7px
 }
 
@@ -1845,6 +1854,15 @@ body {
     .topbar {
         display: none
     }
+.topbar a {
+    color: #fff;
+    text-decoration: none
+}
+
+.topbar a:hover {
+    color: #d8e4de
+}
+
 
     .navbar {
         padding-top: 10px !important;

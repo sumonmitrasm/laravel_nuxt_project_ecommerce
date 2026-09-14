@@ -1,7 +1,7 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 useSeoMeta({ robots: 'noindex, nofollow' })
 const route = useRoute()
-const activeSection = ref('dashboard')
+const activeSection = ref(route.query.section === 'orders' ? 'orders' : 'dashboard')
 const { user, logout, updateProfile } = useAuth()
 const { cartCount, fetchCart } = useCart()
 const { defaultAddress, fetchAddresses } = useAddresses()
@@ -45,6 +45,10 @@ const sections = [
   { id: 'address', label: 'Addresses', icon: 'bi-geo-alt' },
   { id: 'profile', label: 'Account details', icon: 'bi-person' }
 ]
+
+watch(() => route.query.section, (section) => {
+  if (section === 'orders') activeSection.value = 'orders'
+})
 
 const profileSaved = ref(false)
 const profileSaving = ref(false)
@@ -1329,4 +1333,6 @@ onBeforeUnmount(() => {
   }
 }
 </style>
+
+
 
