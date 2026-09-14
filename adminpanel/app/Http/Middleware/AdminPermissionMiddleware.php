@@ -74,6 +74,8 @@ class AdminPermissionMiddleware
             'products', 'admin-product.show', 'inventory.index', 'admin-reviews.index' => ['product', 'view'],
             'inventory.adjust', 'admin-reviews.status' => ['product', 'edit'],
             'admin-reviews.delete' => ['product', 'delete'],
+            'admin-contact.index' => ['setting', 'view'],
+            'admin-contact.delete' => ['setting', 'delete'],
             'product-attributes' => ['attribute', 'view'],
             'product-attributes.store' => ['attribute', 'add'],
             'product-attributes.values.store' => ['attribute', 'edit'],

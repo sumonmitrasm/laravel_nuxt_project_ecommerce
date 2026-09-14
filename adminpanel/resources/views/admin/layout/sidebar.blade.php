@@ -158,6 +158,7 @@
                         </li>
                         @if ($canManageBrands)<li><a href="{{ route('brands') }}" class="slide-item {{ request()->routeIs('brands') ? 'active' : '' }}">Brands</a></li>@endif
                         @if ($canManageSettings)<li><a href="{{ route('settings') }}" class="slide-item {{ request()->routeIs('settings') ? 'active' : '' }}">General Settings</a></li>@endif
+                        @if ($canManageSettings)<li><a href="{{ route('admin-contact.index') }}" class="slide-item {{ request()->routeIs('admin-contact.*') ? 'active' : '' }}">Contact Messages</a></li>@endif
 
                     </ul>
                 </li>

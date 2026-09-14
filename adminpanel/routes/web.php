@@ -19,6 +19,7 @@ use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductReviewController;
+use App\Http\Controllers\ContactMessageController;
 
 Route::get('/clear-cache', function() {
     Artisan::call('view:clear');
@@ -113,6 +114,8 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::get('reviews', [ProductReviewController::class, 'index'])->name('admin-reviews.index');
         Route::patch('reviews/{review}/{status}', [ProductReviewController::class, 'status'])->name('admin-reviews.status');
         Route::delete('reviews/{review}', [ProductReviewController::class, 'destroy'])->name('admin-reviews.delete');
+        Route::get('contact-messages', [ContactMessageController::class, 'index'])->name('admin-contact.index');
+        Route::delete('contact-messages/{message}', [ContactMessageController::class, 'destroy'])->name('admin-contact.delete');
         //>>>>>>>>>>>>>>>>>>>>>>>>End Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         //>>>>>>>>>>>>>>>>>>>>>>>>Coupon activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('coupons', [CouponController::class, 'index'])->name('coupons');

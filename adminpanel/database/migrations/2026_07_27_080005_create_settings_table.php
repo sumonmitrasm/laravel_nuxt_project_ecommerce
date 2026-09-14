@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->string('address')->nullable();
+            $table->string('map_url')->nullable();
             $table->text('description')->nullable();
             $table->text('side_name')->nullable();
             $table->text('developed_year')->nullable();

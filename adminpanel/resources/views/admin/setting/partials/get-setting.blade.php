@@ -115,6 +115,10 @@
                             <input type="text" name="address" class="form-control" required>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label">Google Maps Link</label>
+                            <input type="url" name="map_url" class="form-control" placeholder="https://share.google/...">
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">Side Name</label>
                             <input type="text" name="side_name" class="form-control" required>
                         </div>
@@ -215,3 +219,4 @@
         </div>
     </div>
 </div>
+

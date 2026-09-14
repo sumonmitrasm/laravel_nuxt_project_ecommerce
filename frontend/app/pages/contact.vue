@@ -1,15 +1,65 @@
-<script setup lang="ts">
-    const submitted = ref(false);
-    const companyLocation = "Dhaka, Bangladesh";
-    const mapUrl = computed(() => `https://www.google.com/maps?q=${encodeURIComponent(companyLocation)}&output=embed`);
-    const directionsUrl = computed(
-        () => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyLocation)}`
-    );
+<script setup>
+const config = useRuntimeConfig()
 
-    useHead({
-        title: "Contact Us | NOVACART",
-        meta: [{ name: "description", content: "Contact NOVACART customer support." }],
-    });
+const form = reactive({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    topic: '',
+    message: '',
+})
+
+const consent = ref(false)
+const sending = ref(false)
+const successMessage = ref('')
+const errorMessage = ref('')
+
+const { data: contact } = await useFetch('/contact', {
+    baseURL: config.public.apiBase,
+})
+
+const companyLocation = computed(() => contact.value?.address || 'Dhaka, Bangladesh')
+const mapUrl = computed(() => `https://www.google.com/maps?q=${encodeURIComponent(companyLocation.value)}&output=embed`)
+const directionsUrl = computed(() => contact.value?.map_url || `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyLocation.value)}`)
+
+const cleanFirstName = () => { form.first_name = form.first_name.replace(/[^\p{L}\s.-]/gu, '') }
+const cleanLastName = () => { form.last_name = form.last_name.replace(/[^\p{L}\s.-]/gu, '') }
+const cleanPhone = () => { form.phone = form.phone.replace(/[^0-9+\-\s()]/g, '') }
+const cleanMessage = () => { form.message = form.message.replace(/[^\p{L}\p{N}\s.,!?()'"\-]/gu, '') }
+
+const submitContact = async () => {
+    successMessage.value = ''
+    errorMessage.value = ''
+
+    if (!consent.value) {
+        errorMessage.value = 'Please accept the consent checkbox.'
+        return
+    }
+
+    try {
+        sending.value = true
+        const response = await $fetch('/contact', {
+            baseURL: config.public.apiBase,
+            method: 'POST',
+            body: form,
+        })
+
+        successMessage.value = response.message
+        Object.assign(form, { first_name: '', last_name: '', email: '', phone: '', topic: '', message: '' })
+        consent.value = false
+    } catch (error) {
+        const errors = error?.data?.errors
+        errorMessage.value = errors ? Object.values(errors).flat().join(' ') : error?.data?.message || 'Message could not be sent.'
+    } finally {
+        sending.value = false
+    }
+}
+
+useHead(() => ({
+    title: 'Contact Us | ' + (contact.value?.site_name || 'Website'),
+    meta: [{ name: 'description', content: 'Contact ' + (contact.value?.site_name || 'our') + ' customer support.' }],
+}))
 </script>
 
 <template>
@@ -31,25 +81,25 @@
         <section class="contact-section">
             <div class="container">
                 <div class="contact-cards">
-                    <a class="contact-card" href="tel:+8801234567890">
+                    <a class="contact-card" :href="contact?.phone ? 'tel:' + contact.phone : '#'">
                         <i class="bi bi-telephone"></i>
                         <div>
-                            <small>Call us</small><strong>+880 1234-567890</strong>
-                            <p>Sat–Thu, 9:00 AM–8:00 PM</p>
+                            <small>Call us</small><strong>{{ contact?.phone || 'Not available' }}</strong>
+                            <p>Sat&ndash;Thu, 9:00 AM&ndash;8:00 PM</p>
                         </div>
                     </a>
-                    <a class="contact-card" href="mailto:support@novacart.com">
+                    <a class="contact-card" :href="contact?.email ? 'mailto:' + contact.email : '#'">
                         <i class="bi bi-envelope"></i>
                         <div>
-                            <small>Email us</small><strong>support@novacart.com</strong>
+                            <small>Email us</small><strong>{{ contact?.email || 'Not available' }}</strong>
                             <p>We usually reply within 24 hours</p>
                         </div>
                     </a>
                     <div class="contact-card">
                         <i class="bi bi-geo-alt"></i>
                         <div>
-                            <small>Visit us</small><strong>Dhaka, Bangladesh</strong>
-                            <p>Level 5, NOVACART Centre</p>
+                            <small>Visit us</small><strong>{{ contact?.address || 'Dhaka, Bangladesh' }}</strong>
+                            <p>{{ contact?.site_name || 'Our Store' }} Centre</p>
                         </div>
                     </div>
                 </div>
@@ -95,21 +145,20 @@
                     </div>
 
                     <div class="contact-form-panel">
-                        <form @submit.prevent="submitted = true">
+                        <form @submit.prevent="submitContact">
                             <div class="contact-form-head">
                                 <small>Send a message</small>
                                 <h2>Tell us what you need</h2>
                             </div>
                             <div class="contact-fields">
                                 <label
-                                    ><span>First name</span><input name="firstName" autocomplete="given-name" required
-                                /></label>
+                                    ><span>First name</span><input v-model="form.first_name" name="first_name" autocomplete="given-name" minlength="2" maxlength="50" required @input="cleanFirstName" /></label>
                                 <label
-                                    ><span>Last name</span><input name="lastName" autocomplete="family-name" required
-                                /></label>
+                                    ><span>Last name</span><input v-model="form.last_name" name="last_name" autocomplete="family-name" minlength="2" maxlength="50" required @input="cleanLastName" /></label>
                                 <label class="full"
                                     ><span>Email address</span
                                     ><input
+                                        v-model="form.email"
                                         name="email"
                                         type="email"
                                         autocomplete="email"
@@ -118,12 +167,12 @@
                                 /></label>
                                 <label class="full"
                                     ><span>Phone <small>(optional)</small></span
-                                    ><input name="phone" type="tel" autocomplete="tel" placeholder="+880 1XXX-XXXXXX"
+                                    ><input v-model="form.phone" name="phone" type="tel" maxlength="20" autocomplete="tel" placeholder="+880 1XXX-XXXXXX" @input="cleanPhone"
                                 /></label>
                                 <label class="full"
                                     ><span>Topic</span
-                                    ><select name="topic" required>
-                                        <option value="" disabled selected>Select a topic</option>
+                                    ><select v-model="form.topic" name="topic" required>
+                                        <option value="" disabled>Select a topic</option>
                                         <option>Order and delivery</option>
                                         <option>Returns and refunds</option>
                                         <option>Product information</option>
@@ -134,7 +183,11 @@
                                 <label class="full"
                                     ><span>Message</span
                                     ><textarea
+                                        v-model="form.message"
                                         name="message"
+                                        minlength="10"
+                                        maxlength="2000"
+                                        @input="cleanMessage"
                                         rows="5"
                                         placeholder="How can we help you?"
                                         required
@@ -142,17 +195,18 @@
                                 </label>
                             </div>
                             <label class="contact-consent"
-                                ><input type="checkbox" required /><span
-                                    >I agree that NOVACART may use my details to respond to this enquiry.</span
+                                ><input v-model="consent" type="checkbox" required /><span
+                                    >I agree that {{ contact?.site_name || 'this website' }} may use my details to respond to this enquiry.</span
                                 ></label
                             >
-                            <button class="contact-submit" type="submit">
-                                Send message <i class="bi bi-arrow-right"></i>
+                            <div v-if="errorMessage" class="contact-error">{{ errorMessage }}</div>
+                            <button class="contact-submit" type="submit" :disabled="sending">
+                                {{ sending ? 'Sending...' : 'Send message' }} <i class="bi bi-arrow-right"></i>
                             </button>
-                            <div v-if="submitted" class="contact-success" role="status">
+                            <div v-if="successMessage" class="contact-success" role="status">
                                 <i class="bi bi-check-circle-fill"></i
                                 ><span
-                                    ><strong>Message received!</strong> We will contact you as soon as possible.</span
+                                    ><strong>{{ successMessage }}</strong></span
                                 >
                             </div>
                         </form>
@@ -163,7 +217,7 @@
                     <div class="contact-map-head">
                         <div>
                             <small class="contact-eyebrow">Find our store</small>
-                            <h2>Visit NOVACART</h2>
+                            <h2>Visit {{ contact?.site_name || 'Our Store' }}</h2>
                             <p><i class="bi bi-geo-alt"></i> {{ companyLocation }}</p>
                         </div>
                         <a :href="directionsUrl" target="_blank" rel="noopener noreferrer"
@@ -173,7 +227,7 @@
                     <div class="contact-map-frame">
                         <iframe
                             :src="mapUrl"
-                            title="NOVACART company location on Google Maps"
+                            :title="(contact?.site_name || 'Store') + ' location on Google Maps'"
                             loading="lazy"
                             referrerpolicy="no-referrer-when-downgrade"
                             allowfullscreen
@@ -407,6 +461,7 @@
     .contact-submit i {
         margin-left: 8px;
     }
+    .contact-error { margin: 0 0 15px; padding: 12px 15px; background: #fff0ee; color: #b73527; font-size: 0.8rem; }
     .contact-success {
         display: flex;
         align-items: center;
@@ -544,3 +599,4 @@
         }
     }
 </style>
+
