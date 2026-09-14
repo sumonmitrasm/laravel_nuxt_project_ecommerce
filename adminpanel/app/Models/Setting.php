@@ -9,7 +9,7 @@ class Setting extends Model
     use HasFactory;
     protected $table = 'settings';
     protected $fillable = [
-    'logo', 'favicon', 'perronal_phone', 'phone', 'email', 'address',
+    'logo', 'favicon', 'perronal_phone', 'phone', 'email', 'address', 'map_url',
     'description', 'side_name', 'developed_year', 'facebook_url',
     'twitter_url', 'linkedin_url', 'instagram_url','youtube_url','meta_title',
     'meta_description', 'meta_image', 'url_structure', 'heading_tag',
@@ -17,3 +17,4 @@ class Setting extends Model
     'image', 'canonical_tag', 'status'
     ];
 }
+

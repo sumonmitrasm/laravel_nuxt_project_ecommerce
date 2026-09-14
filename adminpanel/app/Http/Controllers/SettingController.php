@@ -108,6 +108,7 @@ class SettingController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'email' => ['required', 'email', 'max:255'],
             'address' => ['required', 'string', 'max:500'],
+            'map_url' => ['nullable', 'url', 'max:1000'],
             'description' => ['nullable', 'string'],
             'side_name' => ['required', 'string', 'max:255'],
             'developed_year' => ['required', 'string', 'max:20'],
@@ -173,3 +174,4 @@ class SettingController extends Controller
         Cache::forget('api.general-setting.seo.v2');
     }
 }
+

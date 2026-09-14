@@ -487,7 +487,7 @@ const productBadge = product => {
                             </div>
                         </div>
                     </div>
-                    <div class="shop-filter-group">
+                    <!-- <div class="shop-filter-group">
                         <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#filterRating">
                             Customer rating <i class="bi bi-chevron-down"></i>
                         </button>
@@ -495,7 +495,7 @@ const productBadge = product => {
                             <label><input type="checkbox" /> <b class="filter-stars">★★★★★</b></label><label><input
                                     type="checkbox" /> <b class="filter-stars">★★★★</b> &amp; up</label>
                         </div>
-                    </div>
+                    </div> -->
                 </aside>
                 <div class="col-lg-9">
                     <div class="shop-toolbar">
