@@ -2,16 +2,43 @@
 const config = useRuntimeConfig()
 const route = useRoute()
 
-const id = route.query.id
-const slug = route.query.slug
+const blogApiUrl = computed(() => {
+    return `${config.public.apiBase}/blog/${route.query.id}/${route.query.slug}`
+})
 
-const { data, pending, error } = await useFetch(
-    `${config.public.apiBase}/blog/${id}/${slug}`
-)
+const { data, pending, error } = await useFetch(blogApiUrl)
 
 const blog = computed(() => data.value?.blog || null)
 const tags = computed(() => blog.value?.tags || [])
+
+const { data: blogListData } = await useFetch(
+    `${config.public.apiBase}/blog`
+)
+
+const sidebarBlogs = computed(() => {
+    const blogList = blogListData.value?.blogs?.data || []
+
+    return blogList
+        .filter(item => item.id !== blog.value?.id)
+        .slice(0, 4)
+})
 const seo = computed(() => data.value?.seo || {})
+
+const pageUrl = useRequestURL()
+const shareUrl = computed(() => encodeURIComponent(pageUrl.href))
+const shareTitle = computed(() => encodeURIComponent(blog.value?.title || ''))
+const linkCopied = ref(false)
+
+const copyBlogLink = async () => {
+    if (!import.meta.client) return
+
+    await navigator.clipboard.writeText(window.location.href)
+    linkCopied.value = true
+
+    setTimeout(() => {
+        linkCopied.value = false
+    }, 2000)
+}
 // console.log('query', route.query)
 // console.log('id', route.query.id)
 // console.log('slug', route.query.slug)
@@ -73,40 +100,42 @@ useHead(() => ({
 
             <aside class="blog-sidebar">
                 <section class="sidebar-box">
-                    <h3>Social Networks</h3>
+                    <h3>Share This Blog</h3>
                     <div class="social-list">
-                        <a href="#"><i class="bi bi-instagram instagram"></i><span>Instagram</span></a>
-                        <a href="#"><i class="bi bi-twitter-x twitter"></i><span>Twitter</span></a>
-                        <a href="#"><i class="bi bi-facebook facebook"></i><span>Facebook</span></a>
-                        <a href="#"><i class="bi bi-youtube youtube"></i><span>YouTube</span></a>
-                        <a href="#"><i class="bi bi-pinterest pinterest"></i><span>Pinterest</span></a>
-                        <a href="#"><i class="bi bi-linkedin linkedin"></i><span>LinkedIn</span></a>
+                        <a :href="`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-facebook facebook"></i><span>Facebook</span>
+                        </a>
+                        <a :href="`https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle}`" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-twitter-x twitter"></i><span>Twitter</span>
+                        </a>
+                        <a :href="`https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-linkedin linkedin"></i><span>LinkedIn</span>
+                        </a>
+                        <a :href="`https://wa.me/?text=${shareTitle}%20${shareUrl}`" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-whatsapp whatsapp"></i><span>WhatsApp</span>
+                        </a>
+                        <button type="button" @click="copyBlogLink">
+                            <i class="bi bi-link-45deg copy-link"></i>
+                            <span>{{ linkCopied ? 'Copied!' : 'Copy Link' }}</span>
+                        </button>
                     </div>
                 </section>
-
                 <section class="sidebar-box popular-box">
-                    <div class="popular-tabs">
-                        <button class="active">POPULAR</button>
-                        <button>RECENT</button>
-                        <button>TRENDY</button>
-                    </div>
+                    <h3>Blogs</h3>
 
-                    <a href="#" class="popular-post">
-                        <img src="/assets/images/product-1.svg" alt="Popular post">
-                        <span><strong>Undeniable Proof That You Need Travel</strong><small>06 August 2026</small></span>
-                    </a>
-                    <a href="#" class="popular-post">
-                        <img src="/assets/images/product-2.svg" alt="Popular post">
-                        <span><strong>What Food Can Teach Us About Sports</strong><small>04 August 2026</small></span>
-                    </a>
-                    <a href="#" class="popular-post">
-                        <img src="/assets/images/product-3.svg" alt="Popular post">
-                        <span><strong>Everything You Need To Know Today</strong><small>01 August 2026</small></span>
-                    </a>
-                    <a href="#" class="popular-post">
-                        <img src="/assets/images/product-4.svg" alt="Popular post">
-                        <span><strong>Meet The Style Jobs Of The Tech Industry</strong><small>28 July 2026</small></span>
-                    </a>
+                    <NuxtLink
+                        v-for="sidebarBlog in sidebarBlogs"
+                        :key="sidebarBlog.id"
+                        :to="`/blogDetail?id=${sidebarBlog.id}&slug=${sidebarBlog.slug}`"
+                        class="popular-post"
+                    >
+                        <img v-if="sidebarBlog.image_url" :src="sidebarBlog.image_url" :alt="sidebarBlog.title">
+                        <span v-else class="popular-image-empty"><i class="bi bi-image"></i></span>
+                        <span>
+                            <strong>{{ sidebarBlog.title }}</strong>
+                            <small>{{ formatDate(sidebarBlog.published_at) }}</small>
+                        </span>
+                    </NuxtLink>
                 </section>
 
                 <section class="sidebar-box">
@@ -115,7 +144,7 @@ useHead(() => ({
                         <NuxtLink
                             v-for="tag in tags"
                             :key="tag.id"
-                            :to="`/tags?id=${tag.id}&slug=${blog.slug}`"
+                            :to="`/tags?slug=${tag.slug}`"
                         >
                             {{ tag.name }}
                         </NuxtLink>
@@ -135,7 +164,7 @@ useHead(() => ({
 .article-card h1 { max-width: 760px; margin: 16px 0 14px; font-size: clamp(27px, 2.4vw, 36px); line-height: 1.18; letter-spacing: -.8px; }
 .post-meta { margin-bottom: 22px; display: flex; flex-wrap: wrap; gap: 17px; color: #969aa3; font-size: 11px; }
 .post-meta span { display: inline-flex; align-items: center; gap: 6px; }
-.post-cover { width: 100%; height: 370px; display: block; border-radius: 6px; object-fit: cover; background: #edf1ef; }
+.post-cover { width: 100%; height: 370px; display: block; border-radius: 6px; object-fit: contain; background: #f7f8f8; }
 .post-content { padding-top: 24px; color: #5f626a; font-size: 14px; line-height: 1.8; }
 .post-content p { margin: 0 0 22px; }
 .post-content h2 { margin: 38px 0 14px; color: #202229; font-size: 23px; line-height: 1.3; }
@@ -146,14 +175,16 @@ useHead(() => ({
 .sidebar-box { padding: 21px; }
 .sidebar-box h3 { margin: 0 0 16px; color: #22242a; font-size: 18px; }
 .social-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
-.social-list a { display: flex; align-items: center; gap: 8px; color: #50535a; font-size: 11px; text-decoration: none; }
+.social-list a, .social-list button { display: flex; align-items: center; gap: 8px; color: #50535a; font-size: 11px; text-decoration: none; }
+.social-list button { padding: 0; border: 0; background: transparent; color: #50535a; font-size: 11px; text-align: left; }
 .social-list i { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 4px; color: #fff; }
-.instagram { background: #e43a93; }.twitter { background: #2ba9e0; }.facebook { background: #3467b3; }.youtube { background: #ef3434; }.pinterest { background: #cf2435; }.linkedin { background: #1976a9; }
+.whatsapp { background: #24a85a; }.copy-link { background: #6f7782; }.twitter { background: #2ba9e0; }.facebook { background: #3467b3; }.youtube { background: #ef3434; }.pinterest { background: #cf2435; }.linkedin { background: #1976a9; }
 .popular-tabs { margin-bottom: 20px; display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid #eee; }
 .popular-tabs button { padding: 9px 3px; border: 0; background: transparent; color: #9a9da5; font-size: 9px; font-weight: 800; }
 .popular-tabs button.active { border-bottom: 2px solid #4c64df; color: #4c64df; }
 .popular-post { padding: 10px 0; display: grid; grid-template-columns: 62px 1fr; gap: 11px; border-bottom: 1px solid #f0f1f3; color: #24262d; text-decoration: none; }
-.popular-post img { width: 62px; height: 55px; object-fit: contain; background: #f4f5f7; }
+.popular-post img, .popular-image-empty { width: 62px; height: 55px; object-fit: cover; background: #f4f5f7; }
+.popular-image-empty { display: grid; place-items: center; color: #90969f; }
 .popular-post strong, .popular-post small { display: block; }
 .popular-post strong { font-size: 11px; line-height: 1.35; }
 .popular-post small { margin-top: 5px; color: #a4a7ae; font-size: 8px; }
