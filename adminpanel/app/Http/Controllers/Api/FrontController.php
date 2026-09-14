@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\Blog;
+use App\Models\Tag;
 
 class FrontController extends Controller
 {
@@ -792,4 +793,64 @@ class FrontController extends Controller
         ]);
     }
 
-}
+
+    public function tags(): JsonResponse
+    {
+        $tags = Tag::query()
+            ->where('status', true)
+            ->withCount(['blogs' => function ($query) {
+                $query->where('status', true);
+            }])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($tag) {
+                return [
+                    'id' => $tag->id,
+                    'name' => $tag->name,
+                    'slug' => $tag->slug,
+                    'description' => $tag->description,
+                    'image_url' => $tag->image
+                        ? asset('admin/tagimage/'.basename($tag->image))
+                        : null,
+                    'blogs_count' => $tag->blogs_count,
+                ];
+            });
+
+        return response()->json([
+            'status' => true,
+            'tags' => $tags,
+        ]);
+    }
+
+    public function tagDetails(string $slug): JsonResponse
+    {
+        $tag = Tag::query()
+            ->where('slug', $slug)
+            ->where('status', true)
+            ->firstOrFail();
+
+        $blogs = $tag->blogs()
+            ->select(['blogs.id', 'title', 'slug', 'image', 'excerpt', 'published_at'])
+            ->where('blogs.status', true)
+            ->latest('published_at')
+            ->paginate(9);
+
+        $blogs->getCollection()->transform(function ($blog) {
+            $blog->image_url = $blog->image
+                ? asset('admin/blogimage/'.basename($blog->image))
+                : null;
+
+            return $blog;
+        });
+
+        return response()->json([
+            'status' => true,
+            'tag' => [
+                'id' => $tag->id,
+                'name' => $tag->name,
+                'slug' => $tag->slug,
+                'description' => $tag->description,
+            ],
+            'blogs' => $blogs,
+        ]);
+    }}
