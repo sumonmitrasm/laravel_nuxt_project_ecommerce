@@ -219,6 +219,70 @@ const submitCart = async (buyNow = false) => {
     }
 }
 
+
+type Review = { id: number; rating: number; title: string; comment: string; verified_purchase: boolean; created_at: string; user: { name: string } }
+const reviews = ref<Review[]>([])
+const reviewAverage = ref(0)
+const reviewTotal = ref(0)
+const reviewForm = reactive({ rating: 0, title: '', comment: '' })
+const reviewMessage = ref('')
+const reviewError = ref('')
+const reviewSubmitting = ref(false)
+
+const loadReviews = async () => {
+    if (!productId.value) return
+    const response = await $fetch<any>(`/products/${productId.value}/reviews`, { baseURL: config.public.apiBase })
+    reviews.value = response.reviews
+    reviewAverage.value = response.average
+    reviewTotal.value = response.total
+}
+const ratingCount = (rating: number) => reviews.value.filter(review => review.rating === rating).length
+const ratingWidth = (rating: number) => reviewTotal.value ? ratingCount(rating) / reviewTotal.value * 100 : 0
+const reviewStars = (rating: number) => '★'.repeat(rating) + '☆'.repeat(5 - rating)
+const reviewDate = (date: string) => new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+
+const cleanTitle = () => { reviewForm.title = reviewForm.title.replace(/[^\p{L}\p{N}\s.,!?()'\-]/gu, '') }
+const cleanComment = () => { reviewForm.comment = reviewForm.comment.replace(/[^\p{L}\p{N}\s.,!?()'"\-]/gu, '') }
+
+watch(productId, loadReviews, { immediate: true })
+
+const submitReview = async () => {
+    reviewMessage.value = ''
+    reviewError.value = ''
+    if (!isAuthenticated.value) {
+        await navigateTo({ path: '/login', query: { redirect: route.fullPath } })
+        return
+    }
+    if (!reviewForm.rating) {
+        reviewError.value = 'Please select a rating.'
+        return
+    }
+    if (reviewForm.title.trim().length < 3 || reviewForm.comment.trim().length < 10) {
+        reviewError.value = 'Please write a valid title and at least 10 characters in your review.'
+        return
+    }
+    try {
+        reviewSubmitting.value = true
+        await $fetch('/sanctum/csrf-cookie', { baseURL: config.public.backendBase, credentials: 'include' })
+        refreshCookie('XSRF-TOKEN')
+        const token = useCookie<string | null>('XSRF-TOKEN')
+        const response = await $fetch<any>(`/products/${productId.value}/reviews`, {
+            baseURL: config.public.apiBase,
+            method: 'POST',
+            credentials: 'include',
+            headers: token.value ? { 'X-XSRF-TOKEN': decodeURIComponent(token.value) } : {},
+            body: reviewForm,
+        })
+        reviewMessage.value = response.message
+        Object.assign(reviewForm, { rating: 0, title: '', comment: '' })
+    } catch (requestError: any) {
+        const errors = requestError?.data?.errors
+        reviewError.value = errors ? Object.values(errors).flat().join(' ') : requestError?.data?.message ?? 'Review could not be submitted.'
+    } finally {
+        reviewSubmitting.value = false
+    }
+}
+
 onBeforeUnmount(() => interactionCleanups.splice(0).forEach(cleanup => cleanup()))
 
 onMounted(() => {
@@ -317,8 +381,33 @@ onMounted(() => {
                     </table>
                 </div>
             </section>
+
+            <section v-if="product" class="customer-reviews container pb-5">
+                <div class="review-heading"><div><span>Customer feedback</span><h2>Ratings &amp; Reviews</h2></div><p>See what customers think about this product.</p></div>
+                <div class="row g-4">
+                    <div class="col-lg-7"><div class="review-card">
+                        <div class="rating-summary"><div><strong>{{ reviewAverage || '0.0' }}</strong><span>{{ reviewStars(Math.round(reviewAverage)) }}</span><small>{{ reviewTotal }} customer reviews</small></div><ul><li v-for="rating in [5,4,3,2,1]" :key="rating">{{ rating }} stars <i><b :style="{ width: ratingWidth(rating) + '%' }"></b></i> {{ ratingCount(rating) }}</li></ul></div>
+                        <p v-if="!reviews.length" class="no-reviews">No approved reviews yet. Be the first to review this product.</p>
+                        <article v-for="review in reviews" :key="review.id"><b class="avatar">{{ review.user.name.slice(0, 2).toUpperCase() }}</b><div><header><strong>{{ review.user.name }}</strong><time>{{ reviewDate(review.created_at) }}</time></header><small v-if="review.verified_purchase" class="verified"><i class="bi bi-patch-check-fill"></i> Verified purchase</small><span class="stars">{{ reviewStars(review.rating) }}</span><h3>{{ review.title }}</h3><p>{{ review.comment }}</p></div></article>
+                    </div></div>
+                    <div class="col-lg-5"><form class="review-form" @submit.prevent="submitReview">
+                        <span>Share your experience</span><h2>Write a Review</h2><p>{{ isAuthenticated ? 'Your review will appear after admin approval.' : 'Please login to submit your review.' }}</p>
+                        <p v-if="reviewError" class="review-alert error">{{ reviewError }}</p><p v-if="reviewMessage" class="review-alert success">{{ reviewMessage }}</p>
+                        <label>Your rating</label><div class="star-buttons"><button v-for="star in 5" :key="star" type="button" :class="{ selected: star <= reviewForm.rating }" @click="reviewForm.rating = star">★</button></div>
+                        <label>Review title</label><input v-model="reviewForm.title" type="text" minlength="3" maxlength="150" required placeholder="Write a short title" @input="cleanTitle">
+                        <label>Your review</label><textarea v-model="reviewForm.comment" rows="5" minlength="10" maxlength="2000" required placeholder="Tell us about the product" @input="cleanComment"></textarea>
+                        <small class="character-note">Letters, numbers and normal punctuation only. @ and # are not allowed.</small>
+                        <button class="submit-review" type="submit" :disabled="reviewSubmitting">{{ reviewSubmitting ? 'Submitting...' : (isAuthenticated ? 'Submit Review' : 'Login to Review') }}</button>
+                    </form></div>
+                </div>
+            </section>
         </main>
 
         <div class="product-zoom-modal" data-zoom-modal aria-hidden="true"><button type="button" data-close-zoom aria-label="Close"><i class="bi bi-x-lg"></i></button><img :src="activeImage" :alt="product?.product_name ?? 'Product'"><span>Inspect product image</span></div>
     </div>
 </template>
+
+<style scoped>
+.customer-reviews{border-top:1px solid #e4e9e6;padding-top:42px}.review-heading{display:flex;align-items:end;justify-content:space-between;margin-bottom:24px}.review-heading span,.review-form>span{color:#ff5745;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase}.review-heading h2,.review-form h2{font-size:29px;font-weight:700;margin:5px 0}.review-heading p,.review-card p,.review-form p{color:#68766f}.review-card,.review-form{border:1px solid #e1e7e3;border-radius:8px;height:100%;padding:26px}.rating-summary{align-items:center;background:#f6f8f7;border-radius:6px;display:grid;grid-template-columns:145px 1fr;padding:22px}.rating-summary>div{align-items:center;border-right:1px solid #ddd;display:flex;flex-direction:column}.rating-summary strong{font-size:44px;line-height:1}.rating-summary span,.stars{color:#ffad21;letter-spacing:2px}.rating-summary small{color:#7d8883}.rating-summary ul{list-style:none;margin:0;padding-left:28px}.rating-summary li{display:grid;font-size:12px;gap:8px;grid-template-columns:43px 1fr 12px;margin:7px 0}.rating-summary li i{background:#e0e5e2;border-radius:5px;height:6px;margin-top:5px;overflow:hidden}.rating-summary li b{background:#ffad21;display:block;height:100%}.review-card article{display:grid;gap:14px;grid-template-columns:45px 1fr;padding:24px 0}.review-card article+article{border-top:1px solid #e7ebe9}.avatar{align-items:center;background:#173c31;border-radius:50%;color:#fff;display:flex;height:45px;justify-content:center}.avatar.alt{background:#ff6554}.review-card header{display:flex;justify-content:space-between}.review-card time{color:#89938e;font-size:11px}.verified{color:#26966e;display:block}.stars{display:block}.review-card h3{font-size:16px;margin:7px 0}.review-form p{font-size:14px;margin:8px 0 20px}.review-form label{display:block;font-size:13px;font-weight:600;margin:13px 0 6px}.review-form input,.review-form textarea{border:1px solid #dbe2de;border-radius:4px;outline:none;padding:11px;width:100%}.review-form input:focus,.review-form textarea:focus{border-color:#ff5745}.star-buttons button{background:none;border:0;color:#ffad21;font-size:25px;padding:0 4px 0 0}.submit-review{background:#ff5745;border:0;border-radius:4px;color:#fff;font-size:12px;font-weight:700;margin:17px 0 10px;padding:13px 23px}.review-form>small{color:#7d8883;display:block}
+@media(max-width:767.98px){.customer-reviews{padding-top:28px}.review-heading{align-items:start;flex-direction:column}.review-heading h2,.review-form h2{font-size:24px}.review-card,.review-form{padding:17px}.rating-summary{gap:18px;grid-template-columns:1fr}.rating-summary>div{border-bottom:1px solid #ddd;border-right:0;padding-bottom:17px}.rating-summary ul{padding-left:0}.review-card header{flex-direction:column}}
+.star-buttons button{color:#d5dbd8}.star-buttons button.selected{color:#ffad21}.review-alert{border-radius:4px!important;margin:10px 0!important;padding:9px!important}.review-alert.error{background:#fff0ee;color:#b73527}.review-alert.success{background:#eaf8f1;color:#187552}.no-reviews{text-align:center;padding:28px}.character-note{color:#7d8883;display:block;margin-top:7px}</style>

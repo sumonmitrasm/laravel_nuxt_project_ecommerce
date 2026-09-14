@@ -18,6 +18,7 @@ use App\Http\Controllers\HomeSliderController;
 use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ProductReviewController;
 
 Route::get('/clear-cache', function() {
     Artisan::call('view:clear');
@@ -109,6 +110,9 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::patch('product/{product}/status', [ProductController::class, 'updateStatus'])->name('admin-product.status');
         Route::delete('product-images/{productImage}', [ProductController::class, 'destroyImage'])->name('admin-product.image.delete');
         Route::delete('product/{product}', [ProductController::class, 'destroy'])->name('admin-product.delete');
+        Route::get('reviews', [ProductReviewController::class, 'index'])->name('admin-reviews.index');
+        Route::patch('reviews/{review}/{status}', [ProductReviewController::class, 'status'])->name('admin-reviews.status');
+        Route::delete('reviews/{review}', [ProductReviewController::class, 'destroy'])->name('admin-reviews.delete');
         //>>>>>>>>>>>>>>>>>>>>>>>>End Product activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         //>>>>>>>>>>>>>>>>>>>>>>>>Coupon activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('coupons', [CouponController::class, 'index'])->name('coupons');
