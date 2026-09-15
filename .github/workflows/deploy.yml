@@ -61,7 +61,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd public_html/adminpanel
-            git pull origin main
+            git pull origin prod
             php artisan migrate --force
             php artisan config:clear
             php artisan cache:clear
