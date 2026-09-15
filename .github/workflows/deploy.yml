@@ -60,8 +60,9 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd public_html/adminpanel
+            cd public_html
             git pull origin prod
+            cd adminpanel
             php artisan migrate --force
             php artisan config:clear
             php artisan cache:clear
