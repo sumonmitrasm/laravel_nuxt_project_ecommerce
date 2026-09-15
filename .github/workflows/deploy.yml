@@ -57,8 +57,8 @@ jobs:
         with:
           host: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 65002
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
           script: |
             cd public_html
             git fetch origin prod
