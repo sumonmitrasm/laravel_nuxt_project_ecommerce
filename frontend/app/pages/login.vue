@@ -55,7 +55,7 @@ onMounted(() => {
         <div class="account-form-wrap">
           <NuxtLink class="account-mobile-logo" to="/">NOVA<span>CART</span></NuxtLink>
           <div class="account-title"><small>Welcome back</small>
-            <h2>Sign in to your account..</h2>
+            <h2>Sign in to your account</h2>
             <p>Only verified accounts can sign in.</p>
           </div>
           <div v-if="message" class="login-alert" :class="{ success }" role="alert">{{ message }}</div>

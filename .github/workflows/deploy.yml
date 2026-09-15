@@ -46,7 +46,7 @@ jobs:
           port: 21
           local-dir: ./frontend/.output/public/
           server-dir: /public_html/
-
+  
   # --- ২. LARAVEL BACKEND SSH DEPLOY ---
   deploy-backend:
     name: Deploy Laravel Backend
@@ -60,7 +60,8 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd public_html
+            cd domains/shahinenterprise.com.bd/public_html || cd public_html || cd ~
+            pwd
             git fetch origin prod
             git reset --hard origin/prod
             cd adminpanel
