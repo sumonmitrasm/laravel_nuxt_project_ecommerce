@@ -10,9 +10,14 @@ export default defineNuxtConfig({
   //     apiBase: 'http://localhost:8000/api',
   //   }
   // },
-  nitro: {
+ nitro: {
     prerender: {
-      failOnError: false
+      routes: [] 
+    }
+  },
+  router: {
+    options: {
+      hashMode: false
     }
   },
   // API Base URL Setup
