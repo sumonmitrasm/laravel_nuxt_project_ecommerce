@@ -10,7 +10,11 @@ export default defineNuxtConfig({
   //     apiBase: 'http://localhost:8000/api',
   //   }
   // },
-  
+  nitro: {
+    prerender: {
+      failOnError: false
+    }
+  },
   // API Base URL Setup
   runtimeConfig: {
     public: {
