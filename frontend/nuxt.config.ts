@@ -1,16 +1,7 @@
-export default defineNuxtConfig({
+﻿export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
-
-  ssr: true, // Server-render homepage content for reliable mobile LCP
-
-  nitro: {
-    prerender: {
-      crawlLinks: false,
-      failOnError: false, // এটি true থেকে false করে দিন
-      routes: ['/']
-    }
-  },
+  ssr: false, // এটি অবশ্যই false রাখতে হবে স্ট্যাটিক হোস্টিংয়ের জন্য
 
   runtimeConfig: {
     public: {
