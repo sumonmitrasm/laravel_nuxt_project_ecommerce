@@ -92,7 +92,7 @@ const formatDate = (date) => {
                         <span>ALL TOPICS</span>
                         <h2>Browse by interest</h2>
                     </div>
-                    <p>Choose a topic to see all blogs published under it.</p>
+                    <p>Choose a topic to see all blogs published under it..</p>
                 </div>
 
                 <div class="tag-grid">
