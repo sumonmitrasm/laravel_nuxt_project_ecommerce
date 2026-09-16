@@ -6,9 +6,9 @@ export default defineNuxtConfig({
 
   nitro: {
     prerender: {
-      crawlLinks: true,
+      crawlLinks: false,
       failOnError: false, // এটি true থেকে false করে দিন
-      routes: ['/', '/shop', '/product', '/cart', '/checkout', '/wishlist', '/compare', '/blog', '/contact', '/about', '/login', '/register', '/tags']
+      routes: ['/']
     }
   },
 
