@@ -1,8 +1,8 @@
-﻿export default defineNuxtConfig({
+export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
 
-  ssr: false, // SPA মোড নিশ্চিত করতে এটি যোগ করা ভালো
+  ssr: true, // Server-render homepage content for reliable mobile LCP
 
   nitro: {
     prerender: {

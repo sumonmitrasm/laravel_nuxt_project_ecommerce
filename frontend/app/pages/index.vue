@@ -279,7 +279,14 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
 
                                     <div class="hero-art dynamic-hero-art">
                                         <div class="art-circle">
-                                            <img v-if="slide.image_url" :src="slide.image_url" :alt="slide.title">
+                                                                                        <img
+                                                v-if="slide.image_url"
+                                                :src="slide.image_url"
+                                                :alt="slide.title"
+                                                :loading="index === 0 ? 'eager' : 'lazy'"
+                                                :fetchpriority="index === 0 ? 'high' : 'low'"
+                                                decoding="async"
+                                            >
                                             <template v-else>
                                                 <i :class="['bi', sliderFallbackIcons[index % sliderFallbackIcons.length][0]]"></i>
                                                 <i :class="['bi', sliderFallbackIcons[index % sliderFallbackIcons.length][1]]"></i>
