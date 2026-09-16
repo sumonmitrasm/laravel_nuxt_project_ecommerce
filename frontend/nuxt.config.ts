@@ -2,19 +2,19 @@
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
 
-  ssr: false,
-
   nitro: {
     prerender: {
       crawlLinks: false,
-      failOnError: false
+      failOnError: true,
+      routes: ['/']
     }
   },
 
   runtimeConfig: {
     public: {
-      backendBase: process.env.NUXT_PUBLIC_BACKEND_BASE || 'https://admin.shahinenterprise.com.bd',
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://admin.shahinenterprise.com.bd/api',
+      // These are the live defaults. frontend/.env overrides them on localhost.
+      backendBase: 'https://admin.shahinenterprise.com.bd',
+      apiBase: 'https://admin.shahinenterprise.com.bd/api',
     }
   },
 
@@ -33,3 +33,4 @@
     }
   }
 })
+
