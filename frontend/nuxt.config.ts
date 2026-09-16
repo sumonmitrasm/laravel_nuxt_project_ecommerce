@@ -2,17 +2,18 @@
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
 
+  ssr: false, // SPA মোড নিশ্চিত করতে এটি যোগ করা ভালো
+
   nitro: {
     prerender: {
       crawlLinks: false,
-      failOnError: true,
+      failOnError: false, // এটি true থেকে false করে দিন
       routes: ['/']
     }
   },
 
   runtimeConfig: {
     public: {
-      // These are the live defaults. frontend/.env overrides them on localhost.
       backendBase: 'https://admin.shahinenterprise.com.bd',
       apiBase: 'https://admin.shahinenterprise.com.bd/api',
     }
@@ -33,4 +34,3 @@
     }
   }
 })
-
