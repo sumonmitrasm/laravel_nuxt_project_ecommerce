@@ -45,8 +45,8 @@ jobs:
           protocol: ftps
           port: 21
           local-dir: ./frontend/.output/public/
-          server-dir: /public_html/frontend/
-  
+          server-dir: /public_html/
+
   # --- ২. LARAVEL BACKEND SSH DEPLOY ---
   deploy-backend:
     name: Deploy Laravel Backend
