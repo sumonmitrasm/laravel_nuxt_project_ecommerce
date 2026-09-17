@@ -1,13 +1,26 @@
 ﻿export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
-  ssr: false, // এটি অবশ্যই false রাখতে হবে স্ট্যাটিক হোস্টিংয়ের জন্য
+  // `nuxt generate` static HTML তৈরি করে। SSR চালু রাখলে generated HTML-এ
+  // homepage-এর heading ও hero image থাকে, তাই slow mobile connection-এও
+  // browser/Lighthouse JavaScript শেষ হওয়ার অপেক্ষা না করেই LCP পায়.
+  ssr: true,
 
   runtimeConfig: {
     public: {
       backendBase: 'https://admin.shahinenterprise.com.bd',
       apiBase: 'https://admin.shahinenterprise.com.bd/api',
     }
+  },
+
+  // This project is deployed as static files.  Prerender the public landing
+  // page for a fast first paint, but do not crawl every client-side link while
+  // generating: a few legacy links intentionally have no static page yet.
+  nitro: {
+    prerender: {
+      crawlLinks: false,
+      routes: ['/'],
+    },
   },
 
   app: {
