@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mobile Performance Fix Report</title>
+  <style>
+    :root { --ink:#18231d; --muted:#617068; --brand:#1f7547; --line:#dce6df; --soft:#f4f8f5; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#f6f8f6; color:var(--ink); font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    main { width:min(920px,calc(100% - 32px)); margin:40px auto; padding:40px; background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 16px 48px #17312012; }
+    h1,h2 { line-height:1.25; } h1 { margin:0 0 8px; font-size:clamp(1.65rem,4vw,2.35rem); } h2 { margin:32px 0 12px; font-size:1.25rem; }
+    .lead,.muted { color:var(--muted); } .status { display:inline-block; margin-top:14px; padding:6px 11px; border-radius:999px; color:#12673b; background:#e5f5eb; font-weight:700; font-size:.86rem; }
+    table { width:100%; border-collapse:collapse; margin:12px 0; } th,td { padding:12px; border:1px solid var(--line); text-align:left; vertical-align:top; } th { background:var(--soft); }
+    code { padding:2px 5px; border-radius:4px; background:#edf2ee; color:#23452f; font-size:.9em; } ul { padding-left:22px; } li+li { margin-top:8px; }
+    .notice { padding:15px 17px; border-left:4px solid #d88a20; border-radius:5px; background:#fff8e9; }
+    footer { margin-top:36px; color:var(--muted); font-size:.88rem; }
+    @media (max-width:600px) { main { width:100%; margin:0; border:0; border-radius:0; padding:24px 18px; } th,td { padding:9px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Mobile Performance Fix Report</h1>
+    <p class="lead">Project: <strong>laravel_nuxt_project_ecommerce</strong><br>Target: Homepage mobile ও desktop PageSpeed performance</p>
+    <span class="status">লোকাল production build সফল</span>
+
+    <h2>সমস্যার মূল কারণ</h2>
+    <p>Nuxt configuration-এ <code>ssr: false</code> ছিল। তাই live homepage-এর প্রথম HTML-এ <code>#___nuxt</code> খালি থাকত। Hero content, title এবং image দেখতে browser-কে আগে JavaScript download/execute করে API response-এর জন্য অপেক্ষা করতে হতো। Slow mobile network-এ এটি <code>NO_LCP</code> বা খারাপ LCP-এর বড় কারণ।</p>
+
+    <h2>যে পরিবর্তনগুলো করা হয়েছে</h2>
+    <table>
+      <thead><tr><th>ফাইল</th><th>পরিবর্তন</th><th>ফলাফল</th></tr></thead>
+      <tbody>
+        <tr><td><code>frontend/nuxt.config.ts</code></td><td><code>ssr: true</code> করা হয়েছে। Static generation-এর জন্য শুধু homepage prerender করা হয়েছে।</td><td>HTML parse হওয়ার সময়ই homepage content পাওয়া যাবে; LCP-এর জন্য JavaScript dependency কমবে।</td></tr>
+        <tr><td><code>frontend/app/pages/index.vue</code></td><td>প্রথম slider image-এর জন্য <code>rel=preload</code>, <code>fetchpriority=high</code>, <code>width</code>, <code>height</code> ও <code>sizes</code> যোগ করা হয়েছে।</td><td>Browser hero image আগে থেকে fetch করতে পারবে এবং image layout স্থির থাকবে।</td></tr>
+        <tr><td><code>frontend/app/pages/index.vue</code></td><td>Sidebar/category thumbnail-এ <code>loading=lazy</code> ও <code>decoding=async</code> যোগ করা হয়েছে।</td><td>প্রথম viewport-এর জন্য অপ্রয়োজনীয় image download কমবে।</td></tr>
+        <tr><td><code>frontend/app/components/AppFooter.vue</code></td><td>Mobile off-canvas menu-এর section image lazy-load করা হয়েছে।</td><td>বন্ধ থাকা menu-এর image প্রথম page load-এ bandwidth নেবে না।</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Build verification</h2>
+    <ul>
+      <li><code>npm run generate</code> সফলভাবে সম্পন্ন হয়েছে।</li>
+      <li>Generated <code>index.html</code>-এ <code>data-ssr=&quot;true&quot;</code> পাওয়া গেছে।</li>
+      <li>Hero image preload, <code>fetchpriority=&quot;high&quot;</code>, এবং <code>width=&quot;700&quot; height=&quot;700&quot;</code> যাচাই করা হয়েছে।</li>
+      <li>Homepage-এর hero markup generated HTML-এ উপস্থিত আছে।</li>
+    </ul>
+
+    <h2>Deployment note</h2>
+    <div class="notice">বর্তমান পরিবর্তনগুলো লোকাল branch <code>serverSecound</code>-এ আছে। GitHub Actions production deployment শুধু <code>prod</code> branch-এ push হলে চালু হয়। তাই live ফল দেখতে এই পরিবর্তনগুলো <code>prod</code>-এ merge/push করতে হবে।</div>
+
+    <h2>Frontend page কোথায় থাকে?</h2>
+    <p>Development source pages থাকে <code>frontend/app/pages</code>-এ। Server-এর <code>public_html</code>-এ source folder যায় না; সেখানে Nuxt build-এর compiled <code>index.html</code>, <code>200.html</code> এবং <code>_nuxt</code> files যায়। <code>.htaccess</code> ও <code>200.html</code> দিয়ে <code>/shop</code>, <code>/contact</code>, <code>/blog</code>-এর মতো client-side routes কাজ করে।</p>
+
+    <h2>পরের যাচাই</h2>
+    <p>Deploy হওয়ার 5–10 মিনিট পরে PageSpeed Insights-এ homepage আবার Mobile ও Desktop mode-এ test করতে হবে। নতুন report-এ <code>NO_LCP</code> না থেকে একটি LCP time দেখা উচিত। Score server response time, visitor location, cache এবং test run অনুযায়ী কিছুটা ওঠানামা করতে পারে।</p>
+
+    <footer>এই রিপোর্টটি performance fix-এর সঙ্গে তৈরি করা হয়েছে।</footer>
+  </main>
+</body>
+</html>
