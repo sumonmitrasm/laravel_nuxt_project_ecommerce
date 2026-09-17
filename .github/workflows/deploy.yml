@@ -1,13 +1,13 @@
 name: Deploy Nuxt Frontend & Laravel Backend
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
 on:
   push:
     branches:
       - prod
-
-concurrency:
-  group: production-deploy
-  cancel-in-progress: true
 
 jobs:
   # --- ১. FRONTEND BUILD & FTP DEPLOY ---
@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -50,6 +50,7 @@ jobs:
   # --- ২. LARAVEL BACKEND SSH DEPLOY ---
   deploy-backend:
     name: Deploy Laravel Backend
+    needs: deploy-frontend
     runs-on: ubuntu-latest
     steps:
       - name: Execute Remote SSH Commands for Laravel
@@ -62,8 +63,9 @@ jobs:
           script: |
             cd domains/shahinenterprise.com.bd/public_html || cd public_html || cd ~
             pwd
+            # যদি সার্ভারে গিট ফোল্ডার রাখতে না চান, তবে শুধু adminpanel ফোল্ডার আপডেট করার ব্যবস্থা
             git fetch origin prod
-            git reset --hard origin/prod
+            git checkout origin/prod -- adminpanel/
             cd adminpanel
             php artisan migrate --force
             php artisan config:clear
