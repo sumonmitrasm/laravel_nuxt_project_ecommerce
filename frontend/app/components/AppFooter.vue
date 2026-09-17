@@ -136,7 +136,7 @@ onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
                 <div v-for="(section, index) in sections" :key="section.id" class="mobile-nav-group">
                     <button type="button" data-bs-toggle="collapse" :data-bs-target="`#${mobileSectionId(section)}`"
                         :aria-expanded="index === 0"><span>
-                            <img v-if="section.image_url" :src="section.image_url" alt="">
+                            <img v-if="section.image_url" :src="section.image_url" alt="" loading="lazy" decoding="async">
                             <i v-else class="bi bi-grid"></i> {{ section.name }}</span><i
                             class="bi bi-chevron-down"></i>
                     </button>

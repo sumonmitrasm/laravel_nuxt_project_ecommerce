@@ -18,6 +18,7 @@ usePageSeo(pageSeo)
 
 const sections = computed(() => data.value?.categories ?? [])
 const sliders = computed(() => data.value?.sliders ?? [])
+const lcpSlide = computed(() => sliders.value[0] ?? null)
 const hotDeals = computed(() => data.value?.hot_deals ?? [])
 const trendingGroups = computed(() => data.value?.trending_products ?? {})
 const trendingProducts = computed(() => trendingGroups.value[activeTrendingFilter.value] ?? [])
@@ -69,6 +70,21 @@ const activeSection = computed(() =>
 
 const sectionIcons = ['bi-phone', 'bi-bag', 'bi-house-heart', 'bi-heart-pulse', 'bi-controller', 'bi-bicycle', 'bi-balloon', 'bi-car-front']
 const sectionIcon = index => sectionIcons[index % sectionIcons.length]
+
+// The first slider is the image users see above the fold.  Adding this to the
+// document head lets the browser fetch it while parsing HTML, before Vue loads.
+useHead(() => ({
+  link: lcpSlide.value?.image_url
+    ? [{
+        key: 'home-lcp-image',
+        rel: 'preload',
+        as: 'image',
+        href: lcpSlide.value.image_url,
+        type: 'image/webp',
+        fetchpriority: 'high',
+      }]
+    : [],
+}))
 </script>
 
 
@@ -82,7 +98,7 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
                         <div v-for="(section, sectionIndex) in sections" :key="section.id" class="desktop-category-item">
                             <NuxtLink :to="{ path: '/shop', query: { section: section.id } }"><span>
                                     <img v-if="section.image_url" :src="section.image_url" :alt="section.name"
-                                        class="sidebar-section-image">
+                                        class="sidebar-section-image" loading="lazy" decoding="async">
                                     <i v-else class="bi" :class="sectionIcon(sectionIndex)"></i>{{ section.name }}</span><i
                                     class="bi bi-chevron-right"></i></NuxtLink>
                             <div v-if="section.categories?.length" class="category-flyout">
@@ -94,7 +110,7 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
                                         :to="{ path: '/shop', query: { category: category.url } }">View products</NuxtLink>
                                 </div>
                                 <div class="flyout-feature">
-                                    <img v-if="section.image_url" :src="section.image_url" :alt="section.name" class="flyout-section-image">
+                                    <img v-if="section.image_url" :src="section.image_url" :alt="section.name" class="flyout-section-image" loading="lazy" decoding="async">
                                     <i v-else class="bi bi-grid"></i><small>Featured section</small>
                                     <strong>Explore {{ section.name }}</strong>
                                     <NuxtLink :to="{ path: '/shop', query: { section: section.id } }">Explore now <i class="bi bi-arrow-right"></i></NuxtLink>
@@ -286,6 +302,9 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
                                                 :loading="index === 0 ? 'eager' : 'lazy'"
                                                 :fetchpriority="index === 0 ? 'high' : 'low'"
                                                 decoding="async"
+                                                width="700"
+                                                height="700"
+                                                sizes="(max-width: 767px) 210px, 330px"
                                             >
                                             <template v-else>
                                                 <i :class="['bi', sliderFallbackIcons[index % sliderFallbackIcons.length][0]]"></i>
@@ -331,7 +350,7 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
                         :class="{ active: activeSection?.id === section.id }"
                         :aria-selected="activeSection?.id === section.id"
                         @click="activeSectionId = section.id">
-                        <img v-if="section.image_url" :src="section.image_url" alt="">
+                        <img v-if="section.image_url" :src="section.image_url" alt="" loading="lazy" decoding="async">
                         <span>{{ section.name }}</span>
                     </button>
                 </div>
