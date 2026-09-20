@@ -578,7 +578,7 @@ const productBadge = product => {
             <button class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body">
-            <div class="shop-filter-head"><strong>Filters</strong><button type="reset">Clean All</button></div>
+            <div class="shop-filter-head"><strong>Filters </strong><button type="reset">Clean All</button></div>
             <div class="shop-filter-group">
                 <button class="shop-filter-title" data-bs-toggle="collapse" data-bs-target="#mobileFilterPanel0" aria-expanded="true">Category <i class="bi bi-chevron-down"></i></button>
                 <div class="collapse show" id="mobileFilterPanel0">
