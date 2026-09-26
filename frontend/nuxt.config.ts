@@ -1,4 +1,14 @@
-﻿export default defineNuxtConfig({
+﻿import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+
+// Public assets keep their filename after generation. Change the URL when the
+// stylesheet changes so browsers and Hostinger CDN fetch the deployed version.
+const stylesheetVersion = createHash('sha256')
+  .update(readFileSync(new URL('./public/assets/css/style.css', import.meta.url)))
+  .digest('hex')
+  .slice(0, 12)
+
+export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
   // `nuxt generate` static HTML তৈরি করে। SSR চালু রাখলে generated HTML-এ
@@ -33,7 +43,7 @@
       link: [
         { rel: 'stylesheet', href: '/assets/vendor/bootstrap/css/bootstrap.min.css' },
         { rel: 'stylesheet', href: '/assets/vendor/bootstrap-icons/bootstrap-icons.css' },
-        { rel: 'stylesheet', href: '/assets/css/style.css' },
+        { rel: 'stylesheet', href: `/assets/css/style.css?v=${stylesheetVersion}` },
       ]
     }
   }
