@@ -605,6 +605,8 @@ body {
     overflow-x: auto;
     scroll-behavior: smooth;
     scroll-snap-type: x mandatory;
+    /* Match the track padding so initial snapping does not scroll before LCP. */
+    scroll-padding-left: 2px;
     scrollbar-width: none;
     padding: 0 2px 12px
 }
@@ -6477,6 +6479,8 @@ body {
     overflow-x: auto;
     scroll-behavior: smooth;
     scroll-snap-type: x mandatory;
+    /* Match the track padding so initial snapping does not scroll before LCP. */
+    scroll-padding-left: 2px;
     scrollbar-width: none;
     padding: 0 2px 12px
 }
