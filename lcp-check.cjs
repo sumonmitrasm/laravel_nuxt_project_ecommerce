@@ -11,10 +11,17 @@ async function main() {
   let id = 0
   const pending = new Map()
   const traceEvents = []
+  const stylesheetResponses = []
 
   socket.on('message', raw => {
     const message = JSON.parse(raw)
+    if (message.method === 'Fetch.requestPaused') {
+      const url = new URL(message.params.request.url)
+      url.searchParams.set('v', process.env.LCP_STYLE_VERSION)
+      send('Fetch.continueRequest', { requestId: message.params.requestId, url: url.href }).catch(error => { console.error(error); socket.close() })
+    }
     if (message.method === 'Tracing.dataCollected') traceEvents.push(...message.params.value)
+    if (message.method === 'Network.responseReceived' && message.params.response.url.includes('/assets/css/style.css')) stylesheetResponses.push(message.params)
     if (message.id && pending.has(message.id)) {
       pending.get(message.id)(message)
       pending.delete(message.id)
@@ -37,6 +44,7 @@ async function main() {
   await send('Page.enable')
   await send('Network.enable')
   await send('Network.setCacheDisabled', { cacheDisabled: true })
+  if (process.env.LCP_STYLE_VERSION) await send('Fetch.enable', { patterns: [{ urlPattern: '*/assets/css/style.css*', requestStage: 'Request' }] })
   await send('Emulation.setDeviceMetricsOverride', mode === 'mobile'
     ? { width: 412, height: 823, deviceScaleFactor: 1.75, mobile: true }
     : { width: 1350, height: 940, deviceScaleFactor: 1, mobile: false })
@@ -76,6 +84,13 @@ async function main() {
   if (result.result.exceptionDetails) throw new Error(JSON.stringify(result.result.exceptionDetails))
   const scrolling = await send('Runtime.evaluate', { expression: 'JSON.stringify(window.__scrollEvents)', returnByValue: true })
   const report = { mode, url, ...JSON.parse(result.result.result.value), scrollEvents: JSON.parse(scrolling.result.result.value), diagnostics: JSON.parse(diagnostics.result.result.value) }
+  const track = await send('Runtime.evaluate', { expression: `JSON.stringify((()=>{const e=document.querySelector('.deals-track');if(!e)return null;const s=getComputedStyle(e);return {scrollLeft:e.scrollLeft,padding:s.padding,scrollPadding:s.scrollPadding,scrollSnapType:s.scrollSnapType,stylesheets:[...document.styleSheets].map(s=>s.href)}})())`, returnByValue: true })
+  report.track = JSON.parse(track.result.result.value)
+  report.stylesheetResponses = []
+  for (const entry of stylesheetResponses) {
+    const body = await send('Network.getResponseBody', { requestId: entry.requestId })
+    report.stylesheetResponses.push({ url: entry.response.url, headers: entry.response.headers, fromDiskCache: entry.response.fromDiskCache, hasScrollPaddingFix: body.result.body.includes('scroll-padding-left: 2px') })
+  }
   if (process.env.LCP_SCROLL_TEST) {
     await send('Runtime.evaluate', { expression: `document.querySelector('.deals-track')?.scrollBy({left:280,behavior:'smooth'})` })
     await new Promise(resolve => setTimeout(resolve, 1500))
