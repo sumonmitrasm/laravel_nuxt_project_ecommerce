@@ -1,0 +1,7 @@
+# Temporary browser profiles and local performance diagnostics
+/.lcp-chrome/
+/scroll-*.json
+/scroll-*.png
+/scroll-*.log
+/lcp-trace.json
+/lcp-build.log
