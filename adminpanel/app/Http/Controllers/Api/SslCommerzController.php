@@ -32,7 +32,16 @@ class SslCommerzController extends Controller
             throw ValidationException::withMessages(['payment' => 'This order can no longer be paid.']);
         }
 
-        $payment = $order->payments->firstOrFail();
+        // A retry gets its own row. Never replace an older transaction ID.
+        $payment = $order->payments()->whereNull('transaction_id')->latest('id')->first();
+        if (! $payment) {
+            $payment = $order->payments()->create([
+                'method' => 'sslcommerz',
+                'amount' => $order->grand_total,
+                'currency' => $order->currency,
+                'status' => 'pending',
+            ]);
+        }
         $transactionId = 'SSL'.$order->id.Str::upper(Str::random(12));
         $payment->update(['transaction_id' => $transactionId, 'status' => 'initiated']);
 
@@ -115,7 +124,7 @@ class SslCommerzController extends Controller
         if (! $payment || ! $payment->order || $payment->method !== 'sslcommerz') return null;
         if ($payment->paid_at) return $payment->order->order_number;
 
-        $gateway = app(SslCommerzNotification::class);
+        $gateway = new SslCommerzNotification();
         if (! $gateway->orderValidate($request->all(), $transactionId, (float) $payment->amount, $payment->currency)) {
             Log::warning('SSLCommerz validation failed.', ['transaction_id' => $transactionId]);
             return null;
@@ -135,9 +144,10 @@ class SslCommerzController extends Controller
             if ($lockedPayment->paid_at) return [$order, false];
 
             $cancelled = in_array($order->order_status, ['cancelled', 'canceled'], true);
+            $alreadyPaid = $order->payment_status === 'paid';
 
             $lockedPayment->update([
-                'status' => $cancelled ? 'refund_pending' : 'paid',
+                'status' => ($cancelled || $alreadyPaid) ? 'refund_pending' : 'paid',
                 'gateway_reference' => $validation?->bank_tran_id ?? $request->input('bank_tran_id'),
                 'paid_at' => now(),
                 'gateway_response' => [
@@ -153,6 +163,15 @@ class SslCommerzController extends Controller
                 $order->statusHistories()->create([
                     'status' => 'cancelled',
                     'note' => 'Payment received after cancellation. Refund required.',
+                    'changed_by_type' => 'system',
+                ]);
+                return [$order, false];
+            }
+            // A different retry was already paid. Keep this payment for refund review.
+            if ($alreadyPaid) {
+                $order->statusHistories()->create([
+                    'status' => $order->order_status,
+                    'note' => 'A second SSLCommerz payment was received. Refund required.',
                     'changed_by_type' => 'system',
                 ]);
                 return [$order, false];
