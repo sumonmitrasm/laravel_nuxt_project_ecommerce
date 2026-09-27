@@ -29,3 +29,14 @@ useHead(() => ({
     <AppToast />
   </div>
 </template>
+
+<style>
+/* Hide only the page scrollbar; keep wheel, touch and keyboard scrolling. */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+</style>
