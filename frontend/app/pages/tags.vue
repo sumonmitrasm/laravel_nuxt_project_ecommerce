@@ -12,7 +12,7 @@ const tagApiUrl = computed(() => {
     return `${config.public.apiBase}/tags`
 })
 
-const { data, pending, error } = await useFetch(tagApiUrl)
+const { data, pending, error } = useFetch(tagApiUrl, { lazy: true })
 
 const tags = computed(() => data.value?.tags || [])
 const selectedTag = computed(() => data.value?.tag || null)

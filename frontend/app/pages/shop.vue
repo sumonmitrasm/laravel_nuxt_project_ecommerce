@@ -28,7 +28,7 @@ const changeWishlist = async (productId) => {
 onMounted(() => {
     if (isAuthenticated.value) fetchWishlist().catch(() => null)
 })
-const { data: catalogData } = await useCatalogMenu()
+const { data: catalogData } = useCatalogMenu()
 const siteName = computed(() => catalogData.value?.site?.name || 'NovaCart')
 const searchTerm = computed(() => {
     const value = Array.isArray(route.query.q) ? route.query.q[0] : route.query.q
@@ -95,7 +95,7 @@ const {
     status,
     error,
     refresh
-} = await useAsyncData(
+} = useAsyncData(
     'shop-products',
 
     async () => {
@@ -119,7 +119,9 @@ const {
     },
 
     {
-        watch: [categoryUrl, currentPage, brandQuery, attributeQuery, selectedMinPrice, selectedMaxPrice, selectedSort, searchTerm]
+        watch: [categoryUrl, currentPage, brandQuery, attributeQuery, selectedMinPrice, selectedMaxPrice, selectedSort, searchTerm],
+        // Render the shop shell first; load products without delaying route navigation.
+        lazy: true
     }
 )
 

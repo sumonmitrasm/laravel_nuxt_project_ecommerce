@@ -15,8 +15,9 @@ const sending = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
 
-const { data: contact } = await useFetch('/contact', {
+const { data: contact } = useFetch('/contact', {
     baseURL: config.public.apiBase,
+    lazy: true,
 })
 
 const companyLocation = computed(() => contact.value?.address || 'Dhaka, Bangladesh')

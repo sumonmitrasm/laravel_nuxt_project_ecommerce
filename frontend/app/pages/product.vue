@@ -59,13 +59,17 @@ const productId = computed(() => {
     return Number.isInteger(id) && id > 0 ? id : null
 })
 
-const { data, status, error } = await useAsyncData<ProductDetailResponse>(
+const { data, status, error } = useAsyncData<ProductDetailResponse>(
     () => `product-detail-${productId.value ?? 'invalid'}`,
     () => {
         if (!productId.value) throw createError({ statusCode: 404, statusMessage: 'Product not found.' })
         return $fetch<ProductDetailResponse>(`/detail/${productId.value}`, { baseURL: config.public.apiBase })
     },
-    { watch: [productId] }
+    {
+        watch: [productId],
+        // Keep link navigation responsive while the product request is in progress.
+        lazy: true
+    }
 )
 
 const product = computed<any>(() => data.value?.product ?? null)

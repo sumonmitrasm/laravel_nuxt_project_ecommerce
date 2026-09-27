@@ -1,20 +1,25 @@
 <script setup>
 definePageMeta({
-  layout: 'home'
+  layout: 'home',
+  // Preserve the already loaded home page when visitors open another route.
+  // Returning through the logo then does not rebuild this large page.
+  keepalive: true,
 })
 
 const activeDealFilter = ref('all')
 const activeTrendingFilter = ref('featured')
-const { data, pending, error } = await useCatalogMenu()
+const { data, pending, error } = useCatalogMenu()
 // Shared menu requests can be pending again even when SSR already has data.
 // Keep the populated markup stable during hydration and background refreshes.
 const catalogLoading = computed(() => pending.value && !data.value)
 const catalogError = computed(() => error.value && !data.value)
 const config = useRuntimeConfig()
-const { data: recommendedData, pending: recommendedPending, error: recommendedError } = await useFetch('/recommended-products', {
+const { data: recommendedData, pending: recommendedPending, error: recommendedError } = useFetch('/recommended-products', {
   baseURL: config.public.apiBase,
   query: { page: 1 },
-  key: 'recommended-products-first-page'
+  key: 'recommended-products-first-page',
+  // Product data can load after the route has opened.
+  lazy: true,
 })
 const pageSeo = computed(() => data.value?.seo)
 

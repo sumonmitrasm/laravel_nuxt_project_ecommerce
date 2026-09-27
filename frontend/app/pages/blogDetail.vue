@@ -6,13 +6,14 @@ const blogApiUrl = computed(() => {
     return `${config.public.apiBase}/blog/${route.query.id}/${route.query.slug}`
 })
 
-const { data, pending, error } = await useFetch(blogApiUrl)
+const { data, pending, error } = useFetch(blogApiUrl, { lazy: true })
 
 const blog = computed(() => data.value?.blog || null)
 const tags = computed(() => blog.value?.tags || [])
 
-const { data: blogListData } = await useFetch(
-    `${config.public.apiBase}/blog`
+const { data: blogListData } = useFetch(
+    `${config.public.apiBase}/blog`,
+    { lazy: true }
 )
 
 const sidebarBlogs = computed(() => {
@@ -39,12 +40,6 @@ const copyBlogLink = async () => {
         linkCopied.value = false
     }, 2000)
 }
-// console.log('query', route.query)
-// console.log('id', route.query.id)
-// console.log('slug', route.query.slug)
-console.log('blog', blog.value)
-console.log('tags', tags.value)
-console.log('seo', seo.value)
 const formatDate = (date) => {
     if (!date) return ''
 
