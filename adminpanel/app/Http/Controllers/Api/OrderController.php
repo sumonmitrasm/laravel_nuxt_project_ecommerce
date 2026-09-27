@@ -132,7 +132,7 @@ class OrderController extends Controller
             foreach ($order->items as $item) {
                 if ($item->product_variant_id) {
                     app(\App\Services\InventoryService::class)->restoreForCancelledOrder(
-                        $item->product_variant_id, $item->quantity, $order, 'user', $user->id
+                        $item->product_variant_id, $item->quantity, $order, 'user', $request->user()->id
                     );
                 }
             }
