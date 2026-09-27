@@ -10,6 +10,7 @@ use App\Models\ProductAttributeDefinition;
 use App\Models\Section;
 use App\Support\ImageOptimizer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -355,11 +356,34 @@ class ProductController extends Controller
         if ($errors) throw ValidationException::withMessages($errors);
     }
 
-    private function categoryAttributeMap($categories): array
+    private function categoryAttributeMap(Collection $categories): array
     {
+        // Load these once, instead of running queries for every category.
+        // Include inactive parents because their children can inherit attributes.
+        $parents = Category::pluck('parent_id', 'id');
+        $attributes = DB::table('category_attribute')->orderBy('position')->get()->groupBy('category_id');
         $map = [];
         foreach ($categories as $category) {
-            $map[(string) $category->id] = $this->applicableCategoryAttributes((int) $category->id);
+            $categoryId = (int) $category->id;
+            $visited = [];
+            $map[(string) $category->id] = [];
+
+            while ($categoryId && ! in_array($categoryId, $visited, true)) {
+                $visited[] = $categoryId;
+                $rows = $attributes->get($categoryId, collect());
+                if ($rows->isNotEmpty()) {
+                    foreach ($rows as $row) {
+                        $map[(string) $category->id][(string) $row->attribute_id] = [
+                            'is_variant' => (bool) $row->is_variant,
+                            'is_filterable' => (bool) $row->is_filterable,
+                            'is_required' => (bool) $row->is_required,
+                            'position' => (int) $row->position,
+                        ];
+                    }
+                    break;
+                }
+                $categoryId = (int) $parents->get($categoryId, 0);
+            }
         }
         return $map;
     }
@@ -403,7 +427,7 @@ class ProductController extends Controller
         return $image ? asset('admin/productimage/'.basename($image)) : null;
     }
 
-    private function categoryGroups($sections, $categories): array
+    private function categoryGroups(Collection $sections, Collection $categories): array
     {
         $groups = [];
 
@@ -432,7 +456,7 @@ class ProductController extends Controller
         return $groups;
     }
 
-    private function appendCategoryChildren(int $parentId, $childrenByParent, array &$options, int $depth, array &$visited): void
+    private function appendCategoryChildren(int $parentId, Collection $childrenByParent, array &$options, int $depth, array &$visited): void
     {
         foreach ($childrenByParent->get($parentId, collect()) as $category) {
             if (isset($visited[(int) $category->id])) {
