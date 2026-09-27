@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>মোবাইল LCP সমস্যা — সমাধান ও পরিবর্তনের রিপোর্ট</title>
+  <style>
+    :root{--ink:#182e29;--muted:#536761;--brand:#126953;--line:#d9e4df;--soft:#f1f6f3}
+    *{box-sizing:border-box}body{margin:0;background:#edf2ef;color:var(--ink);font-family:"Nirmala UI","Noto Sans Bengali",system-ui,sans-serif;line-height:1.8}
+    .page{max-width:1060px;margin:32px auto;background:white;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+    header{padding:42px 48px;background:#123c31;color:white}header p{color:#d2e6dc;margin:12px 0 0}.eyebrow{font-size:12px;font-weight:700;letter-spacing:2px;color:#b6dfcb}
+    h1{font-size:clamp(25px,4vw,38px);line-height:1.4;margin:12px 0}h2{font-size:23px;margin:0 0 16px}h3{font-size:18px;margin:24px 0 8px}p{margin:10px 0}
+    main{padding:32px 48px 48px}section{padding:28px 0;border-bottom:1px solid var(--line);scroll-margin-top:20px}section:last-child{border:0}
+    nav{display:flex;flex-wrap:wrap;gap:8px;padding-bottom:18px}nav a{padding:5px 12px;background:var(--soft);border:1px solid var(--line);border-radius:6px;text-decoration:none;font-size:13px}a{color:var(--brand);overflow-wrap:anywhere}
+    .note{padding:16px 20px;background:var(--soft);border-left:4px solid var(--brand);border-radius:4px}.pending{background:#fff8e9;border-color:#bc8029}.muted{color:var(--muted)}
+    .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px;margin:16px 0}th,td{padding:13px 14px;border:1px solid var(--line);text-align:left;vertical-align:top}th{background:var(--soft)}
+    code{font-family:Consolas,monospace;font-size:.88em;background:#edf3ef;padding:2px 5px;border-radius:4px;overflow-wrap:anywhere}pre{background:#132b24;color:#e2f0e7;padding:20px;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65}pre code{background:none;color:inherit;padding:0}
+    .flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:12px;align-items:center;margin:18px 0}.flow div{background:var(--soft);padding:16px;border:1px solid var(--line);border-radius:9px}.flow b{font-size:22px;color:var(--brand)}
+    li{margin:7px 0}footer{padding:22px 48px;background:var(--soft);font-size:13px;color:var(--muted)}.badge{display:inline-block;background:#e3f3e8;color:#185b39;padding:3px 10px;border-radius:20px;font-size:12px}
+    @media(max-width:640px){.page{margin:0;border:0;border-radius:0}header,main,footer{padding:24px}section{padding:24px 0}.flow{grid-template-columns:1fr}.flow b{text-align:center;transform:rotate(90deg)}th,td{padding:10px}table{min-width:570px}}
+    @media print{body{background:white;font-size:11pt}.page{max-width:none;margin:0;border:0}header{background:white;color:var(--ink);padding:20px 0;border-bottom:3px solid var(--brand)}header p,.eyebrow{color:var(--muted)}main{padding:0}nav{display:none}section{break-inside:auto}h2,h3{break-after:avoid}tr,pre,.note,.flow{break-inside:avoid}.table-wrap{overflow:visible}table{min-width:0}footer{padding:16px 0}pre{background:#f1f6f3;color:var(--ink)}}
+  </style>
+</head>
+<body>
+<article class="page">
+  <header>
+    <div class="eyebrow">TECHNICAL CHANGE REPORT · 27 SEPTEMBER 2026</div>
+    <h1>মোবাইল LCP সমস্যার তদন্ত ও সমাধান</h1>
+    <p>প্রজেক্ট: Laravel + Nuxt Ecommerce<br>ওয়েবসাইট: shahinenterprise.com.bd · Hosting: Hostinger · Deployment: GitHub Actions</p>
+  </header>
+  <main>
+    <nav aria-label="রিপোর্টের সূচিপত্র">
+      <a href="#summary">সারাংশ</a><a href="#cause">মূল কারণ</a><a href="#changes">ফাইল ও কোড</a><a href="#layout">ডিজাইন সংশোধন</a><a href="#verification">পরীক্ষা</a><a href="#deploy">Deploy</a><a href="#cleanup">পরিষ্কার করা ফাইল</a>
+    </nav>
+
+    <section id="summary">
+      <h2>১. কী সমস্যা দেখা যাচ্ছিল?</h2>
+      <p>PageSpeed Insights-এর মোবাইল রিপোর্টে <code>Largest Contentful Paint: Error! NO_LCP</code> দেখা যাচ্ছিল। একই রিপোর্টে Total Blocking Time-ও <code>NO_LCP</code> error দেখাচ্ছিল। ডেস্কটপে performance score ছিল 98 এবং LCP ছিল প্রায় 0.6 সেকেন্ড।</p>
+      <p><strong>NO_LCP মানে performance score শূন্য নয়।</strong> সেই পরীক্ষায় প্রয়োজনীয় LCP measurement পাওয়া যায়নি, তাই পূর্ণ performance score হিসাব করা যায়নি। মোবাইলে hero ছবি ও শিরোনাম দৃশ্যমান থাকলেও Chrome-এর LCP entry খালি ছিল।</p>
+      <div class="note">তদন্তে দুটি আলাদা সমস্যা নিশ্চিত হয়েছে: Hot Deals slider-এর অনিচ্ছাকৃত প্রাথমিক scroll এবং Hostinger CDN থেকে পুরোনো CSS আসা। পরবর্তীতে localhost-এর horizontal overflow ও TypeScript error-ও আলাদাভাবে সংশোধন করা হয়েছে।</div>
+      <p class="muted">এই রিপোর্ট পূর্ববর্তী পরীক্ষার পর্যবেক্ষণ ও বর্তমান source code-এর ভিত্তিতে তৈরি। সর্বশেষ deploy-এর পরে সফল PageSpeed রিপোর্ট এই আলোচনায় যাচাই করা হয়নি।</p>
+    </section>
+
+    <section id="cause">
+      <h2>২. কীভাবে মূল কারণ ধরা হয়েছে?</h2>
+      <h3>ক. Hot Deals slider নিজে ২ পিক্সেল scroll করছিল</h3>
+      <p>Chrome-এর mobile emulation-এ LCP ও scroll event একসঙ্গে রেকর্ড করা হয়। ছবির download সম্পূর্ণ, heading দৃশ্যমান এবং page visibility ঠিক ছিল। পরীক্ষা করে দেখা যায়, নিচের Hot Deals অংশ বাদ দিলে অথবা তার scroll snapping বন্ধ করলে LCP পাওয়া যায়।</p>
+      <p><code>.deals-track</code>-এ <code>padding: 0 2px 12px</code> এবং <code>scroll-snap-type: x mandatory</code> ছিল। কিন্তু প্রথম card-এর snap alignment-এর জন্য সমান scroll padding ছিল না। ফলস্বরূপ initial render-এর সময় track নিজে <code>scrollLeft: 2</code>-তে যাচ্ছিল। এই পরীক্ষায় সেই scroll-এর সঙ্গে LCP measurement বন্ধ হয়ে যাওয়ার সম্পর্ক পাওয়া যায়।</p>
+      <div class="flow" aria-label="সমস্যার ধাপ">
+        <div>Track-এর বাঁ পাশে<br><strong>২px padding</strong></div><b aria-hidden="true">→</b>
+        <div>Initial snap alignment-এ<br><strong>নিজে scroll</strong></div><b aria-hidden="true">→</b>
+        <div>মোবাইল পরীক্ষায়<br><strong>LCP entry নেই</strong></div>
+      </div>
+      <p>একটি পরীক্ষায় scroll event প্রায় <strong>895.8ms</strong>-এ এবং FCP <strong>908ms</strong>-এ ছিল; LCP তালিকা খালি। সমান <code>scroll-padding-left: 2px</code> দেওয়ার পরে initial scroll event পাওয়া যায়নি এবং hero image-এর LCP পাওয়া গেছে।</p>
+
+      <h3>খ. Deploy সফল হলেও Hostinger পুরোনো CSS দিচ্ছিল</h3>
+      <p>Fix deploy করার পরেও PageSpeed-এ error থাকায় browser-এর প্রকৃত stylesheet response পরীক্ষা করা হয়। সেটি Hostinger CDN-এর cached পুরোনো ফাইল ছিল। অন্য request-এ নতুন ফাইল পাওয়া গেলেও browser-এর response-এ fix ছিল না। তাই শুধু upload সফল হওয়া দিয়ে browser নতুন CSS পাচ্ছে বলা যাচ্ছিল না।</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Browser-এ পাওয়া response</th><th>পুরোনো URL</th><th>Version যুক্ত URL</th></tr></thead>
+        <tbody>
+          <tr><td>CSS URL</td><td><code>/assets/css/style.css</code></td><td><code>/assets/css/style.css?v=…</code></td></tr>
+          <tr><td>Last-Modified</td><td>17 September 2026</td><td>26 September 2026</td></tr>
+          <tr><td>Hostinger cache header</td><td><code>x-hcdn-cache-status: HIT</code></td><td><code>x-hcdn-cache-status: MISS</code> — পরীক্ষিত response</td></tr>
+          <tr><td>Scroll padding fix</td><td>অনুপস্থিত</td><td>উপস্থিত</td></tr>
+          <tr><td>মোবাইল LCP</td><td>Entry খালি</td><td>প্রায় 1.50 সেকেন্ড</td></tr>
+        </tbody>
+      </table></div>
+      <p class="muted">এখানে version যুক্ত CSS-টি পরীক্ষার browser request-এ ব্যবহার করা হয়েছিল; সেই পরীক্ষাটি নিজে কোনো production deploy বা CDN purge করেনি।</p>
+    </section>
+
+    <section id="changes">
+      <h2>৩. কোথায় কী পরিবর্তন আছে?</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ফাইল</th><th>পরিবর্তন</th><th>উদ্দেশ্য</th></tr></thead>
+        <tbody>
+          <tr><td><code>frontend/public/assets/css/style.css</code></td><td>দুটি বিদ্যমান <code>.deals-track</code> block-এ scroll padding; বর্তমান লাইনে প্রায় 609 ও 6483।</td><td>প্রাথমিক ২px scroll বন্ধ করা; slider-এর scroll ও snap রাখা।</td></tr>
+          <tr><td><code>frontend/nuxt.config.ts</code></td><td>CSS content-এর SHA-256 hash থেকে version তৈরি করে stylesheet URL-এ যুক্ত করা।</td><td>CSS বদলালে browser/CDN-কে নতুন URL দিয়ে নতুন ফাইল আনতে দেওয়া।</td></tr>
+          <tr><td><code>frontend/app/pages/index.vue</code></td><td><code>catalogLoading</code> ও <code>catalogError</code>; template-এ এই guard ব্যবহার।</td><td>ডেটা থাকা অবস্থায় loading markup দেখিয়ে hydration mismatch তৈরি না করা।</td></tr>
+          <tr><td><code>frontend/app/app.vue</code></td><td>Global <code>html</code> scrollbar CSS; আগের <code>index.vue</code>-এর homepage-only class ও rule সরানো হয়েছে।</td><td>সর্বশেষ অনুরোধ অনুযায়ী সব পেজের visible page scrollbar লুকানো; scrolling চালু রাখা।</td></tr>
+          <tr><td><code>frontend/package.json</code></td><td><code>@types/node</code>, <code>typescript</code> dev dependency এবং <code>typecheck:config</code> script।</td><td>Node import-এর editor error দূর করা ও config type-check করা।</td></tr>
+          <tr><td><code>frontend/package-lock.json</code></td><td>নতুন dev dependency-এর lock entries।</td><td>CI/CD-এর <code>npm ci</code>-তে একই dependency নির্ভরযোগ্যভাবে install করা।</td></tr>
+          <tr><td><code>.gitignore</code> — project root</td><td>অস্থায়ী Chrome profile, screenshot, report ও log-এর নির্দিষ্ট pattern ignore।</td><td>পরীক্ষার ফাইল অনিচ্ছাকৃতভাবে commit হওয়া আটকানো।</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>৩.১ — Scroll padding fix</h3>
+      <pre><code>.deals-track {
+    /* Existing rules remain in place. */
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 2px;
+    padding: 0 2px 12px;
+}</code></pre>
+      <p>Stylesheet-এ একই selector-এর দুটি block আগে থেকেই ছিল। দুটিতেই fix দেওয়া হয়েছে। Slider সরানো বা page-wide horizontal overflow লুকিয়ে দেওয়া এই LCP fix-এর অংশ নয়।</p>
+
+      <h3>৩.২ — CSS-এর automatic versioning</h3>
+      <pre><code>import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+
+const stylesheetVersion = createHash('sha256')
+  .update(readFileSync(new URL('./public/assets/css/style.css', import.meta.url)))
+  .digest('hex')
+  .slice(0, 12)
+
+// Inside app.head.link:
+{ rel: 'stylesheet', href: `/assets/css/style.css?v=${stylesheetVersion}` }</code></pre>
+      <p>Build-এর সময় CSS-এর content থেকে version তৈরি হয়। Content বদলালে version বদলায়। পরীক্ষিত একটি build-এর URL ছিল <code>/assets/css/style.css?v=779189e036d1</code>; পরবর্তী build-এ content অনুযায়ী এটি ভিন্ন হতে পারে। Node.js-এর file reading ও hashing build/config পর্যায়ে হয়, browser-এ নয়।</p>
+
+      <h3>৩.৩ — আগে থেকে থাকা LCP প্রস্তুতি</h3>
+      <p>বর্তমান কোডে নিচের ব্যবস্থা রয়েছে। এগুলো এই তদন্ত শুরুর সময়ই ছিল; এগুলোকে ২px scroll সমস্যার সদ্য করা fix হিসেবে ধরা ঠিক হবে না।</p>
+      <ul>
+        <li><code>nuxt.config.ts</code>-এ <code>ssr: true</code> এবং homepage <code>/</code> prerender করা হয়। Generated HTML-এ মূল content থাকে।</li>
+        <li><code>index.vue</code>-এ প্রথম hero image-এর <code>rel="preload"</code>, <code>as="image"</code> ও high fetch priority আছে।</li>
+        <li>প্রথম slide-এর image eager/high priority; পরের slide-এর image lazy/low priority। Image-এ explicit dimensions ও async decoding আছে।</li>
+      </ul>
+    </section>
+
+    <section id="layout">
+      <h2>৪. পরে দেখা দেওয়া scrollbar ও editor error</h2>
+      <h3>Horizontal overflow-এর আলাদা কারণ</h3>
+      <p>Localhost-এর ডেস্কটপ screenshot-এ নিচের horizontal scrollbar তদন্ত করে দেখা যায়, Hot Deals arrow button viewport-এর বাইরে চলে যাচ্ছিল। Browser-এ button-এর parent ছিল <code>category-api-message</code> এবং তার position ছিল <code>static</code>; প্রত্যাশিত parent ছিল <code>deals-wrap</code> ও <code>position: relative</code>।</p>
+      <p>Raw server HTML-এ <code>Loading hot deals...</code> ছিল, কিন্তু browser-এ পরে product list ছিল। Shared menu data পাওয়া গেলেও <code>pending</code> আবার true থাকায় markup অসামঞ্জস্য হচ্ছিল। Data থাকলে loading/error placeholder না দেখানোর guard দেওয়া হয়েছে:</p>
+      <pre><code>const catalogLoading = computed(() =&gt; pending.value &amp;&amp; !data.value)
+const catalogError = computed(() =&gt; error.value &amp;&amp; !data.value)</code></pre>
+      <p>Category এবং Hot Deals loading/error condition-এ এই guard এবং Trending empty state-এ <code>catalogLoading</code> ব্যবহার করা হয়েছে। এরপর server HTML-এ <code>deals-wrap</code> পাওয়া যায় এবং browser-এ arrow-এর positioning parent ঠিক থাকে।</p>
+      <h3>Visible vertical scrollbar</h3>
+      <p>প্রথমে শুধু homepage-এর visible page scrollbar লুকানো হয়েছিল। সর্বশেষ অনুরোধে একই নিয়ম সব পেজে প্রয়োগ করতে <code>app.vue</code>-এর global style-এ নেওয়া হয়েছে; <code>index.vue</code>-এর <code>home-page</code> class ও সংশ্লিষ্ট rule সরানো হয়েছে। এটি LCP fix নয়; আলাদা visual preference।</p>
+      <pre><code>/* Global style in frontend/app/app.vue: */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }</code></pre>
+      <p>Page scroll বন্ধ করতে <code>overflow-y: hidden</code> দেওয়া হয়নি। Keyboard PageDown দিয়ে নিচে যাওয়া পরীক্ষা করা হয়েছে।</p>
+      <h3>Node import-এর লাল error</h3>
+      <p><code>node:crypto</code> ও <code>node:fs</code>-এর types অনুপস্থিত থাকায় VS Code-এ error ছিল। Build সফল হলেও সেই editor/type error আলাদা ছিল। <code>@types/node: ^24.19.0</code> এবং <code>typescript: ~5.9.3</code> dev dependency যোগ করার পরে config type-check সফল হয়।</p>
+      <pre><code>npm run typecheck:config
+
+# Runs:
+nuxt prepare &amp;&amp; tsc --project .nuxt/tsconfig.node.json --noEmit</code></pre>
+      <p class="muted">এই command Nuxt-এর Node/config project পরীক্ষা করে; পুরো Vue application-এর পূর্ণ type-check বলে দাবি করা হয়নি।</p>
+    </section>
+
+    <section id="verification">
+      <h2>৫. কী কী যাচাই করা হয়েছে?</h2>
+      <p>অস্থায়ী <code>lcp-check.cjs</code> দিয়ে Chrome DevTools Protocol ব্যবহার করে mobile viewport, mobile user agent, 4× CPU slowdown, cache-disabled request, LCP observer, image visibility, scroll event, response headers এবং screenshot পরীক্ষা করা হয়েছিল। এটি পূর্ণ Lighthouse/PageSpeed test নয়; একই network throttling ব্যবহার করা হয়নি।</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>পরীক্ষা</th><th>পর্যবেক্ষণ</th><th>সীমা</th></tr></thead>
+        <tbody>
+          <tr><td>প্রথম live mobile পরীক্ষা</td><td>LCP entry খালি; ছবি ও heading দৃশ্যমান।</td><td>সমস্যা reproduce করা গেছে।</td></tr>
+          <tr><td>প্রথম live desktop পরীক্ষা</td><td>LCP প্রায় 0.70s।</td><td>Chrome diagnostic measurement।</td></tr>
+          <tr><td>Scroll padding fix-এর local generated build</td><td>Mobile প্রায় 0.68s; desktop প্রায় 0.42s।</td><td>Local assets/backend পরিবেশ; live speed-এর নিশ্চয়তা নয়।</td></tr>
+          <tr><td>Live site + versioned CSS request</td><td>Mobile প্রায় 1.50s; desktop প্রায় 0.93s; initial track scroll event নেই।</td><td>পরীক্ষার browser-এ stylesheet request version করা হয়েছিল।</td></tr>
+          <tr><td>Scrollbar fix-এর viewport পরীক্ষা</td><td>1920, 1366 ও 412px-এ document scrollWidth এবং clientWidth সমান।</td><td>এই তিনটি width-এ horizontal page overflow পাওয়া যায়নি।</td></tr>
+          <tr><td>Scroll functionality</td><td>Mobile track scrollLeft 343px; PageDown-এ mobile page 720px এবং laptop page 822px নিচে যায়।</td><td>পরীক্ষার নির্দিষ্ট অবস্থার মান।</td></tr>
+          <tr><td>Screenshot review</td><td>Desktop ও mobile screenshot দেখা হয়েছে; homepage-এর চিহ্নিত scrollbar নেই।</td><td>এই যাচাই homepage-এর জন্য।</td></tr>
+          <tr><td>Build ও config check</td><td><code>npm run generate</code> এবং <code>npm run typecheck:config</code> সফল। Generated HTML-এর CSS version source/output hash-এর সঙ্গে মিলেছে।</td><td>পৃথক ধাপে করা checks; production PageSpeed run-এর বিকল্প নয়।</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note pending"><strong>চূড়ান্ত সীমাবদ্ধতা:</strong> স্থানীয় fix ও নিয়ন্ত্রিত live-browser পরীক্ষায় LCP পাওয়া গেছে। সর্বশেষ পরিবর্তন deploy এবং CDN cache flush করার পর নতুন PageSpeed mobile report দিয়ে চূড়ান্ত ফল নিশ্চিত করতে হবে। এই রিপোর্ট কোনো নির্দিষ্ট performance score-এর নিশ্চয়তা দিচ্ছে না।</div>
+    </section>
+
+    <section id="deploy">
+      <h2>৬. GitHub Actions ও Hostinger-এ কী যাবে?</h2>
+      <p>বিদ্যমান <code>.github/workflows/deploy.yml</code>-এ <code>prod</code> branch-এ push হলে frontend build ও FTP deploy হয়। এই তদন্তে workflow পরিবর্তন করা হয়নি। Frontend-এর <code>.output/public/</code>-এর content যায় server-এর <code>/public_html/</code>-এ। Backend-এর আলাদা SSH step আছে।</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Build output</th><th>Hostinger</th></tr></thead>
+        <tbody>
+          <tr><td><code>frontend/.output/public/index.html</code></td><td><code>public_html/index.html</code></td></tr>
+          <tr><td><code>frontend/.output/public/_nuxt/</code></td><td><code>public_html/_nuxt/</code></td></tr>
+          <tr><td><code>frontend/.output/public/assets/css/style.css</code></td><td><code>public_html/assets/css/style.css</code></td></tr>
+        </tbody>
+      </table></div>
+      <ol>
+        <li>প্রয়োজনীয় source পরিবর্তন, <code>package.json</code> ও <code>package-lock.json</code> একসঙ্গে commit করুন।</li>
+        <li><code>prod</code>-এ merge হওয়ার পরে GitHub Actions-এর frontend ও backend job সফল হয়েছে কি না দেখুন।</li>
+        <li>Hostinger hPanel → Websites → সংশ্লিষ্ট website-এর Dashboard → Performance → CDN → <strong>Flush cache</strong> দিন।</li>
+        <li>Browser Network panel-এ CSS URL-এ version এবং response body-তে <code>scroll-padding-left: 2px</code> আছে কি না দেখুন। শুধু cache HIT/MISS দেখে সিদ্ধান্ত নয়—সঠিক version ও content পাওয়া গুরুত্বপূর্ণ।</li>
+        <li>PageSpeed Insights-এ নতুন mobile ও desktop analysis চালান। Mobile LCP যেন সময় দেখায় এবং <code>NO_LCP</code> না থাকে; layout ও scroll-ও যাচাই করুন।</li>
+      </ol>
+      <p><code>nuxt.config.ts</code> বা <code>node_modules</code> হাতে frontend-এর <code>public_html</code>-এ আপলোড করতে হয় না। Build-এর generated files-ই deploy হয়। GitHub-এর Ubuntu runner notice build machine-এর জন্য; সেটি Hostinger hosting পরিবর্তন বোঝায় না।</p>
+      <p>Hostinger-এর নির্দেশনা: <a href="https://www.hostinger.com/support/hostinger-cdn-how-to-clear-the-cache/">CDN cache flush ও response header বোঝার পদ্ধতি</a>।</p>
+    </section>
+
+    <section id="cleanup">
+      <h2>৭. কোন অপ্রয়োজনীয় ফাইল সরানো হয়েছে?</h2>
+      <p>ব্যবহারকারীর অনুরোধে অস্থায়ী <code>.lcp-chrome/</code> profile, <code>lcp-check.cjs</code> diagnostic script এবং পুরোনো <code>frontend/MOBILE_PERFORMANCE_FIX_REPORT.html</code> সরানো হয়েছে। Cleanup-এর সময় <code>scroll-*</code> screenshot, JSON report ও build log আর উপস্থিত ছিল না।</p>
+      <p>Root <code>.gitignore</code>-এ নির্দিষ্ট diagnostic pattern যোগ করা হয়েছে, যাতে ভবিষ্যতে পরীক্ষার output অনিচ্ছাকৃতভাবে Git-এ না যায়। Website-এর প্রয়োজনীয় source fix রাখা হয়েছে।</p>
+      <div class="note"><strong>এই নতুন document-এর অবস্থান:</strong> <code>docs/lcp-fix-report.html</code>। এটি ব্যবহারকারীর অনুরোধে রাখা documentation; বর্তমান workflow-এর frontend deploy source <code>frontend/.output/public/</code>-এর বাইরে। ফলে এই document frontend website-এর public file হিসেবে স্বয়ংক্রিয়ভাবে upload হবে না। Browser-এ খুলে পড়া বা Print → Save as PDF করা যাবে।</div>
+    </section>
+  </main>
+  <footer>প্রস্তুত: ২৭ সেপ্টেম্বর ২০২৬ · আগের পরীক্ষার evidence ও বর্তমান source code অনুযায়ী। Source পরিবর্তনের সঙ্গে line number ও hash বদলাতে পারে। এই document-এর নিজস্ব কোনো external font, script বা tracking dependency নেই।</footer>
+</article>
+</body>
+</html>

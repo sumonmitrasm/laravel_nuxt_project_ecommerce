@@ -78,7 +78,6 @@ const sectionIcon = index => sectionIcons[index % sectionIcons.length]
 // The first slider is the image users see above the fold.  Adding this to the
 // document head lets the browser fetch it while parsing HTML, before Vue loads.
 useHead(() => ({
-  htmlAttrs: { class: 'home-page' },
   link: lcpSlide.value?.image_url
     ? [{
         key: 'home-lcp-image',
@@ -503,9 +502,6 @@ useHead(() => ({
 </template>
 
 <style scoped>
-/* Keep homepage scrolling available without a visible page scrollbar. */
-:global(html.home-page) { scrollbar-width: none; }
-:global(html.home-page::-webkit-scrollbar) { display: none; }
 .section-filter-tabs{display:flex;gap:8px;overflow-x:auto;margin:0 0 14px;padding:2px 0 8px;scrollbar-width:thin}.section-filter-tabs button{display:flex;flex:0 0 auto;align-items:center;gap:8px;border:1px solid #e1e4e2;background:#fff;padding:8px 14px;color:var(--ink);font-size:.78rem}.section-filter-tabs button.active{border-color:var(--brand);background:var(--brand);color:#fff}.section-filter-tabs img{width:25px;height:25px;border-radius:50%;object-fit:cover}.category-api-image{width:112px!important;height:105px!important;object-fit:contain}.category-api-placeholder{display:grid!important;width:112px!important;height:105px!important;place-items:center;background:#f5f7f5!important;color:var(--brand)}.category-api-message{display:grid;min-height:172px;border:1px solid #e1e4e2;place-items:center;background:#fff;color:#78817d}.category-api-error{color:#b84d42}@media(max-width:575.98px){.section-filter-tabs button{padding:7px 11px}.category-api-image,.category-api-placeholder{width:112px!important;height:92px!important}}
 .flyout-section-image{width:58px;height:58px;margin-bottom:12px;object-fit:contain}
 .sidebar-section-image{flex:0 0 22px;width:22px;height:22px;margin-right:12px;object-fit:contain}
