@@ -1,10 +1,11 @@
 ﻿<script setup>
 const router = useRouter()
 const config = useRuntimeConfig()
-const { data } = await useCatalogMenu()
+const { data } = useCatalogMenu()
 const sections = computed(() => data.value?.categories ?? [])
 const { cartCount, fetchCart } = useCart()
 const { wishlistCount, fetchWishlist } = useWishlist()
+const { isAuthenticated } = useAuth()
 
 const searchText = ref('')
 const selectedCategory = ref('')
@@ -72,7 +73,7 @@ const closeSuggestions = () => setTimeout(() => { showSuggestions.value = false 
 onBeforeUnmount(() => clearTimeout(searchTimer))
 onMounted(() => {
     fetchCart().catch(error => console.error('Cart load error:', error))
-    fetchWishlist().catch(() => null)
+    if (isAuthenticated.value) fetchWishlist().catch(() => null)
 })
 </script>
 

@@ -8,7 +8,7 @@ type CatalogSiteResponse = {
   site?: SiteIdentity
 }
 
-const { data: catalogData } = await useCatalogMenu()
+const { data: catalogData } = useCatalogMenu()
 
 const site = computed(() =>
   (catalogData.value as CatalogSiteResponse | null)?.site
@@ -18,7 +18,7 @@ const siteName = computed(() => site.value?.name || 'NovaCart')
 </script>
 
 <template>
-  <NuxtLink to="/" :aria-label="`${siteName} home`">
+  <NuxtLink to="/" prefetch :aria-label="`${siteName} home`">
     <img
       v-if="site?.logo"
       class="site-logo-image"

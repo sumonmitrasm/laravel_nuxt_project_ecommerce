@@ -5,7 +5,7 @@ type CatalogSeoResponse = {
   seo?: PageSeoData
 }
 
-const { data: catalogData } = await useCatalogMenu()
+const { data: catalogData } = useCatalogMenu()
 
 const favicon = computed(() =>
   (catalogData.value as CatalogSeoResponse | null)?.seo?.favicon

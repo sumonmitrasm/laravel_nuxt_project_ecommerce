@@ -4,8 +4,9 @@ const route = useRoute()
 
 const page = computed(() => Number(route.query.page || 1))
 
-const { data, pending, error } = await useFetch(`${config.public.apiBase}/blog`, {
-    query: { page }
+const { data, pending, error } = useFetch(`${config.public.apiBase}/blog`, {
+    query: { page },
+    lazy: true
 })
 
 const blogs = computed(() => data.value?.blogs?.data || [])

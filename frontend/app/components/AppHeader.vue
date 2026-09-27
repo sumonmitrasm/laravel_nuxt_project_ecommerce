@@ -4,7 +4,7 @@ const { wishlistCount, fetchWishlist } = useWishlist()
 const { authLoaded, isAuthenticated, fetchUser } = useAuth()
 const router = useRouter()
 const config = useRuntimeConfig()
-const { data: catalogData } = await useCatalogMenu()
+const { data: catalogData } = useCatalogMenu()
 const sitePhone = computed(() => catalogData.value?.site?.phone || '')
 const phoneLink = computed(() => 'tel:' + sitePhone.value.replace(/[^+\d]/g, ''))
 const searchOpen = ref(false)
@@ -55,14 +55,15 @@ const submitSearch = () => {
     router.push({ path: '/shop', query: { q: query } })
 }
 
-if (!authLoaded.value) {
-    await fetchUser().catch(() => null)
-}
-
 onBeforeUnmount(() => clearTimeout(searchTimer))
 onMounted(() => {
+    const loadAccount = async () => {
+        if (!authLoaded.value) await fetchUser().catch(() => null)
+        if (isAuthenticated.value) fetchWishlist().catch(() => null)
+    }
+
+    loadAccount()
     fetchCart().catch(error => console.error('Cart load error:', error))
-    if (isAuthenticated.value) fetchWishlist().catch(() => null)
 })
 </script>
 

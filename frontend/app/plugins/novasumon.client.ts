@@ -27,6 +27,10 @@ function loadScript(src: string) {
 
 export default defineNuxtPlugin((nuxtApp) => {
   nuxtApp.hook('app:mounted', async () => {
+    // Load public route components after hydration. This keeps navigation
+    // responsive on mobile without waiting for a page bundle after a tap.
+    void prefetchComponents(['/', '/shop', '/about', '/contact', '/blog', '/tags', '/cart', '/wishlist', '/login', '/register'])
+
     for (const src of scripts) await loadScript(src)
 
     const bootstrap = (window as typeof window & {

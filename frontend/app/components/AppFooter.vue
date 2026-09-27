@@ -1,6 +1,6 @@
 <script setup>
 const config = useRuntimeConfig()
-const { data } = await useCatalogMenu()
+const { data } = useCatalogMenu()
 const sections = computed(() => data.value?.categories ?? [])
 const mobileSectionId = section => `mobile-section-${section.id}`
 const mobileSearchText = ref('')

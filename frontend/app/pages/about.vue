@@ -20,9 +20,10 @@ type AboutResponse = {
 }
 
 const config = useRuntimeConfig()
-const { data } = await useFetch<AboutResponse>('/about', {
+const { data } = useFetch<AboutResponse>('/about', {
   baseURL: config.public.apiBase,
-  key: 'about-page'
+  key: 'about-page',
+  lazy: true
 })
 
 const content = computed(() => data.value?.content)
