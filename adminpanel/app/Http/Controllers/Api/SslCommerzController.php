@@ -80,6 +80,9 @@ class SslCommerzController extends Controller
     public function success(Request $request): RedirectResponse
     {
         $orderNumber = $this->completePayment($request);
+        if ($orderNumber && Order::where('order_number', $orderNumber)->whereIn('order_status', ['cancelled', 'canceled'])->exists()) {
+            return $this->frontendRedirect('cancelled', $orderNumber);
+        }
         return $this->frontendRedirect($orderNumber ? 'success' : 'invalid', $orderNumber);
     }
 
@@ -110,9 +113,9 @@ class SslCommerzController extends Controller
 
         $payment = OrderPayment::with('order')->where('transaction_id', $transactionId)->first();
         if (! $payment || ! $payment->order || $payment->method !== 'sslcommerz') return null;
-        if ($payment->status === 'paid') return $payment->order->order_number;
+        if ($payment->paid_at) return $payment->order->order_number;
 
-        $gateway = new SslCommerzNotification();
+        $gateway = app(SslCommerzNotification::class);
         if (! $gateway->orderValidate($request->all(), $transactionId, (float) $payment->amount, $payment->currency)) {
             Log::warning('SSLCommerz validation failed.', ['transaction_id' => $transactionId]);
             return null;
@@ -126,12 +129,15 @@ class SslCommerzController extends Controller
         }
 
         [$order, $newlyPaid] = DB::transaction(function () use ($payment, $validation, $request) {
+            // Lock the order first, just like the cancellation flow.
+            $order = Order::whereKey($payment->order_id)->lockForUpdate()->firstOrFail();
             $lockedPayment = OrderPayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
-            $order = Order::whereKey($lockedPayment->order_id)->lockForUpdate()->firstOrFail();
-            if ($lockedPayment->status === 'paid') return [$order, false];
+            if ($lockedPayment->paid_at) return [$order, false];
+
+            $cancelled = in_array($order->order_status, ['cancelled', 'canceled'], true);
 
             $lockedPayment->update([
-                'status' => 'paid',
+                'status' => $cancelled ? 'refund_pending' : 'paid',
                 'gateway_reference' => $validation?->bank_tran_id ?? $request->input('bank_tran_id'),
                 'paid_at' => now(),
                 'gateway_response' => [
@@ -141,6 +147,16 @@ class SslCommerzController extends Controller
                     'card_type' => $validation?->card_type,
                 ],
             ]);
+            // Money arrived after cancellation: keep the order cancelled for refund.
+            if ($cancelled) {
+                $order->update(['payment_status' => 'refund_pending']);
+                $order->statusHistories()->create([
+                    'status' => 'cancelled',
+                    'note' => 'Payment received after cancellation. Refund required.',
+                    'changed_by_type' => 'system',
+                ]);
+                return [$order, false];
+            }
             $order->update(['payment_status' => 'paid', 'order_status' => 'confirmed']);
             if (! $order->statusHistories()->where('status', 'confirmed')->exists()) {
                 $order->statusHistories()->create([
