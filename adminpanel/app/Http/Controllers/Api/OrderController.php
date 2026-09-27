@@ -52,7 +52,7 @@ class OrderController extends Controller
             ->with([
                 'items',
                 'address',
-                'payments' => fn ($query) => $query->latest('id'),
+                'payments' => fn ($query) => $query->orderByDesc('paid_at')->latest('id'),
                 'statusHistories' => fn ($query) => $query->oldest('id'),
             ])
             ->firstOrFail();
