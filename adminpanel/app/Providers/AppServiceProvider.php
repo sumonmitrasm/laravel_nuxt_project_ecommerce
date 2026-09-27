@@ -44,13 +44,15 @@ class AppServiceProvider extends ServiceProvider
         Section::observe(SectionObserver::class);
 
         Paginator::useBootstrap();
-        $generalSetting = Cache::remember(
-            'general_setting.v2',
-            now()->addHours(6),
-            fn () => Setting::query()->where('status', true)->latest('id')->first()?->toArray(),
-        );
-
-        View::share('generalSetting', $generalSetting ? (object) $generalSetting : null);
+        // Read site settings only when a view needs them, not on every API/Artisan call.
+        View::composer(['admin.login', 'admin.layout.*', 'emails.order-placed'], function ($view) {
+            $generalSetting = Cache::remember(
+                'general_setting.v2',
+                now()->addHours(6),
+                fn () => Setting::query()->where('status', true)->latest('id')->first()?->toArray(),
+            );
+            $view->with('generalSetting', $generalSetting ? (object) $generalSetting : null);
+        });
 
         View::composer('admin.layout.header', function ($view) {
             $query = AdminNotification::query()->where('admin_id', Auth::guard('admin')->id());

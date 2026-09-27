@@ -21,12 +21,6 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ContactMessageController;
 
-Route::get('/clear-cache', function() {
-    Artisan::call('view:clear');
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    return "All cache cleared successfully!";
-});
 // Route::get('/dashboard', function () {
 //     return view('dashboard');
 // })->middleware(['auth', 'verified'])->name('dashboard');
