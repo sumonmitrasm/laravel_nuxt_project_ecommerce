@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\RegisterRequest;
 use App\Models\User;
+use App\Models\Coupon;
+use App\Models\Order;
 use App\Services\CartManager;
 use App\Support\ImageOptimizer;
 use Illuminate\Auth\Events\Verified;
@@ -126,6 +128,34 @@ class AuthController extends Controller
         return response()->json([
             'status' => true,
             'user' => $this->userPayload($request->user()),
+        ]);
+    }
+
+    public function welcomeCoupon(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $hasCompletedOrder = Order::query()
+            ->where('user_id', $user->id)
+            ->where('order_status', '!=', 'cancelled')
+            ->exists();
+
+        $coupon = $hasCompletedOrder ? null : Coupon::query()
+            ->where('is_active', true)
+            ->where('customer_scope', 'first_order')
+            ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->whereDoesntHave('usages', fn ($query) => $query->where('user_id', $user->id))
+            ->where(fn ($query) => $query->whereNull('usage_limit')->orWhereRaw('(select count(*) from coupon_usages where coupons.id = coupon_usages.coupon_id) < usage_limit'))
+            ->orderBy('id')
+            ->first();
+
+        return response()->json([
+            'coupon' => $coupon ? [
+                'code' => $coupon->code,
+                'name' => $coupon->name,
+                'description' => $coupon->description,
+            ] : null,
         ]);
     }
 

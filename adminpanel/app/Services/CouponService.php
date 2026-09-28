@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Coupon;
 use App\Models\CouponUsage;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -81,13 +82,21 @@ class CouponService
             $this->fail('Please sign in to use this coupon.');
         }
 
-        if ($coupon->customer_scope === 'first_order' && CouponUsage::query()->where('user_id', $user?->id)->exists()) {
+        if ($coupon->customer_scope === 'first_order' && Order::query()
+            ->where('user_id', $user?->id)
+            ->where('order_status', '!=', 'cancelled')
+            ->exists()) {
             $this->fail('This coupon is valid only for your first order.');
         }
 
         if ($coupon->customer_scope === 'lifetime_spend') {
-            // Until the real orders table is connected, no lifetime spend can be proven safely.
-            $this->fail('This loyalty coupon is not available yet.');
+            $spent = $this->completedSpend($user);
+            $required = (float) $coupon->minimum_lifetime_spend;
+
+            if ($spent < $required) {
+                $remaining = number_format($required - $spent, 2);
+                $this->fail("Spend another ৳{$remaining} on completed orders to use this coupon.");
+            }
         }
 
         if ($coupon->usage_limit_per_user !== null) {
@@ -99,6 +108,20 @@ class CouponService
                 $this->fail('You have already used this coupon the maximum number of times.');
             }
         }
+    }
+
+    private function completedSpend(User $user): float
+    {
+        return (float) Order::query()
+            ->where('user_id', $user->id)
+            ->where('order_status', '!=', 'cancelled')
+            ->where(function ($query) {
+                $query->where('payment_status', 'paid')
+                    ->orWhere(fn ($query) => $query
+                        ->where('payment_method', 'cod')
+                        ->where('order_status', 'delivered'));
+            })
+            ->sum('grand_total');
     }
 
     private function eligibleItems(Coupon $coupon, Collection $items): Collection

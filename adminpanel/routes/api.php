@@ -63,6 +63,7 @@ Route::prefix('auth')->group(function () {
 
     Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/user', [AuthController::class, 'user']);
+        Route::get('/welcome-coupon', [AuthController::class, 'welcomeCoupon']);
         Route::patch('/profile', [AuthController::class, 'updateProfile']);
         Route::post('/logout', [AuthController::class, 'logout']);
         //delivery address
