@@ -20,6 +20,7 @@ use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ContactMessageController;
+use App\Http\Controllers\PurchaseController;
 
 // Route::get('/dashboard', function () {
 //     return view('dashboard');
@@ -99,6 +100,17 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::get('products', [ProductController::class, 'index'])->name('products');
         Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::patch('inventory/{variant}', [InventoryController::class, 'adjust'])->name('inventory.adjust');
+        Route::get('suppliers', [PurchaseController::class, 'suppliers'])->name('suppliers.index');
+        Route::post('suppliers', [PurchaseController::class, 'storeSupplier'])->name('suppliers.store');
+        Route::get('suppliers/{supplier}/edit', [PurchaseController::class, 'editSupplier'])->name('suppliers.edit');
+        Route::put('suppliers/{supplier}', [PurchaseController::class, 'updateSupplier'])->name('suppliers.update');
+        Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+        Route::get('purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
+        Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+        Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
+        Route::get('purchases/{purchase}/edit', [PurchaseController::class, 'edit'])->name('purchases.edit');
+        Route::put('purchases/{purchase}', [PurchaseController::class, 'update'])->name('purchases.update');
+        Route::post('purchases/{purchase}/payments', [PurchaseController::class, 'storePayment'])->name('purchases.payments.store');
         Route::post('product', [ProductController::class, 'store'])->name('admin-product.store');
         Route::get('product/{product}', [ProductController::class, 'show'])->name('admin-product.show');
         Route::put('product/{product}', [ProductController::class, 'update'])->name('admin-product.update');

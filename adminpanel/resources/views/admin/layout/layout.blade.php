@@ -238,6 +238,21 @@
                 .fail(function(x){var e=x.responseJSON&&x.responseJSON.errors;crudToast('error',e?Object.values(e).flat()[0]:(x.responseJSON&&x.responseJSON.message)||'Stock update failed.')})
                 .always(function(){$button.prop('disabled',false)});
             });
+            $(document).on('submit', '[data-purchase-form]', function (event) {
+                event.preventDefault();
+                var $form=$(this), $button=$form.find('button[type="submit"]').prop('disabled',true);
+                $.ajax({url:$form.attr('action'),method:'POST',data:$form.serialize(),headers:{Accept:'application/json'}})
+                .done(function(response){
+                    window.loadAjaxPage(response.redirect_url || window.location.href, true);
+                    setTimeout(function(){crudToast('success',response.message || 'Saved successfully.')},200);
+                })
+                .fail(function(xhr){
+                    var errors=xhr.responseJSON&&xhr.responseJSON.errors;
+                    var message=errors?Object.values(errors).flat()[0]:(xhr.responseJSON&&xhr.responseJSON.message)||'Could not save.';
+                    crudToast('error',message);
+                })
+                .always(function(){$button.prop('disabled',false)});
+            });
             // Product attribute/value forms submit without a full browser reload.
             $(document).on('submit', '[data-product-attribute-form]', function (event) {
                 event.preventDefault();
