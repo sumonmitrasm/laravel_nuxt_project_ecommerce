@@ -1,4 +1,4 @@
-﻿import { createHash } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 
 // Public assets keep their filename after generation. Change the URL when the
@@ -49,7 +49,14 @@ export default defineNuxtConfig({
       try {
         const response = await fetch(`${apiBase}/seo/product-slugs`)
         const data = await response.json() as { products?: Array<{ id: number; slug: string }> }
-        nitroConfig.prerender.routes.push(...(data.products ?? []).map(product => `/product/${product.id}/${product.slug}`))
+        const routes = nitroConfig.prerender?.routes
+        if (routes) {
+          const products = data.products ?? []
+
+          for (const product of products) {
+            routes.push(`/product/${product.id}/${product.slug}`)
+          }
+        }
       } catch {
         // The public storefront remains deployable if the API is temporarily unavailable.
       }
