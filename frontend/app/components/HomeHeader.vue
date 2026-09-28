@@ -5,7 +5,8 @@ const { data } = useCatalogMenu()
 const sections = computed(() => data.value?.categories ?? [])
 const { cartCount, fetchCart } = useCart()
 const { wishlistCount, fetchWishlist } = useWishlist()
-const { isAuthenticated } = useAuth()
+const { authLoaded, isAuthenticated, fetchUser } = useAuth()
+const { coupon: welcomeCoupon, fetchWelcomeCoupon } = useWelcomeCoupon()
 
 const searchText = ref('')
 const selectedCategory = ref('')
@@ -71,18 +72,23 @@ const submitSearch = () => {
 const closeSuggestions = () => setTimeout(() => { showSuggestions.value = false }, 150)
 
 onBeforeUnmount(() => clearTimeout(searchTimer))
-onMounted(() => {
+onMounted(async () => {
     fetchCart().catch(error => console.error('Cart load error:', error))
-    if (isAuthenticated.value) fetchWishlist().catch(() => null)
+    if (!authLoaded.value) await fetchUser().catch(() => null)
+    if (isAuthenticated.value) {
+        fetchWishlist().catch(() => null)
+        fetchWelcomeCoupon().catch(() => null)
+    }
 })
 </script>
 
 <template>
   <header>
      <div class="topbar py-2">
-        <div class="container d-flex justify-content-end">
+        <div class="container d-flex">
             <!-- <span>Free delivery over ৳3,000</span> -->
-            <span>
+            <NuxtLink v-if="welcomeCoupon" class="apply-coupon-link" to="/account"><i class="bi bi-ticket-perforated"></i> Apply coupon: <b>{{ welcomeCoupon.code }}</b></NuxtLink>
+            <span class="ms-auto">
                 <NuxtLink to="/contact">Help Center</NuxtLink>
                 ·
                 <NuxtLink :to="{ path: '/account', query: { section: 'orders' } }">Track Order</NuxtLink>
@@ -127,6 +133,7 @@ onMounted(() => {
                         class="badge bg-danger rounded-pill">{{ cartCount }}</span></NuxtLink></div>
         </div>
     </nav>
+    <NuxtLink v-if="welcomeCoupon" class="mobile-welcome-coupon" to="/account"><i class="bi bi-ticket-perforated"></i> Apply coupon: <b>{{ welcomeCoupon.code }}</b></NuxtLink>
     <div class="category-bar bg-white">
         <div class="container d-flex align-items-center"><NuxtLink class="btn btn-brand rounded-0 px-4 py-3"
                 to="/#heroCarousel"><i class="bi bi-grid me-2"></i>Browse Categories</NuxtLink>

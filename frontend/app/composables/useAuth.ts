@@ -63,6 +63,7 @@ export const useAuth = () => {
     const response = await $fetch<AuthResponse>('/auth/login', { baseURL: config.public.apiBase, method: 'POST', credentials: 'include', headers: loginHeaders(), body: payload })
     user.value = response.user
     authLoaded.value = true
+    useWelcomeCoupon().clearWelcomeCoupon()
     await refreshShoppingCart()
     await useWishlist().fetchWishlist(true)
     return response
@@ -73,6 +74,7 @@ export const useAuth = () => {
     const response = await $fetch<RegisterResponse>('/auth/register', { baseURL: config.public.apiBase, method: 'POST', credentials: 'include', headers: csrfHeaders(), body: payload })
     user.value = null
     authLoaded.value = true
+    useWelcomeCoupon().clearWelcomeCoupon()
     return response
   }
 
@@ -119,6 +121,7 @@ export const useAuth = () => {
     user.value = null
     authLoaded.value = true
     useWishlist().clearWishlist()
+    useWelcomeCoupon().clearWelcomeCoupon()
     await refreshShoppingCart()
   }
 

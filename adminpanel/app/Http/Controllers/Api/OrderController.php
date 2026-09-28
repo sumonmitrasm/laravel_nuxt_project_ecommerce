@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\OrderPlacedMail;
 use App\Mail\OrderStatusMail;
 use App\Models\Cart;
+use App\Models\Coupon;
 use App\Models\CouponUsage;
 use App\Models\Order;
 use App\Models\Product;
@@ -203,8 +204,19 @@ class OrderController extends Controller
         $order = DB::transaction(function () use ($validated, $user, $address, $shipping, $resolvedCart) {
             $cart = Cart::whereKey($resolvedCart->id)->where('user_id', $user->id)->lockForUpdate()->first();
             if (! $cart) throw ValidationException::withMessages(['cart' => 'Your cart could not be found.']);
-            $cart->load(['items', 'coupon']);
+            $cart->load('items');
             if ($cart->items->isEmpty()) throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
+
+            // Lock the coupon until this order and its usage record are saved.
+            // A second checkout with the same limited coupon waits here, then
+            // re-checks the limit against the first transaction's usage.
+            $coupon = $cart->coupon_id
+                ? Coupon::query()->lockForUpdate()->find($cart->coupon_id)
+                : null;
+
+            if ($cart->coupon_id && ! $coupon) {
+                throw ValidationException::withMessages(['coupon' => 'This coupon is no longer available.']);
+            }
 
             $pricedItems = collect();
             foreach ($cart->items as $cartItem) {
@@ -240,8 +252,8 @@ class OrderController extends Controller
             $subtotal = round((float) $pricedItems->sum('line_total'), 2);
             $discount = 0.0;
             $freeShipping = false;
-            if ($cart->coupon) {
-                $calculation = $this->coupons->calculate($cart->coupon, $pricedItems, $subtotal, $user, (string) $cart->guest_token);
+            if ($coupon) {
+                $calculation = $this->coupons->calculate($coupon, $pricedItems, $subtotal, $user, (string) $cart->guest_token);
                 $discount = (float) $calculation['discount'];
                 $freeShipping = (bool) $calculation['free_shipping'];
             }
@@ -250,7 +262,7 @@ class OrderController extends Controller
 
             $order = Order::create([
                 'order_number' => $this->newOrderNumber(), 'user_id' => $user->id,
-                'coupon_id' => $cart->coupon_id, 'shipping_method_id' => $shipping->id,
+                'coupon_id' => $coupon?->id, 'shipping_method_id' => $shipping->id,
                 'shipping_method_name' => $shipping->name, 'payment_method' => $validated['payment_method'],
                 'payment_status' => 'unpaid', 'order_status' => 'pending', 'subtotal' => $subtotal,
                 'discount_amount' => $discount, 'shipping_charge' => $shippingCharge, 'tax_amount' => 0,
@@ -293,9 +305,9 @@ class OrderController extends Controller
                 'status' => 'pending', 'note' => 'Order placed by customer.',
                 'changed_by_type' => 'user', 'changed_by_id' => $user->id,
             ]);
-            if ($cart->coupon) {
+            if ($coupon) {
                 CouponUsage::create([
-                    'coupon_id' => $cart->coupon->id, 'user_id' => $user->id, 'order_id' => $order->id,
+                    'coupon_id' => $coupon->id, 'user_id' => $user->id, 'order_id' => $order->id,
                     'guest_token' => $cart->guest_token, 'discount_amount' => $discount, 'used_at' => now(),
                 ]);
             }

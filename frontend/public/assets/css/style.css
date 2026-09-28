@@ -1931,6 +1931,33 @@ body {
     text-transform: uppercase
 }
 
+.apply-coupon-link {
+    color: inherit !important;
+    font-size: .78rem;
+    font-weight: 400;
+    text-decoration: none;
+    text-transform: none
+}
+
+.shop-topbar .apply-coupon-link {
+    margin-left: 0;
+    color: #69736e !important
+}
+
+.topbar .apply-coupon-link {
+    color: #fff !important
+}
+
+.apply-coupon-link b,
+.mobile-welcome-coupon b {
+    color: var(--brand);
+    font-weight: 700
+}
+
+.mobile-welcome-coupon {
+    display: none
+}
+
 .shop-navbar {
     min-height: 92px;
     border-bottom: 1px solid #edf0ee;
@@ -2604,6 +2631,21 @@ body {
 @media(max-width:991.98px) {
     .shop-topbar {
         display: none
+    }
+
+    .mobile-welcome-coupon {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 34px;
+        padding: 8px 15px;
+        border-bottom: 1px solid #edf0ee;
+        color: #69736e;
+        background: #fff8f5;
+        font-size: .76rem;
+        font-weight: 400;
+        text-decoration: none;
+        text-transform: none
     }
 
     .shop-navbar {

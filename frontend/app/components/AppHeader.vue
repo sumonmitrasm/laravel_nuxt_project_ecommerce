@@ -2,6 +2,7 @@
 const { cartCount, fetchCart } = useCart()
 const { wishlistCount, fetchWishlist } = useWishlist()
 const { authLoaded, isAuthenticated, fetchUser } = useAuth()
+const { coupon: welcomeCoupon, fetchWelcomeCoupon } = useWelcomeCoupon()
 const router = useRouter()
 const config = useRuntimeConfig()
 const { data: catalogData } = useCatalogMenu()
@@ -59,7 +60,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 onMounted(() => {
     const loadAccount = async () => {
         if (!authLoaded.value) await fetchUser().catch(() => null)
-        if (isAuthenticated.value) fetchWishlist().catch(() => null)
+        if (isAuthenticated.value) {
+            fetchWishlist().catch(() => null)
+            fetchWelcomeCoupon().catch(() => null)
+        }
     }
 
     loadAccount()
@@ -72,6 +76,7 @@ onMounted(() => {
         <div class="shop-topbar">
             <div class="container">
                 <span>English <i class="bi bi-chevron-down"></i></span>
+                <NuxtLink v-if="welcomeCoupon" class="apply-coupon-link" to="/account"><i class="bi bi-ticket-perforated"></i> Apply coupon: <b>{{ welcomeCoupon.code }}</b></NuxtLink>
                 <div class="ms-auto">
                     <a v-if="sitePhone" :href="phoneLink"><i class="bi bi-telephone"></i> Call: {{ sitePhone }}</a
                     ><NuxtLink to="/wishlist"><i class="bi bi-heart"></i> Wishlist ({{ wishlistCount }})</NuxtLink
@@ -142,5 +147,6 @@ onMounted(() => {
                 </div>
             </div>
         </nav>
+        <NuxtLink v-if="welcomeCoupon" class="mobile-welcome-coupon" to="/account"><i class="bi bi-ticket-perforated"></i> Apply coupon: <b>{{ welcomeCoupon.code }}</b></NuxtLink>
     </header>
 </template>
