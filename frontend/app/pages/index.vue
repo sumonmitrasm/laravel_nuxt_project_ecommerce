@@ -398,14 +398,14 @@ useHead(() => ({
                         <article v-for="product in filteredHotDeals" :key="product.id" class="deal-card">
                             <div class="deal-media">
                                 <span class="deal-badge sale">-{{ Number(product.discount) }}%</span>
-                                <NuxtLink :to="{ path: '/product', query: { id: product.id } }">
+                                <NuxtLink :to="`/product/${product.id}/${product.slug}`">
                                     <img v-if="product.image_url" :src="product.image_url" :alt="product.name" loading="lazy">
                                     <span v-else class="category-api-placeholder"><i class="bi bi-image"></i></span>
                                 </NuxtLink>
-                                <NuxtLink class="deal-add-cart" :to="{ path: '/product', query: { id: product.id } }"><i class="bi bi-eye"></i><span>View product</span></NuxtLink>
+                                <NuxtLink class="deal-add-cart" :to="`/product/${product.id}/${product.slug}`"><i class="bi bi-eye"></i><span>View product</span></NuxtLink>
                             </div>
                             <small>{{ product.category_name }}</small>
-                            <h3><NuxtLink :to="{ path: '/product', query: { id: product.id } }">{{ product.name }}</NuxtLink></h3>
+                            <h3><NuxtLink :to="`/product/${product.id}/${product.slug}`">{{ product.name }}</NuxtLink></h3>
                             <div class="deal-price">{{ money(product.final_price) }} <del>{{ money(product.regular_price) }}</del></div>
                             <div class="deal-stock" :class="{ 'is-out': !product.in_stock }"><i class="bi" :class="product.in_stock ? 'bi-check-circle' : 'bi-x-circle'"></i> {{ product.in_stock ? 'In stock' : 'Out of stock' }}</div>
                         </article>
@@ -434,16 +434,16 @@ useHead(() => ({
                 </div>
                 <div v-for="product in trendingProducts" :key="product.id" class="col-6 col-lg-3">
                     <div class="product-card card h-100 p-2">
-                        <NuxtLink :to="{ path: '/product', query: { id: product.id } }" class="product-media">
+                        <NuxtLink :to="`/product/${product.id}/${product.slug}`" class="product-media">
                             <img v-if="product.image_url" :src="product.image_url" :alt="product.name" loading="lazy">
                             <span v-else class="category-api-placeholder"><i class="bi bi-image"></i></span>
                             <span class="smart-badge">{{ product.badge }}</span>
                         </NuxtLink>
                         <div class="card-body d-flex flex-column">
                             <small class="text-secondary">{{ product.category_name }}</small>
-                            <h6 class="mt-1"><NuxtLink class="text-dark text-decoration-none" :to="{ path: '/product', query: { id: product.id } }">{{ product.name }}</NuxtLink></h6>
+                            <h6 class="mt-1"><NuxtLink class="text-dark text-decoration-none" :to="`/product/${product.id}/${product.slug}`">{{ product.name }}</NuxtLink></h6>
                             <div class="mt-auto"><span class="price">{{ money(product.final_price) }}</span> <span v-if="product.has_discount" class="old-price">{{ money(product.regular_price) }}</span></div>
-                            <NuxtLink v-if="product.in_stock" class="btn btn-dark w-100 mt-3" :to="{ path: '/product', query: { id: product.id } }">View product <i class="bi bi-arrow-right ms-1"></i></NuxtLink>
+                            <NuxtLink v-if="product.in_stock" class="btn btn-dark w-100 mt-3" :to="`/product/${product.id}/${product.slug}`">View product <i class="bi bi-arrow-right ms-1"></i></NuxtLink>
                             <button v-else class="btn btn-secondary w-100 mt-3" type="button" disabled>Out of stock</button>
                         </div>
                     </div>
@@ -459,7 +459,7 @@ useHead(() => ({
                 </div>
                 <div v-if="recommendedProducts.length" class="more-products-grid">
                     <article v-for="product in recommendedProducts" :key="product.id" class="more-product-card">
-                        <NuxtLink class="more-product-media" :to="{ path: '/product', query: { id: product.id } }">
+                        <NuxtLink class="more-product-media" :to="`/product/${product.id}/${product.slug}`">
                             <img v-if="product.image_url" :src="product.image_url" :alt="product.name" loading="lazy">
                             <div v-else class="more-product-placeholder"><i class="bi bi-image"></i></div>
                             <em :class="product.badge === 'Sale' ? 'sale' : product.badge === 'Featured' ? 'top' : 'new'">{{ product.badge }}</em>
@@ -467,7 +467,7 @@ useHead(() => ({
                         </NuxtLink>
                         <div class="more-product-info">
                             <small>{{ product.category_name }}</small>
-                            <h3><NuxtLink :to="{ path: '/product', query: { id: product.id } }">{{ product.name }}</NuxtLink></h3>
+                            <h3><NuxtLink :to="`/product/${product.id}/${product.slug}`">{{ product.name }}</NuxtLink></h3>
                             <div class="more-product-stock" :class="{ 'is-out': !product.in_stock }">{{ product.in_stock ? 'In stock' : 'Out of stock' }}</div>
                             <div class="more-product-price">{{ money(product.final_price) }} <del v-if="product.has_discount">{{ money(product.regular_price) }}</del></div>
                         </div>

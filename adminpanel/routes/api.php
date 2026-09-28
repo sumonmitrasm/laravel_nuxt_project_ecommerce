@@ -22,6 +22,8 @@ Route::get('/search', [FrontController::class, 'search'])->middleware('throttle:
 Route::get('/recommended-products', [FrontController::class, 'recommendedProducts'])->name('api.recommended-products');
 Route::get('/listing/{url}', [FrontController::class, 'listing'])->name('api.listing');
 Route::get('/detail/{id}', [FrontController::class, 'details'])->whereNumber('id')->name('api.detail');
+Route::get('/detail/{id}/{slug}', [FrontController::class, 'detailsBySlug'])->whereNumber('id')->where('slug', '[a-z0-9-]+')->name('api.detail.slug');
+Route::get('/seo/product-slugs', [FrontController::class, 'productSlugs'])->name('api.seo.product-slugs');
 Route::get('/products/{product}/reviews', [ProductReviewController::class, 'index'])->whereNumber('product');
 Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->middleware(['auth:sanctum', 'verified'])->whereNumber('product');
 Route::get('/shipping-methods', [ShippingMethodController::class, 'index'])->name('api.shipping-methods');

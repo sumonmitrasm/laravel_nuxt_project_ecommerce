@@ -2,11 +2,9 @@
 import type { PageSeoData } from '~/composables/usePageSeo'
 definePageMeta({
     middleware: (to) => {
-        const value = Array.isArray(to.query.id) ? to.query.id[0] : to.query.id
-        const id = Number.parseInt(value?.toString() ?? '', 10)
-
-        // Product details require a valid product ID.
-        if (!Number.isInteger(id) || id < 1) {
+        const id = Number(to.params.id || to.query.id)
+        const slug = Array.isArray(to.params.slug) ? to.params.slug[0] : to.params.slug
+        if (!Number.isInteger(id) || id < 1 || (slug && !/^[a-z0-9-]+$/.test(slug.toString()))) {
             return navigateTo('/shop', { replace: true })
         }
     }
@@ -53,26 +51,35 @@ const cartMessage = ref('')
 const cartError = ref('')
 const addingToCart = ref(false)
 
+const productSlug = computed(() => {
+    const value = Array.isArray(route.params.slug) ? route.params.slug[0] : route.params.slug
+    return value?.toString() ?? ''
+})
 const productId = computed(() => {
-    const value = Array.isArray(route.query.id) ? route.query.id[0] : route.query.id
-    const id = Number.parseInt(value?.toString() ?? '', 10)
+    const value = Array.isArray(route.params.id) ? route.params.id[0] : (route.params.id || route.query.id)
+    const id = Number(value)
     return Number.isInteger(id) && id > 0 ? id : null
 })
 
 const { data, status, error } = useAsyncData<ProductDetailResponse>(
-    () => `product-detail-${productId.value ?? 'invalid'}`,
+    () => `product-detail-${productId.value ?? 'invalid'}-${productSlug.value || 'invalid'}`,
     () => {
         if (!productId.value) throw createError({ statusCode: 404, statusMessage: 'Product not found.' })
-        return $fetch<ProductDetailResponse>(`/detail/${productId.value}`, { baseURL: config.public.apiBase })
+        const endpoint = productSlug.value
+            ? `/detail/${productId.value}/${encodeURIComponent(productSlug.value)}`
+            : `/detail/${productId.value}`
+        return $fetch<ProductDetailResponse>(endpoint, { baseURL: config.public.apiBase })
     },
     {
-        watch: [productId],
-        // Keep link navigation responsive while the product request is in progress.
-        lazy: true
+        watch: [productId, productSlug],
+        // Wait for the single product request before replacing the current page.
+        // This avoids showing a blank "Loading product" page during navigation.
+        lazy: false
     }
 )
 
 const product = computed<any>(() => data.value?.product ?? null)
+const loadedProductId = computed(() => product.value?.id ?? null)
 const changeWishlist = async () => {
     if (!productId.value) return
     if (!isAuthenticated.value) {
@@ -108,6 +115,12 @@ const attributeGroups = computed(() => {
 
     return [...groups.values()]
 })
+
+// Old links with only ?id= keep working and move visitors to the SEO URL.
+if (import.meta.client && productId.value && !productSlug.value) {
+    const response = await $fetch<ProductDetailResponse>(`/detail/${productId.value}`, { baseURL: config.public.apiBase })
+    await navigateTo(`/product/${productId.value}/${response.product.slug}`, { replace: true })
+}
 
 const selectedVariant = computed(() => {
     if (!hasVariants.value || attributeGroups.value.some(group => !selectedValues[group.id])) return null
@@ -237,8 +250,8 @@ const reviewError = ref('')
 const reviewSubmitting = ref(false)
 
 const loadReviews = async (page = 1) => {
-    if (!productId.value) return
-    const response = await $fetch<any>(`/products/${productId.value}/reviews`, { baseURL: config.public.apiBase, query: { page, per_page: 10 } })
+    if (!loadedProductId.value) return
+    const response = await $fetch<any>(`/products/${loadedProductId.value}/reviews`, { baseURL: config.public.apiBase, query: { page, per_page: 10 } })
     reviews.value = page === 1 ? response.reviews : [...reviews.value, ...response.reviews]
     reviewAverage.value = response.average
     reviewTotal.value = response.total
@@ -259,7 +272,7 @@ const reviewDate = (date: string) => new Date(date).toLocaleDateString('en-GB', 
 const cleanTitle = () => { reviewForm.title = reviewForm.title.replace(/[^\p{L}\p{N}\s.,!?()'\-]/gu, '') }
 const cleanComment = () => { reviewForm.comment = reviewForm.comment.replace(/[^\p{L}\p{N}\s.,!?()'"\-]/gu, '') }
 
-watch(productId, loadReviews, { immediate: true })
+watch(loadedProductId, loadReviews, { immediate: true })
 
 const submitReview = async () => {
     reviewMessage.value = ''
@@ -281,7 +294,7 @@ const submitReview = async () => {
         await $fetch('/sanctum/csrf-cookie', { baseURL: config.public.backendBase, credentials: 'include' })
         refreshCookie('XSRF-TOKEN')
         const token = useCookie<string | null>('XSRF-TOKEN')
-        const response = await $fetch<any>(`/products/${productId.value}/reviews`, {
+        const response = await $fetch<any>(`/products/${loadedProductId.value}/reviews`, {
             baseURL: config.public.apiBase,
             method: 'POST',
             credentials: 'include',

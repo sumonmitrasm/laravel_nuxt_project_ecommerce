@@ -15,7 +15,7 @@ class Product extends Model
     protected $appends = ['image_url', 'effective_discount', 'final_price'];
 
     protected $fillable = [
-        'section_id', 'category_id', 'brand_id', 'admin_id', 'vendor_id', 'admin_type',
+        'section_id', 'category_id', 'brand_id', 'admin_id', 'vendor_id', 'admin_type', 'slug',
         'product_name', 'product_code', 'product_price', 'product_discount',
         'product_weight', 'product_image', 'product_video', 'description', 'meta_title',
         'meta_description', 'meta_image', 'url_structure', 'heading_tag', 'schema_markup',

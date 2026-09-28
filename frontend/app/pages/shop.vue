@@ -527,7 +527,7 @@ const productBadge = product => {
                     <div v-else class="shop-products">
                         <article v-for="product in products" :key="product.id" class="shop-product">
                             <div class="shop-product-media">
-                                <NuxtLink class="shop-product-photo" :to="{ path: '/product', query: { id: product.id } }" :style="{
+                                <NuxtLink class="shop-product-photo" :to="`/product/${product.id}/${product.slug}`" :style="{
                                     backgroundImage: product.image_url ? `url(${product.image_url})` : 'none',
                                     backgroundSize: 'contain',
                                     backgroundPosition: 'center',
@@ -537,13 +537,13 @@ const productBadge = product => {
                                     }}</em><button class="shop-heart" :class="{ active: hasProduct(product.id) }" type="button" :disabled="wishlistBusyId === product.id" :aria-label="hasProduct(product.id) ? 'Remove from wishlist' : 'Add to wishlist'" @click="changeWishlist(product.id)">
                                     <i class="bi" :class="hasProduct(product.id) ? 'bi-heart-fill' : 'bi-heart'"></i>
                                 </button><NuxtLink class="shop-cart"
-                                    :to="{ path: '/product', query: { id: product.id } }"><i
+                                    :to="`/product/${product.id}/${product.slug}`"><i
                                         class="bi bi-eye"></i> View product</NuxtLink>
                             </div>
                             <div class="shop-product-info">
                                 <small>{{ product.category?.category_name ?? category?.category_name }}</small>
                                 <h2>
-                                    <NuxtLink :to="{ path: '/product', query: { id: product.id } }">{{
+                                    <NuxtLink :to="`/product/${product.id}/${product.slug}`">{{
                                         product.product_name }}
                                     </NuxtLink>
                                 </h2>

@@ -56,6 +56,10 @@ class SettingController extends Controller
             'record' => $setting,
             'image_url' => $this->imageUrl($setting->image),
             'favicon_url' => $this->imageUrl($setting->favicon),
+            'meta_image_url' => $this->imageUrl($setting->meta_image),
+            'image_urls' => [
+                'meta_image' => $this->imageUrl($setting->meta_image),
+            ],
         ]);
     }
 
@@ -85,6 +89,7 @@ class SettingController extends Controller
     {
         $this->deleteImage($setting->image);
         $this->deleteImage($setting->favicon);
+        $this->deleteImage($setting->meta_image);
         $setting->delete();
         $this->clearSettingCache();
 
@@ -119,6 +124,7 @@ class SettingController extends Controller
             'youtube_url' => ['nullable', 'url', 'max:255'],
             'meta_title' => ['nullable', 'string', 'max:255'],
             'meta_description' => ['nullable', 'string'],
+            'meta_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:4096'],
             'url_structure' => ['nullable', 'string', 'max:255'],
             'heading_tag' => ['nullable', 'string', 'max:255'],
             'schema_markup' => ['nullable', 'string'],
@@ -129,7 +135,7 @@ class SettingController extends Controller
             'status' => ['required', 'boolean'],
         ]);
 
-        foreach (['image', 'favicon'] as $field) {
+        foreach (['image', 'favicon', 'meta_image'] as $field) {
             if ($request->hasFile($field)) {
                 $data[$field] = $this->storeImage($request->file($field), $field);
                 if ($setting) {

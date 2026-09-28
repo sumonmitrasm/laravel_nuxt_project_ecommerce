@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -69,6 +70,7 @@ class ProductController extends Controller
         $admin = Auth::guard('admin')->user();
         $data['admin_id'] = $admin?->id;
         $data['admin_type'] = $admin?->type;
+        $data['slug'] = $this->uniqueSlug($data['product_name']);
         DB::transaction(function () use ($data, $request) {
             $product = Product::create($data);
             $this->storeProductImages($request, $product);
@@ -135,13 +137,13 @@ class ProductController extends Controller
         $this->validateProductSpecifications($request);
         $this->validateVariantSelections($request, $product);
         $data = $this->validatedData($request, $product);
+        $data['slug'] = $this->uniqueSlug($data['product_name'], $product->id);
         DB::transaction(function () use ($data, $request, $product) {
             $product->update($data);
             $this->storeProductImages($request, $product);
             $this->syncProductAttributes($request, $product);
             $this->syncProductSpecifications($request, $product);
         });
-
         return response()->json(['message' => 'Product updated successfully.']);
     }
 
@@ -232,6 +234,19 @@ class ProductController extends Controller
         unset($data['product_images'], $data['variants'], $data['product_attributes']);
 
         return $data;
+    }
+
+    private function uniqueSlug(string $name, ?int $exceptId = null): string
+    {
+        $base = Str::slug($name) ?: 'product';
+        $slug = $base;
+        $number = 2;
+
+        while (Product::query()->where('slug', $slug)->when($exceptId, fn ($query) => $query->whereKeyNot($exceptId))->exists()) {
+            $slug = $base.'-'.$number++;
+        }
+
+        return $slug;
     }
 
     private function storeProductImages(Request $request, Product $product): void

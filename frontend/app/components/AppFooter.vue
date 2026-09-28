@@ -115,7 +115,7 @@ onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
                 <div v-if="mobileSearching" class="mobile-search-message">Searching...</div>
                 <template v-else-if="mobileSuggestions.length">
                     <NuxtLink v-for="product in mobileSuggestions" :key="product.id"
-                        :to="{ path: '/product', query: { id: product.id } }" class="mobile-search-result">
+                        :to="`/product/${product.id}/${product.slug}`" class="mobile-search-result">
                         <img v-if="product.image_url" :src="product.image_url" :alt="product.name">
                         <span v-else class="mobile-search-image"><i class="bi bi-image"></i></span>
                         <span><small>{{ product.category_name }}</small><strong>{{ product.name }}</strong></span>

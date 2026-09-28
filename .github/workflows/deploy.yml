@@ -13,6 +13,7 @@ jobs:
   # --- ১. FRONTEND BUILD & FTP DEPLOY ---
   deploy-frontend:
     name: Deploy Nuxt Frontend
+    needs: deploy-backend
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -50,7 +51,6 @@ jobs:
   # --- ২. LARAVEL BACKEND SSH DEPLOY ---
   deploy-backend:
     name: Deploy Laravel Backend
-    needs: deploy-frontend
     runs-on: ubuntu-latest
     steps:
       - name: Execute Remote SSH Commands for Laravel

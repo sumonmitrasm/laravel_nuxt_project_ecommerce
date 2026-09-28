@@ -7,6 +7,7 @@ const stylesheetVersion = createHash('sha256')
   .update(readFileSync(new URL('./public/assets/css/style.css', import.meta.url)))
   .digest('hex')
   .slice(0, 12)
+const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'https://admin.shahinenterprise.com.bd/api'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -30,6 +31,28 @@ export default defineNuxtConfig({
     prerender: {
       crawlLinks: false,
       routes: ['/'],
+    },
+  },
+
+  hooks: {
+    'pages:extend'(pages) {
+      const productPage = pages.find(page => page.path === '/product')
+      if (productPage) {
+        pages.push({
+          name: 'product-id-slug',
+          path: '/product/:id/:slug',
+          file: productPage.file,
+        })
+      }
+    },
+    async 'nitro:config'(nitroConfig) {
+      try {
+        const response = await fetch(`${apiBase}/seo/product-slugs`)
+        const data = await response.json() as { products?: Array<{ id: number; slug: string }> }
+        nitroConfig.prerender.routes.push(...(data.products ?? []).map(product => `/product/${product.id}/${product.slug}`))
+      } catch {
+        // The public storefront remains deployable if the API is temporarily unavailable.
+      }
     },
   },
 
