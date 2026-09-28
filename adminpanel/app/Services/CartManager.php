@@ -3,22 +3,21 @@
 namespace App\Services;
 
 use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CartManager
 {
+    private const MAX_ITEM_QUANTITY = 3;
+
     public function resolve(Request $request, bool $create = false): ?Cart
     {
         if ($user = $request->user()) {
-            $cart = Cart::query()
-                ->where('user_id', $user->id)
-                ->latest('updated_at')
-                ->first();
-
-            return $cart ?? $this->mergeForUser(
+            return $this->mergeForUser(
                 $user,
                 $request->header('X-Guest-Cart-Token'),
                 $create,
@@ -39,32 +38,77 @@ class CartManager
 
     public function mergeForUser(User $user, ?string $guestToken, bool $create = true): ?Cart
     {
-        if ($guestToken && Str::isUuid($guestToken)) {
-            $guestCart = Cart::query()
-                ->whereNull('user_id')
-                ->where('guest_token', $guestToken)
+        return DB::transaction(function () use ($user, $guestToken, $create): ?Cart {
+            $userCart = Cart::query()
+                ->where('user_id', $user->id)
+                ->latest('updated_at')
+                ->lockForUpdate()
                 ->first();
 
-            if ($guestCart) {
+            $guestCart = $guestToken && Str::isUuid($guestToken)
+                ? Cart::query()
+                    ->whereNull('user_id')
+                    ->where('guest_token', $guestToken)
+                    ->lockForUpdate()
+                    ->first()
+                : null;
+
+            if (! $guestCart) {
+                if ($userCart || ! $create) {
+                    return $userCart;
+                }
+
+                return Cart::query()->create([
+                    'user_id' => $user->id,
+                    'guest_token' => null,
+                ]);
+            }
+
+            if (! $userCart) {
                 $guestCart->update(['user_id' => $user->id]);
 
                 return $guestCart->fresh();
             }
-        }
 
-        $userCart = Cart::query()
-            ->where('user_id', $user->id)
-            ->latest('updated_at')
-            ->first();
+            $this->moveGuestItemsToUserCart($guestCart, $userCart);
+            $userCart->touch();
 
-        if ($userCart || ! $create) {
-            return $userCart;
-        }
+            if (! $userCart->coupon_id && $guestCart->coupon_id) {
+                $userCart->update([
+                    'coupon_id' => $guestCart->coupon_id,
+                    'coupon_applied_at' => $guestCart->coupon_applied_at,
+                ]);
+            }
 
-        return Cart::query()->create([
-            'user_id' => $user->id,
-            'guest_token' => $guestToken && Str::isUuid($guestToken) ? $guestToken : null,
-        ]);
+            $guestCart->delete();
+
+            return $userCart->fresh();
+        });
+    }
+
+    private function moveGuestItemsToUserCart(Cart $guestCart, Cart $userCart): void
+    {
+        $guestCart->items()->lockForUpdate()->get()->each(function (CartItem $guestItem) use ($userCart): void {
+            $userItemQuery = CartItem::query()
+                ->where('cart_id', $userCart->id)
+                ->where('product_id', $guestItem->product_id);
+
+            $userItem = $guestItem->product_variant_id
+                ? $userItemQuery->where('product_variant_id', $guestItem->product_variant_id)->lockForUpdate()->first()
+                : $userItemQuery->whereNull('product_variant_id')->lockForUpdate()->first();
+
+            if (! $userItem) {
+                $guestItem->update(['cart_id' => $userCart->id]);
+
+                return;
+            }
+
+            $userItem->update([
+                'quantity' => min(self::MAX_ITEM_QUANTITY, $userItem->quantity + $guestItem->quantity),
+            ]);
+
+            $guestItem->delete();
+        });
     }
 
     private function guestToken(Request $request, bool $required): ?string
