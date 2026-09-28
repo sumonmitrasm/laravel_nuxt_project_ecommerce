@@ -19,9 +19,12 @@ return new class extends Migration
             $table->string('recipient_name', 100);
             $table->string('phone', 20);
             $table->string('alternative_phone', 20)->nullable();
-            $table->integer('division', 100);
-            $table->integer('district', 100);
-            $table->integer('upazila', 100);
+            // These hold the IDs from the Bangladesh location tables.
+            // The second integer() argument means “auto-increment” in Laravel,
+            // so it must not be used here.
+            $table->unsignedBigInteger('division');
+            $table->unsignedBigInteger('district');
+            $table->unsignedBigInteger('upazila');
             $table->string('area', 150)->nullable();
             $table->string('postal_code', 20)->nullable();
             $table->text('address_line');

@@ -8,18 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Older databases used product_id and session_id directly on carts.
+        // New installations already use the cart_items table, so no change is needed.
+        if (! Schema::hasColumn('carts', 'product_id')) {
+            return;
+        }
+
         Schema::table('carts', function (Blueprint $table) {
             $table->dropForeign(['product_id']);
             $table->dropColumn(['product_id', 'session_id']);
             $table->foreignId('user_id')->nullable()->change();
             $table->uuid('guest_token')->nullable()->change();
             $table->unique('guest_token', 'carts_guest_token_unique');
-        });
-
-        Schema::table('cart_items', function (Blueprint $table) {
-            $table->foreignId('product_variant_id')->nullable()->change();
-            $table->unsignedInteger('quantity')->default(1)->change();
-            $table->unique(['cart_id', 'product_id', 'product_variant_id'], 'cart_item_unique');
         });
     }
 
