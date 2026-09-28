@@ -9,6 +9,7 @@ use App\Models\Cart;
 use App\Models\Coupon;
 use App\Models\CouponUsage;
 use App\Models\Order;
+use App\Models\OrderReturn;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ShippingMethod;
@@ -62,6 +63,7 @@ class OrderController extends Controller
                 'address',
                 'payments' => fn ($query) => $query->orderByDesc('paid_at')->latest('id'),
                 'statusHistories' => fn ($query) => $query->oldest('id'),
+                'returnRequest',
             ])
             ->firstOrFail();
 
@@ -93,6 +95,9 @@ class OrderController extends Controller
                 'payment_status' => $order->payment_status,
                 'payment_method' => $order->payment_method,
                 'shipping_method_name' => $order->shipping_method_name,
+                'courier_name' => $order->courier_name,
+                'tracking_number' => $order->tracking_number,
+                'shipped_at' => $order->shipped_at,
                 'subtotal' => $order->subtotal,
                 'discount_amount' => $order->discount_amount,
                 'shipping_charge' => $order->shipping_charge,
@@ -114,8 +119,50 @@ class OrderController extends Controller
                     'note' => $history->note,
                     'created_at' => $history->created_at,
                 ]),
+                'return_request' => $order->returnRequest ? [
+                    'status' => $order->returnRequest->status,
+                    'reason' => $order->returnRequest->reason,
+                    'admin_note' => $order->returnRequest->admin_note,
+                    'refund_amount' => $order->returnRequest->refund_amount,
+                    'requested_at' => $order->returnRequest->requested_at,
+                ] : null,
             ],
         ]);
+    }
+
+    public function requestReturn(Request $request, string $orderNumber): JsonResponse
+    {
+        $validated = $request->validate(['reason' => ['required', 'string', 'max:500']]);
+
+        $return = DB::transaction(function () use ($request, $orderNumber, $validated) {
+            $order = Order::query()
+                ->where('user_id', $request->user()->id)
+                ->where('order_number', $orderNumber)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($order->order_status !== 'delivered') {
+                throw ValidationException::withMessages(['order' => 'A return can be requested after delivery only.']);
+            }
+
+            if ($order->returnRequest()->exists()) {
+                throw ValidationException::withMessages(['order' => 'A return request already exists for this order.']);
+            }
+
+            return OrderReturn::create([
+                'order_id' => $order->id,
+                'user_id' => $request->user()->id,
+                'reason' => $validated['reason'],
+                'status' => 'requested',
+                'requested_at' => now(),
+            ]);
+        }, 3);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Your return request has been sent to our support team.',
+            'return_request' => $return,
+        ], 201);
     }
     public function cancel(Request $request, string $orderNumber): JsonResponse
     {
@@ -295,7 +342,9 @@ class OrderController extends Controller
                 }
             }
 
-            $order->address()->create([
+            // One order has one delivery address. updateOrCreate also makes a
+            // retried checkout request safe instead of inserting a duplicate.
+            $order->address()->updateOrCreate([], [
                 'user_address_id' => $address->id, 'label' => $address->label,
                 'recipient_name' => $address->recipient_name, 'phone' => $address->phone,
                 'alternative_phone' => $address->alternative_phone, 'division_id' => $address->division,

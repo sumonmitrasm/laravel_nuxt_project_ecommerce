@@ -81,6 +81,7 @@ Route::prefix('auth')->group(function () {
         Route::post('/orders/{orderNumber}/payment', [SslCommerzController::class, 'initiate'])->middleware('throttle:10,1')->name('api.orders.payment');
         Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])->name('api.orders.show');
         Route::patch('/orders/{orderNumber}/cancel', [OrderController::class, 'cancel'])->name('api.orders.cancel');
+        Route::post('/orders/{orderNumber}/return', [OrderController::class, 'requestReturn'])->name('api.orders.return');
         Route::get('/wishlist', [WishlistController::class, 'index'])->name('api.wishlist.index');
         Route::post('/wishlist', [WishlistController::class, 'store'])->name('api.wishlist.store');
         Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy'])->whereNumber('product')->name('api.wishlist.destroy');

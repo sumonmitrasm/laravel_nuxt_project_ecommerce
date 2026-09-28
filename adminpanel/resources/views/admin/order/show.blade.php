@@ -42,6 +42,33 @@
                 @if($order->payment_method === 'sslcommerz' && $order->payment_status !== 'paid' && $order->order_status !== 'cancelled')<div class="alert alert-warning mt-3 mb-0">Online payment is not verified. This order cannot move forward yet.</div>@endif
             </div></div>
 
+            @php($canSaveTracking = in_array($order->order_status, ['shipped', 'delivered']))
+            <div class="card"><div class="card-header"><h3 class="card-title">Courier tracking</h3></div><div class="card-body">
+                <form method="POST" action="{{ route('admin-orders.tracking', $order) }}" data-order-status-form>@csrf @method('PATCH')<div class="alert alert-danger d-none js-order-status-errors"></div>
+                    <label class="form-label">Courier name</label><input name="courier_name" class="form-control mb-2" value="{{ old('courier_name', $order->courier_name) }}" placeholder="Example: Pathao, Steadfast" required @disabled(! $canSaveTracking)>
+                    <label class="form-label">Tracking number</label><input name="tracking_number" class="form-control mb-3" value="{{ old('tracking_number', $order->tracking_number) }}" placeholder="Courier consignment ID" required @disabled(! $canSaveTracking)>
+                    <button class="btn btn-outline-primary w-100" data-order-status-submit @disabled(! $canSaveTracking)><span class="spinner-border spinner-border-sm me-2 d-none" data-order-status-spinner></span><span data-order-status-label>Save tracking</span></button>
+                </form>
+                @unless($canSaveTracking)<small class="text-muted d-block mt-2">Courier tracking unlocks after you set this order to Shipped.</small>@endunless
+            </div></div>
+
+            @if($order->returnRequest)
+            <div class="card"><div class="card-header"><h3 class="card-title">Return / refund request</h3></div><div class="card-body">
+                <p class="mb-2"><strong>Customer reason:</strong><br>{{ $order->returnRequest->reason }}</p>
+                <p class="mb-3"><span class="badge bg-warning text-dark">{{ ucfirst($order->returnRequest->status) }}</span></p>
+                @if($order->returnRequest->status !== 'refunded' && $order->returnRequest->status !== 'rejected')
+                <form method="POST" action="{{ route('admin-orders.return', $order->returnRequest) }}" data-order-status-form>@csrf @method('PATCH')<div class="alert alert-danger d-none js-order-status-errors"></div>
+                    <label class="form-label">Decision</label><select name="status" class="form-select mb-2"><option value="approved">Approve return</option><option value="rejected">Reject request</option>@if($order->returnRequest->status === 'approved')<option value="refunded">Refund completed</option>@endif</select>
+                    <label class="form-label">Refund amount</label><input name="refund_amount" type="number" min="0" step="0.01" class="form-control mb-2" value="{{ $order->returnRequest->refund_amount }}" placeholder="Leave blank if not refunded yet">
+                    <label class="form-label">Admin note</label><textarea name="admin_note" class="form-control mb-3" rows="2" maxlength="1000">{{ $order->returnRequest->admin_note }}</textarea>
+                    <button class="btn btn-primary w-100" data-order-status-submit><span class="spinner-border spinner-border-sm me-2 d-none" data-order-status-spinner></span><span data-order-status-label>Save decision</span></button>
+                </form>
+                @else
+                <p class="mb-0 text-muted">{{ $order->returnRequest->admin_note ?: 'This request is complete.' }}</p>
+                @endif
+            </div></div>
+            @endif
+
             <div class="card"><div class="card-header"><h3 class="card-title">Payment summary</h3></div><div class="card-body">
                 <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><span>৳{{ number_format((float)$order->subtotal,2) }}</span></div>
                 <div class="d-flex justify-content-between mb-2"><span>Discount</span><span>−৳{{ number_format((float)$order->discount_amount,2) }}</span></div>

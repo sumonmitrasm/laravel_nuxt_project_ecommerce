@@ -134,6 +134,8 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
         Route::get('sales-analytics', [AdminOrderController::class, 'analytics'])->name('admin-orders.analytics');
         Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('admin-orders.show');
         Route::patch('orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('admin-orders.status');
+        Route::patch('orders/{order}/tracking', [AdminOrderController::class, 'updateTracking'])->name('admin-orders.tracking');
+        Route::patch('returns/{orderReturn}', [AdminOrderController::class, 'updateReturn'])->name('admin-orders.return');
         Route::get('notifications', [AdminNotificationController::class, 'index'])->name('admin-notifications.index');
         Route::patch('notifications/read-all', [AdminNotificationController::class, 'readAll'])->name('admin-notifications.read-all');
         Route::patch('notifications/{notification}/read', [AdminNotificationController::class, 'read'])->name('admin-notifications.read');
