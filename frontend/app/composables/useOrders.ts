@@ -17,6 +17,7 @@ type OrdersResponse = {
   status: boolean
   total_orders: number
   orders: AccountOrder[]
+  pagination: { current_page: number; last_page: number; per_page: number; total: number }
 }
 
 type PlaceOrderPayload = {
@@ -42,17 +43,22 @@ export const useOrders = () => {
   const guestToken = useCookie<string | null>('guest_cart_token')
   const orders = useState<AccountOrder[]>('customer-orders', () => [])
   const ordersLoaded = useState<boolean>('customer-orders-loaded', () => false)
+  const ordersPagination = useState<OrdersResponse['pagination'] | null>('customer-orders-pagination', () => null)
 
-  const fetchOrders = async (force = false) => {
+  const fetchOrders = async (force = false, page = 1) => {
     if (ordersLoaded.value && !force) return orders.value
     const response = await $fetch<OrdersResponse>('/auth/orders', {
       baseURL: config.public.apiBase,
       credentials: 'include',
+      query: { page, per_page: 10 },
     })
-    orders.value = response.orders
+    orders.value = page === 1 ? response.orders : [...orders.value, ...response.orders]
+    ordersPagination.value = response.pagination
     ordersLoaded.value = true
     return orders.value
   }
+
+  const loadMoreOrders = () => fetchOrders(true, (ordersPagination.value?.current_page ?? 1) + 1)
 
   const placeOrder = async (payload: PlaceOrderPayload) => {
     await $fetch('/sanctum/csrf-cookie', {
@@ -89,5 +95,5 @@ export const useOrders = () => {
         : {},
     })
   }
-  return { orders, ordersLoaded, fetchOrders, placeOrder, startSslCommerzPayment }
+  return { orders, ordersLoaded, ordersPagination, fetchOrders, loadMoreOrders, placeOrder, startSslCommerzPayment }
 }

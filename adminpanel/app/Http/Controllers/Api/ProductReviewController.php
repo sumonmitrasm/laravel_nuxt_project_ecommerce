@@ -11,16 +11,27 @@ use Illuminate\Http\Request;
 
 class ProductReviewController extends Controller
 {
-    public function index(Product $product): JsonResponse
+    public function index(Request $request, Product $product): JsonResponse
     {
-        $reviews = ProductReview::with('user:id,name')
-            ->where('product_id', $product->id)->where('status', 'approved')
-            ->latest()->get();
+        $perPage = min(max((int) $request->integer('per_page', 10), 1), 20);
+        $query = ProductReview::query()
+            ->where('product_id', $product->id)
+            ->where('status', 'approved');
+        $summary = (clone $query)->selectRaw('COUNT(*) as total, AVG(rating) as average')->first();
+        $ratingCounts = (clone $query)->selectRaw('rating, COUNT(*) as total')->groupBy('rating')->pluck('total', 'rating');
+        $reviews = $query->with('user:id,name')->latest()->paginate($perPage);
 
         return response()->json([
-            'reviews' => $reviews,
-            'average' => round((float) $reviews->avg('rating'), 1),
-            'total' => $reviews->count(),
+            'reviews' => $reviews->items(),
+            'average' => round((float) $summary->average, 1),
+            'total' => (int) $summary->total,
+            'rating_counts' => $ratingCounts,
+            'pagination' => [
+                'current_page' => $reviews->currentPage(),
+                'last_page' => $reviews->lastPage(),
+                'per_page' => $reviews->perPage(),
+                'total' => $reviews->total(),
+            ],
         ]);
     }
 
