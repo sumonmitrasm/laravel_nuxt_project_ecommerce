@@ -3,6 +3,7 @@ type AuthResponse = { status: boolean; message?: string; user: AuthUser }
 type RegisterResponse = { status: boolean; message: string; email: string }
 type LoginPayload = { email: string; password: string; remember: boolean }
 type RegisterPayload = { name: string; email: string; password: string; password_confirmation: string }
+type PasswordResetResponse = { status: boolean; message: string }
 //update user payload
 type UpdateUserPayload = { name: string; mobile: string; image: File | null }
 type UpdateProfileResponse = { status: boolean; message: string; user: AuthUser }
@@ -83,6 +84,16 @@ export const useAuth = () => {
     return $fetch<{ status: boolean; message: string }>('/auth/email/resend', { baseURL: config.public.apiBase, method: 'POST', credentials: 'include', headers: csrfHeaders(), body: { email } })
   }
 
+  const forgotPassword = async (email: string) => {
+    await csrf()
+    return $fetch<PasswordResetResponse>('/auth/forgot-password', { baseURL: config.public.apiBase, method: 'POST', credentials: 'include', headers: csrfHeaders(), body: { email } })
+  }
+
+  const resetPassword = async (payload: { email: string; token: string; password: string; password_confirmation: string }) => {
+    await csrf()
+    return $fetch<PasswordResetResponse>('/auth/reset-password', { baseURL: config.public.apiBase, method: 'POST', credentials: 'include', headers: csrfHeaders(), body: payload })
+  }
+
   const updateProfile = async (payload: UpdateUserPayload) => {
     await csrf()
 
@@ -125,5 +136,5 @@ export const useAuth = () => {
     await refreshShoppingCart()
   }
 
-  return { user, authLoaded, isAuthenticated, fetchUser, login, register, resendVerification, updateProfile, logout }
+  return { user, authLoaded, isAuthenticated, fetchUser, login, register, resendVerification, forgotPassword, resetPassword, updateProfile, logout }
 }

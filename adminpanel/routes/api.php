@@ -59,6 +59,8 @@ Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->middleware(['api.guest', 'throttle:5,1']);
     Route::post('/login', [AuthController::class, 'login'])->middleware(['api.guest', 'throttle:10,1']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware(['api.guest', 'throttle:5,1']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware(['api.guest', 'throttle:5,1']);
     Route::post('/email/resend', [AuthController::class, 'resendVerification'])->middleware('throttle:6,1');
 
     Route::middleware(['auth:sanctum', 'verified'])->group(function () {
