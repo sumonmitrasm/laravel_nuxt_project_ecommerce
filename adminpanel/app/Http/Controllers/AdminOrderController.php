@@ -7,6 +7,7 @@ use App\Mail\OrderStatusMail;
 use App\Models\CouponUsage;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderReturn;
 use App\Models\ProductVariant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -137,6 +138,7 @@ class AdminOrderController extends Controller
             'user:id,name,email', 'coupon:id,coupon_name,coupon_code', 'items',
             'address', 'payments' => fn ($query) => $query->latest(),
             'statusHistories' => fn ($query) => $query->oldest(),
+            'returnRequest',
         ]);
 
         return view('admin.order.show', [
@@ -192,6 +194,9 @@ class AdminOrderController extends Controller
                     'status' => 'paid', 'paid_at' => now(),
                 ]);
             }
+            if ($validated['status'] === 'shipped' && ! $lockedOrder->shipped_at) {
+                $lockedOrder->shipped_at = now();
+            }
             $lockedOrder->order_status = $validated['status'];
             $lockedOrder->save();
             $lockedOrder->statusHistories()->create([
@@ -223,5 +228,79 @@ class AdminOrderController extends Controller
         }
 
         return back()->with('success', 'Order status updated successfully.');
+    }
+
+    public function updateTracking(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'courier_name' => ['required', 'string', 'max:100'],
+            'tracking_number' => ['required', 'string', 'max:100'],
+        ]);
+
+        if (! in_array($order->order_status, ['shipped', 'delivered'], true)) {
+            return back()->withErrors(['tracking' => 'Set the order status to shipped before adding courier tracking.']);
+        }
+
+        $order->update([
+            'courier_name' => $validated['courier_name'],
+            'tracking_number' => $validated['tracking_number'],
+            'shipped_at' => $order->shipped_at ?: now(),
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Courier tracking saved successfully.']);
+        }
+
+        return back()->with('success', 'Courier tracking saved successfully.');
+    }
+
+    public function updateReturn(Request $request, OrderReturn $orderReturn)
+    {
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(['approved', 'rejected', 'refunded'])],
+            'admin_note' => ['nullable', 'string', 'max:1000'],
+            'refund_amount' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        if ($orderReturn->status !== 'requested' && $validated['status'] !== 'refunded') {
+            return back()->withErrors(['return' => 'This return request has already been processed.']);
+        }
+
+        DB::transaction(function () use ($orderReturn, $validated) {
+            $return = OrderReturn::query()->lockForUpdate()->findOrFail($orderReturn->id);
+            $order = Order::query()->lockForUpdate()->findOrFail($return->order_id);
+            $status = $validated['status'];
+
+            $return->update([
+                'status' => $status,
+                'admin_note' => $validated['admin_note'] ?? null,
+                'refund_amount' => $validated['refund_amount'] ?? $return->refund_amount,
+                'processed_at' => now(),
+            ]);
+
+            if ($status === 'approved') {
+                $order->update(['payment_status' => 'refund_pending']);
+            }
+            if ($status === 'refunded') {
+                $order->load('items');
+                foreach ($order->items as $item) {
+                    if ($item->product_variant_id) {
+                        app(\App\Services\InventoryService::class)->restoreForReturnedOrder(
+                            $item->product_variant_id,
+                            $item->quantity,
+                            $order,
+                            Auth::guard('admin')->id(),
+                        );
+                    }
+                }
+                $order->update(['payment_status' => 'refunded']);
+            }
+        }, 3);
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Return request updated successfully.']);
+        }
+
+        return back()->with('success', 'Return request updated successfully.');
     }
 }

@@ -44,6 +44,22 @@ class InventoryService
         );
     }
 
+    public function restoreForReturnedOrder(
+        int $variantId,
+        int $quantity,
+        Order $order,
+        int $adminId,
+    ): void {
+        $this->changeStock(
+            variantId: $variantId,
+            quantity: $quantity,
+            reason: 'return',
+            order: $order,
+            changedBy: 'admin',
+            changedById: $adminId,
+        );
+    }
+
     public function manualAdjust(
         int $variantId,
         int $quantity,
