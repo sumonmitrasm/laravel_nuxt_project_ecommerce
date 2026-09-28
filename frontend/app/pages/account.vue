@@ -5,7 +5,7 @@ const activeSection = ref(route.query.section === 'orders' ? 'orders' : 'dashboa
 const { user, logout, updateProfile } = useAuth()
 const { cartCount, fetchCart } = useCart()
 const { defaultAddress, fetchAddresses } = useAddresses()
-const { orders: customerOrders, fetchOrders } = useOrders()
+const { orders: customerOrders, ordersPagination, fetchOrders, loadMoreOrders } = useOrders()
 const dashboardLoading = ref(true)
 const dashboardError = ref('')
 const { wishlistCount, fetchWishlist } = useWishlist()
@@ -20,6 +20,13 @@ const orders = computed(() => customerOrders.value.map(order => ({
   tone: order.order_status.toLowerCase().replace(/[^a-z0-9_-]/g, ''),
 })))
 const isLoggingOut = ref(false)
+const loadingMoreOrders = ref(false)
+const hasMoreOrders = computed(() => (ordersPagination.value?.current_page ?? 1) < (ordersPagination.value?.last_page ?? 1))
+const showMoreOrders = async () => {
+  if (loadingMoreOrders.value || !hasMoreOrders.value) return
+  loadingMoreOrders.value = true
+  try { await loadMoreOrders() } finally { loadingMoreOrders.value = false }
+}
 
 definePageMeta({ middleware: 'auth' })
 
@@ -291,6 +298,7 @@ onBeforeUnmount(() => {
                   <em :class="order.tone">{{ order.status }}</em>
                   <NuxtLink :to="{ path: '/account/order-details', query: { order: order.id } }">View details <i class="bi bi-arrow-right"></i></NuxtLink>
                 </div>
+                <div v-if="hasMoreOrders" class="account-load-more"><button type="button" :disabled="loadingMoreOrders" @click="showMoreOrders">{{ loadingMoreOrders ? 'Loading...' : 'Load more orders' }}</button></div>
               </template>
             </div>
           </template>
@@ -809,6 +817,10 @@ onBeforeUnmount(() => {
 .account-order-card:last-child {
   border: 0
 }
+
+.account-load-more { padding: 22px; text-align: center }
+.account-load-more button { border: 1px solid #dfe4e1; background: #fff; padding: 10px 15px; color: var(--ink); font-size: .7rem; font-weight: 700 }
+.account-load-more button:disabled { opacity: .6 }
 
 .account-order-card small,
 .account-order-card strong,

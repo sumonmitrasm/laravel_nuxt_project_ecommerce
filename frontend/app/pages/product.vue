@@ -228,20 +228,31 @@ type Review = { id: number; rating: number; title: string; comment: string; veri
 const reviews = ref<Review[]>([])
 const reviewAverage = ref(0)
 const reviewTotal = ref(0)
+const reviewRatingCounts = ref<Record<string, number>>({})
+const reviewPagination = ref<{ current_page: number; last_page: number } | null>(null)
+const reviewLoadingMore = ref(false)
 const reviewForm = reactive({ rating: 0, title: '', comment: '' })
 const reviewMessage = ref('')
 const reviewError = ref('')
 const reviewSubmitting = ref(false)
 
-const loadReviews = async () => {
+const loadReviews = async (page = 1) => {
     if (!productId.value) return
-    const response = await $fetch<any>(`/products/${productId.value}/reviews`, { baseURL: config.public.apiBase })
-    reviews.value = response.reviews
+    const response = await $fetch<any>(`/products/${productId.value}/reviews`, { baseURL: config.public.apiBase, query: { page, per_page: 10 } })
+    reviews.value = page === 1 ? response.reviews : [...reviews.value, ...response.reviews]
     reviewAverage.value = response.average
     reviewTotal.value = response.total
+    reviewRatingCounts.value = response.rating_counts ?? {}
+    reviewPagination.value = response.pagination
 }
-const ratingCount = (rating: number) => reviews.value.filter(review => review.rating === rating).length
+const ratingCount = (rating: number) => Number(reviewRatingCounts.value[rating] ?? 0)
 const ratingWidth = (rating: number) => reviewTotal.value ? ratingCount(rating) / reviewTotal.value * 100 : 0
+const hasMoreReviews = computed(() => (reviewPagination.value?.current_page ?? 1) < (reviewPagination.value?.last_page ?? 1))
+const loadMoreReviews = async () => {
+    if (reviewLoadingMore.value || !hasMoreReviews.value) return
+    reviewLoadingMore.value = true
+    try { await loadReviews((reviewPagination.value?.current_page ?? 1) + 1) } finally { reviewLoadingMore.value = false }
+}
 const reviewStars = (rating: number) => '★'.repeat(rating) + '☆'.repeat(5 - rating)
 const reviewDate = (date: string) => new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
 
@@ -393,6 +404,7 @@ onMounted(() => {
                         <div class="rating-summary"><div><strong>{{ reviewAverage || '0.0' }}</strong><span>{{ reviewStars(Math.round(reviewAverage)) }}</span><small>{{ reviewTotal }} customer reviews</small></div><ul><li v-for="rating in [5,4,3,2,1]" :key="rating">{{ rating }} stars <i><b :style="{ width: ratingWidth(rating) + '%' }"></b></i> {{ ratingCount(rating) }}</li></ul></div>
                         <p v-if="!reviews.length" class="no-reviews">No approved reviews yet. Be the first to review this product.</p>
                         <article v-for="review in reviews" :key="review.id"><b class="avatar">{{ review.user.name.slice(0, 2).toUpperCase() }}</b><div><header><strong>{{ review.user.name }}</strong><time>{{ reviewDate(review.created_at) }}</time></header><small v-if="review.verified_purchase" class="verified"><i class="bi bi-patch-check-fill"></i> Verified purchase</small><span class="stars">{{ reviewStars(review.rating) }}</span><h3>{{ review.title }}</h3><p>{{ review.comment }}</p></div></article>
+                        <div v-if="hasMoreReviews" class="review-load-more"><button type="button" :disabled="reviewLoadingMore" @click="loadMoreReviews">{{ reviewLoadingMore ? 'Loading...' : 'Load more reviews' }}</button></div>
                     </div></div>
                     <div class="col-lg-5"><form class="review-form" @submit.prevent="submitReview">
                         <span>Share your experience</span><h2>Write a Review</h2><p>{{ isAuthenticated ? 'Your review will appear after admin approval.' : 'Please login to submit your review.' }}</p>
@@ -414,4 +426,4 @@ onMounted(() => {
 <style scoped>
 .customer-reviews{border-top:1px solid #e4e9e6;padding-top:42px}.review-heading{display:flex;align-items:end;justify-content:space-between;margin-bottom:24px}.review-heading span,.review-form>span{color:#ff5745;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase}.review-heading h2,.review-form h2{font-size:29px;font-weight:700;margin:5px 0}.review-heading p,.review-card p,.review-form p{color:#68766f}.review-card,.review-form{border:1px solid #e1e7e3;border-radius:8px;height:100%;padding:26px}.rating-summary{align-items:center;background:#f6f8f7;border-radius:6px;display:grid;grid-template-columns:145px 1fr;padding:22px}.rating-summary>div{align-items:center;border-right:1px solid #ddd;display:flex;flex-direction:column}.rating-summary strong{font-size:44px;line-height:1}.rating-summary span,.stars{color:#ffad21;letter-spacing:2px}.rating-summary small{color:#7d8883}.rating-summary ul{list-style:none;margin:0;padding-left:28px}.rating-summary li{display:grid;font-size:12px;gap:8px;grid-template-columns:43px 1fr 12px;margin:7px 0}.rating-summary li i{background:#e0e5e2;border-radius:5px;height:6px;margin-top:5px;overflow:hidden}.rating-summary li b{background:#ffad21;display:block;height:100%}.review-card article{display:grid;gap:14px;grid-template-columns:45px 1fr;padding:24px 0}.review-card article+article{border-top:1px solid #e7ebe9}.avatar{align-items:center;background:#173c31;border-radius:50%;color:#fff;display:flex;height:45px;justify-content:center}.avatar.alt{background:#ff6554}.review-card header{display:flex;justify-content:space-between}.review-card time{color:#89938e;font-size:11px}.verified{color:#26966e;display:block}.stars{display:block}.review-card h3{font-size:16px;margin:7px 0}.review-form p{font-size:14px;margin:8px 0 20px}.review-form label{display:block;font-size:13px;font-weight:600;margin:13px 0 6px}.review-form input,.review-form textarea{border:1px solid #dbe2de;border-radius:4px;outline:none;padding:11px;width:100%}.review-form input:focus,.review-form textarea:focus{border-color:#ff5745}.star-buttons button{background:none;border:0;color:#ffad21;font-size:25px;padding:0 4px 0 0}.submit-review{background:#ff5745;border:0;border-radius:4px;color:#fff;font-size:12px;font-weight:700;margin:17px 0 10px;padding:13px 23px}.review-form>small{color:#7d8883;display:block}
 @media(max-width:767.98px){.customer-reviews{padding-top:28px}.review-heading{align-items:start;flex-direction:column}.review-heading h2,.review-form h2{font-size:24px}.review-card,.review-form{padding:17px}.rating-summary{gap:18px;grid-template-columns:1fr}.rating-summary>div{border-bottom:1px solid #ddd;border-right:0;padding-bottom:17px}.rating-summary ul{padding-left:0}.review-card header{flex-direction:column}}
-.star-buttons button{color:#d5dbd8}.star-buttons button.selected{color:#ffad21}.review-alert{border-radius:4px!important;margin:10px 0!important;padding:9px!important}.review-alert.error{background:#fff0ee;color:#b73527}.review-alert.success{background:#eaf8f1;color:#187552}.no-reviews{text-align:center;padding:28px}.character-note{color:#7d8883;display:block;margin-top:7px}</style>
+.star-buttons button{color:#d5dbd8}.star-buttons button.selected{color:#ffad21}.review-alert{border-radius:4px!important;margin:10px 0!important;padding:9px!important}.review-alert.error{background:#fff0ee;color:#b73527}.review-alert.success{background:#eaf8f1;color:#187552}.no-reviews{text-align:center;padding:28px}.character-note{color:#7d8883;display:block;margin-top:7px}.review-load-more{text-align:center;padding:16px 0 0}.review-load-more button{background:#fff;border:1px solid #dbe2de;border-radius:4px;color:#17211d;font-size:12px;font-weight:700;padding:10px 15px}.review-load-more button:disabled{opacity:.6}</style>

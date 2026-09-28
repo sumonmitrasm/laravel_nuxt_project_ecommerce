@@ -31,18 +31,25 @@ class OrderController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $perPage = min(max((int) $request->integer('per_page', 10), 1), 20);
         $orders = $request->user()->orders()
             ->withCount('items')
             ->latest('id')
-            ->get([
+            ->paginate($perPage, [
                 'id', 'order_number', 'order_status', 'payment_status',
                 'payment_method', 'grand_total', 'currency', 'placed_at',
             ]);
 
         return response()->json([
             'status' => true,
-            'total_orders' => $orders->count(),
-            'orders' => $orders,
+            'total_orders' => $orders->total(),
+            'orders' => $orders->items(),
+            'pagination' => [
+                'current_page' => $orders->currentPage(),
+                'last_page' => $orders->lastPage(),
+                'per_page' => $orders->perPage(),
+                'total' => $orders->total(),
+            ],
         ]);
     }
 
