@@ -5,8 +5,10 @@ const { login, isAuthenticated } = useAuth()
 const form = reactive({ email: '', password: '', remember: false })
 const loading = ref(false)
 const showPassword = ref(false)
-const message = ref(route.query.verified === '1' ? 'Email verified successfully. You can now sign in.' : '')
-const success = ref(route.query.verified === '1')
+const resetComplete = route.query.reset === '1'
+const verified = route.query.verified === '1'
+const message = ref(resetComplete ? 'Password reset successfully. You can now sign in.' : verified ? 'Email verified successfully. You can now sign in.' : '')
+const success = ref(resetComplete || verified)
 const errors = ref<Record<string, string[]>>({})
 const redirect = computed(() => typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') && !route.query.redirect.startsWith('//') ? route.query.redirect : '/account')
 
