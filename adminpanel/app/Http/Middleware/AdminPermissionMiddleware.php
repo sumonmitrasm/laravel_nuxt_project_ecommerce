@@ -71,8 +71,8 @@ class AdminPermissionMiddleware
             'admin-brand.update', 'admin-brand.status' => ['brand', 'edit'],
             'admin-brand.delete' => ['brand', 'delete'],
 
-            'products', 'admin-product.show', 'inventory.index', 'admin-reviews.index' => ['product', 'view'],
-            'inventory.adjust', 'admin-reviews.status' => ['product', 'edit'],
+            'products', 'admin-product.show', 'inventory.index', 'admin-reviews.index', 'suppliers.index', 'suppliers.edit', 'purchases.index', 'purchases.create', 'purchases.show', 'purchases.edit' => ['product', 'view'],
+            'inventory.adjust', 'admin-reviews.status', 'suppliers.store', 'suppliers.update', 'purchases.store', 'purchases.update', 'purchases.payments.store' => ['product', 'edit'],
             'admin-reviews.delete' => ['product', 'delete'],
             'admin-contact.index' => ['setting', 'view'],
             'admin-contact.delete' => ['setting', 'delete'],

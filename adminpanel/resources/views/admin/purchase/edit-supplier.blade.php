@@ -1,0 +1,8 @@
+@extends('admin.layout.layout')
+@section('content')
+<div class="app-content main-content"><div class="side-app"><div class="container-fluid main-container">
+<div class="page-header"><div class="page-leftheader"><h4 class="page-title">Edit supplier</h4><p class="text-muted mb-0">Update contact information or make the supplier inactive.</p></div></div>
+@if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
+<div class="card"><div class="card-body"><form data-purchase-form method="POST" action="{{ route('suppliers.update',$supplier) }}">@csrf @method('PUT')<div class="row"><div class="col-md-6 mb-3"><label class="form-label">Supplier name *</label><input class="form-control" name="name" value="{{ old('name',$supplier->name) }}" required></div><div class="col-md-6 mb-3"><label class="form-label">Phone</label><input class="form-control" name="phone" value="{{ old('phone',$supplier->phone) }}"></div><div class="col-md-6 mb-3"><label class="form-label">Email</label><input class="form-control" type="email" name="email" value="{{ old('email',$supplier->email) }}"></div><div class="col-md-6 mb-3"><label class="form-label">Status</label><select class="form-select" name="status"><option value="1" @selected($supplier->status)>Active</option><option value="0" @selected(!$supplier->status)>Inactive</option></select></div><div class="col-12 mb-3"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="3">{{ old('address',$supplier->address) }}</textarea></div></div><button class="btn btn-primary">Update supplier</button><a data-ajax-page class="btn btn-light" href="{{ route('suppliers.index') }}">Cancel</a></form></div></div>
+</div></div></div>
+@endsection

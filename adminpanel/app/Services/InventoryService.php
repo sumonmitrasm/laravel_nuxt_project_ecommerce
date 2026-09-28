@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Admin;
 use App\Models\AdminNotification;
 use App\Models\Order;
+use App\Models\Purchase;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -74,6 +75,39 @@ class InventoryService
             changedBy: 'admin',
             changedById: $adminId,
             note: $note,
+        );
+    }
+
+    public function receivePurchase(
+        ProductVariant $variant,
+        int $quantity,
+        Purchase $purchase,
+        int $adminId,
+    ): void {
+        $this->changeStock(
+            variantId: $variant->id,
+            quantity: $quantity,
+            reason: 'purchase',
+            changedBy: 'admin',
+            changedById: $adminId,
+            note: 'Purchase '.$purchase->purchase_number,
+        );
+    }
+
+    public function correctPurchaseQuantity(
+        ProductVariant $variant,
+        int $quantityDifference,
+        Purchase $purchase,
+        int $adminId,
+    ): void {
+        if ($quantityDifference === 0) return;
+        $this->changeStock(
+            variantId: $variant->id,
+            quantity: $quantityDifference,
+            reason: 'purchase_correction',
+            changedBy: 'admin',
+            changedById: $adminId,
+            note: 'Quantity corrected for '.$purchase->purchase_number,
         );
     }
 
