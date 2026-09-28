@@ -44,6 +44,7 @@ class SslCommerzController extends Controller
         }
         $transactionId = 'SSL'.$order->id.Str::upper(Str::random(12));
         $payment->update(['transaction_id' => $transactionId, 'status' => 'initiated']);
+        $order->update(['payment_status' => 'pending']);
 
         $address = $order->address;
         $data = [
@@ -74,9 +75,35 @@ class SslCommerzController extends Controller
             'value_a' => $order->order_number,
         ];
 
-        $response = json_decode((new SslCommerzNotification())->makePayment($data), true);
+        try {
+            $response = json_decode((new SslCommerzNotification())->makePayment($data), true);
+        } catch (\Throwable $exception) {
+            Log::error('SSLCommerz payment session could not be created.', [
+                'order_id' => $order->id,
+                'transaction_id' => $transactionId,
+                'message' => $exception->getMessage(),
+            ]);
+            $this->markPaymentAttempt(
+                $transactionId,
+                'failed',
+                'failed',
+                'SSLCommerz payment session could not be created.',
+            );
+
+            return response()->json([
+                'status' => false,
+                'message' => 'SSLCommerz payment session could not be created. Please try again.',
+            ], 502);
+        }
+
         if (($response['status'] ?? null) !== 'success' || empty($response['data'])) {
-            $payment->update(['status' => 'failed']);
+            $this->markPaymentAttempt(
+                $transactionId,
+                'failed',
+                'failed',
+                'SSLCommerz payment session could not be created.',
+            );
+
             return response()->json([
                 'status' => false,
                 'message' => $response['message'] ?? 'SSLCommerz payment session could not be created.',
@@ -106,12 +133,26 @@ class SslCommerzController extends Controller
 
     public function fail(Request $request): RedirectResponse
     {
-        return $this->frontendRedirect('failed', $this->orderNumber($request));
+        $orderNumber = $this->markPaymentAttempt(
+            (string) $request->input('tran_id'),
+            'failed',
+            'failed',
+            'SSLCommerz reported that the payment attempt failed.',
+        );
+
+        return $this->frontendRedirect('failed', $orderNumber);
     }
 
     public function cancel(Request $request): RedirectResponse
     {
-        return $this->frontendRedirect('cancelled', $this->orderNumber($request));
+        $orderNumber = $this->markPaymentAttempt(
+            (string) $request->input('tran_id'),
+            'abandoned',
+            'abandoned',
+            'Customer left the SSLCommerz payment page before completing payment.',
+        );
+
+        return $this->frontendRedirect('cancelled', $orderNumber);
     }
 
     private function completePayment(Request $request): ?string
@@ -198,10 +239,57 @@ class SslCommerzController extends Controller
         return $order->order_number;
     }
 
-    private function orderNumber(Request $request): ?string
-    {
-        $payment = OrderPayment::with('order')->where('transaction_id', (string) $request->input('tran_id'))->first();
-        return $payment?->order?->order_number;
+    private function markPaymentAttempt(
+        string $transactionId,
+        string $attemptStatus,
+        string $orderPaymentStatus,
+        string $note,
+    ): ?string {
+        if ($transactionId === '') {
+            return null;
+        }
+
+        return DB::transaction(function () use ($transactionId, $attemptStatus, $orderPaymentStatus, $note): ?string {
+            $payment = OrderPayment::query()
+                ->where('transaction_id', $transactionId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $payment || $payment->method !== 'sslcommerz') {
+                return null;
+            }
+
+            $order = Order::query()->lockForUpdate()->find($payment->order_id);
+            if (! $order) {
+                return null;
+            }
+
+            if ($payment->paid_at
+                || $order->payment_status === 'paid'
+                || in_array($order->order_status, ['cancelled', 'canceled'], true)
+                || ! in_array($payment->status, ['pending', 'initiated'], true)) {
+                return $order->order_number;
+            }
+
+            $payment->update(['status' => $attemptStatus]);
+
+            $hasAnotherActiveAttempt = OrderPayment::query()
+                ->where('order_id', $order->id)
+                ->where('id', '!=', $payment->id)
+                ->whereIn('status', ['pending', 'initiated'])
+                ->exists();
+
+            if (! $hasAnotherActiveAttempt) {
+                $order->update(['payment_status' => $orderPaymentStatus]);
+                $order->statusHistories()->create([
+                    'status' => 'pending',
+                    'note' => $note,
+                    'changed_by_type' => 'system',
+                ]);
+            }
+
+            return $order->order_number;
+        }, 3);
     }
 
     private function frontendRedirect(string $state, ?string $orderNumber): RedirectResponse

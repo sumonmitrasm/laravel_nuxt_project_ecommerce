@@ -91,10 +91,16 @@ class AuthController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        Password::sendResetLink(
-            $validated,
-            fn (User $user, string $token) => $user->notify(new StorefrontResetPasswordNotification($token)),
-        );
+        try {
+            Password::sendResetLink(
+                $validated,
+                fn (User $user, string $token) => $user->notify(new StorefrontResetPasswordNotification($token)),
+            );
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'email' => ['We could not send the reset link right now. Please try again later.'],
+            ]);
+        }
 
         return response()->json([
             'status' => true,

@@ -33,7 +33,7 @@ class AdminOrderController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'order_status' => ['nullable', Rule::in(array_keys(self::TRANSITIONS))],
-            'payment_status' => ['nullable', Rule::in(['unpaid', 'pending', 'paid', 'failed', 'cancelled', 'refund_pending', 'refunded'])],
+            'payment_status' => ['nullable', Rule::in(['unpaid', 'pending', 'paid', 'failed', 'abandoned', 'cancelled', 'refund_pending', 'refunded'])],
             'payment_method' => ['nullable', Rule::in(['cod', 'sslcommerz'])],
             'per_page' => ['nullable', 'integer', Rule::in([10, 20, 50, 100])],
         ]);
