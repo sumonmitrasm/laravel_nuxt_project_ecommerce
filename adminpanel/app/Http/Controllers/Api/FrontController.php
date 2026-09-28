@@ -119,6 +119,7 @@ class FrontController extends Controller
 
                 return [
                     'id' => $product->id,
+                    'slug' => $product->slug,
                     'name' => $product->product_name,
                     'image_url' => $product->image_url,
                     'category_id' => $product->category_id,
@@ -199,6 +200,7 @@ class FrontController extends Controller
 
             return [
                 'id' => $product->id,
+                'slug' => $product->slug,
                 'name' => $product->product_name,
                 'image_url' => $product->image_url,
                 'category_name' => $product->category?->category_name ?? 'Products',
@@ -665,7 +667,34 @@ class FrontController extends Controller
 
     public function details(int $id): JsonResponse
     {
-        $product = Product::with([
+        $product = $this->productDetailsQuery()->whereKey($id)->first();
+
+        return $this->productDetailsResponse($product);
+    }
+
+    public function detailsBySlug(int $id, string $slug): JsonResponse
+    {
+        $product = $this->productDetailsQuery()->whereKey($id)->where('slug', $slug)->first();
+
+        return $this->productDetailsResponse($product);
+    }
+
+    public function productSlugs(): JsonResponse
+    {
+        return response()->json([
+            'products' => Product::query()
+                ->where('status', true)
+                ->orderBy('id')
+                ->get(['id', 'slug'])
+                ->map(fn (Product $product) => ['id' => $product->id, 'slug' => $product->slug])
+                ->filter()
+                ->values(),
+        ]);
+    }
+
+    private function productDetailsQuery()
+    {
+        return Product::with([
             'section:id,name',
             'category:id,category_name,url,category_discount',
             'brand:id,name',
@@ -677,10 +706,11 @@ class FrontController extends Controller
                 ->select('id', 'product_id', 'sku', 'price', 'stock', 'status'),
             'variants.values:id,attribute_id,value,color_code',
             'variants.values.attribute:id,name,slug,type',
-        ])
-            ->whereKey($id)
-            ->where('status', true)
-            ->first();
+        ])->where('status', true);
+    }
+
+    private function productDetailsResponse(?Product $product): JsonResponse
+    {
 
         if (! $product) {
             return response()->json([
@@ -716,11 +746,13 @@ class FrontController extends Controller
             ];
         })->values();
 
-        return response()->json([
+        $payload = [
             'status' => true,
             'product' => $productData,
             'seo' => $this->seo->product($product),
-        ], 200);
+        ];
+
+        return response()->json($payload, 200);
     }
 
     public function blog(Request $request): JsonResponse

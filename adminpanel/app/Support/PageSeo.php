@@ -54,7 +54,7 @@ class PageSeo
 
     public function product(Product $product): array
     {
-        $productUrl = $this->frontendUrl('/product?id='.$product->id);
+        $productUrl = $this->frontendUrl('/product/'.$product->id.'/'.$product->slug);
 
         return $this->build(
             title: $product->meta_title ?: $product->product_name,

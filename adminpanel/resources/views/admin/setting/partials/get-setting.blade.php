@@ -177,6 +177,12 @@
                             <label class="form-label">Meta Description</label>
                             <textarea name="meta_description" class="form-control" rows="2"></textarea>
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Meta Image</label>
+                            <input type="file" name="meta_image" class="form-control" accept="image/jpeg,image/png,image/webp" data-image-input>
+                            <small class="text-muted">Used when the website link is shared on Facebook, WhatsApp and other social media. Recommended size: 1200 × 630 px.</small>
+                            <img data-image-preview-for="meta_image" class="d-none mt-2 rounded border" alt="Selected meta image" style="width: 240px; height: 126px; object-fit: cover;">
+                        </div>
 
                         <div class="col-md-6">
                             <label class="form-label">URL Structure</label>

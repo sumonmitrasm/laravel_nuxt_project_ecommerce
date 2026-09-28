@@ -128,7 +128,7 @@ onMounted(() => {
                                 <div v-if="searching" class="header-quick-message">Searching...</div>
                                 <template v-else-if="suggestions.length">
                                     <NuxtLink v-for="product in suggestions" :key="product.id"
-                                        :to="{ path: '/product', query: { id: product.id } }" class="header-quick-result" @click="searchOpen = false">
+                                        :to="`/product/${product.id}/${product.slug}`" class="header-quick-result" @click="searchOpen = false">
                                         <img v-if="product.image_url" :src="product.image_url" :alt="product.name">
                                         <span v-else class="header-quick-image"><i class="bi bi-image"></i></span>
                                         <span><small>{{ product.category_name }}</small><strong>{{ product.name }}</strong></span>
