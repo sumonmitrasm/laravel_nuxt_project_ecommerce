@@ -237,14 +237,10 @@
                         </a>
                         <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow p-4">
                             <div class="sidebar-dropdown-divider pb-3">
-                                <h4 class="font-weight-bold">Help</h4>
-                                <a class="d-block" href="javascript:void(0)">Knowledge base</a>
-                                <a class="d-block" href="javascript:void(0)">Contact@info.com</a>
-                                <a class="d-block" href="javascript:void(0)">88 8888 8888</a>
-                            </div>
-                            <div class="sidebar-dropdown-divider pb-3 pt-3 mb-3">
-                                <p class="mb-1">Your Fax Number</p>
-                                <a class="font-weight-bold" href="javascript:void(0)">88 8888 8888</a>
+                                <h4 class="font-weight-bold">Need help?</h4>
+                                @if($generalSetting?->email)<a class="d-block" href="mailto:{{ $generalSetting->email }}">{{ $generalSetting->email }}</a>@endif
+                                @if($generalSetting?->phone)<a class="d-block" href="tel:{{ preg_replace('/[^0-9+]/', '', $generalSetting->phone) }}">{{ $generalSetting->phone }}</a>@endif
+                                @if(!$generalSetting?->email && !$generalSetting?->phone)<span class="text-muted">Contact details are not configured yet.</span>@endif
                             </div>
                             <a href="{{route('logout-admin')}}">Logout</a>
                         </div>
