@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
 
-        $middleware->validateCsrfTokens(except: ['api/contact']);
+        $middleware->validateCsrfTokens(except: ['api/contact', 'api/visitors']);
 
         $middleware->alias([
             'admin.auth' => \App\Http\Middleware\AdminMiddleware::class,
