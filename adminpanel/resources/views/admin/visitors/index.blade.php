@@ -7,12 +7,18 @@
             <h4 class="page-title">Visitors</h4>
             <p class="text-muted mb-0">Storefront visits and signed-in customer activity.</p>
         </div>
-        <div class="page-rightheader">
+        <div class="page-rightheader d-flex flex-wrap gap-2">
             <div class="btn-group">
                 @foreach (['today' => 'Today', 'week' => '7 days', 'month' => 'This month'] as $key => $label)
                     <a data-ajax-page href="{{ route('visitors.index', ['period' => $key]) }}" class="btn btn-sm {{ $period === $key ? 'btn-primary' : 'btn-outline-primary' }}">{{ $label }}</a>
                 @endforeach
             </div>
+            @if(Auth::guard('admin')->user()?->hasModuleAccess('visitor', 'delete'))
+                <form data-purchase-form method="POST" action="{{ route('visitors.destroy') }}" onsubmit="return confirm('Delete all visitor data? This cannot be undone.')">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete all data</button>
+                </form>
+            @endif
         </div>
     </div>
 

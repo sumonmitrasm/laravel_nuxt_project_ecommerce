@@ -39,6 +39,7 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
     Route::middleware(['admin.auth', 'admin.permission'])->group(function () {
         Route::get('dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::get('visitors', [VisitorController::class, 'index'])->name('visitors.index');
+        Route::delete('visitors', [VisitorController::class, 'destroy'])->name('visitors.destroy');
         Route::get('logout', [AdminController::class, 'logout'])->name('logout-admin');
         //>>>>>>>>>>>>>>>>>>>>>>>>User activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('users', [AdminController::class, 'users'])->name('admin-user');
