@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\VisitorLog;
+use App\Models\VisitorSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -57,10 +58,60 @@ class VisitorController extends Controller
     public function destroy(): \Illuminate\Http\JsonResponse
     {
         VisitorLog::query()->delete();
+        VisitorSession::query()->delete();
 
         return response()->json([
-            'message' => 'All visitor data has been deleted.',
+            'message' => 'All visitor logs and live sessions have been deleted.',
             'redirect_url' => route('visitors.index'),
         ]);
+    }
+
+    public function live()
+    {
+        $since = now()->subMinutes(5);
+        $visitors = VisitorSession::query()->with('user:id,name,email')
+            ->where('last_seen_at', '>=', $since)->latest('last_seen_at')->paginate(30);
+
+        return view('admin.visitors.live', compact('visitors', 'since'));
+    }
+
+    public function trafficSources()
+    {
+        $rows = VisitorLog::query()
+            ->select('referrer', DB::raw('COUNT(*) as visits'), DB::raw('COUNT(DISTINCT visitor_id) as visitors'))
+            ->groupBy('referrer')->orderByDesc('visits')->limit(100)->get();
+
+        $sources = $rows->groupBy(fn ($row) => $this->sourceName($row->referrer))
+            ->map(fn ($group, $source) => [
+                'source' => $source,
+                'visits' => $group->sum('visits'),
+                'visitors' => $group->sum('visitors'),
+            ])->sortByDesc('visits')->values();
+
+        return view('admin.visitors.traffic-sources', compact('sources'));
+    }
+
+    public function countries()
+    {
+        $locations = VisitorLog::query()->whereNotNull('country')
+            ->select('country', 'city', DB::raw('COUNT(*) as visits'), DB::raw('COUNT(DISTINCT visitor_id) as visitors'))
+            ->groupBy('country', 'city')->orderByDesc('visits')->paginate(50);
+
+        return view('admin.visitors.countries', compact('locations'));
+    }
+
+    private function sourceName(?string $referrer): string
+    {
+        if (! $referrer) return 'Direct';
+
+        $host = strtolower((string) parse_url($referrer, PHP_URL_HOST));
+        if ($host === '') return 'Direct';
+        if (str_contains($host, 'google.')) return 'Google';
+        if (str_contains($host, 'facebook.') || str_contains($host, 'fb.')) return 'Facebook';
+        if (str_contains($host, 'instagram.')) return 'Instagram';
+        if (str_contains($host, 'youtube.')) return 'YouTube';
+        if (str_contains($host, 'tiktok.')) return 'TikTok';
+
+        return $host;
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\VisitorLog;
+use App\Models\VisitorSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -41,7 +42,34 @@ class VisitorController extends Controller
             'referrer' => $data['referrer'] ?? null,
         ]);
 
+        $this->updateSession($data, $request, $ipAddress, $location, $user);
+
         return response()->json(['status' => true]);
+    }
+
+    public function heartbeat(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'visitor_id' => ['required', 'string', 'max:64'],
+            'path' => ['required', 'string', 'max:500'],
+        ]);
+        $ipAddress = $request->ip();
+        $this->updateSession($data, $request, $ipAddress, $this->location($request, $ipAddress), $request->user('sanctum'));
+
+        return response()->json(['status' => true]);
+    }
+
+    private function updateSession(array $data, Request $request, string $ipAddress, array $location, $user): void
+    {
+        VisitorSession::updateOrCreate(['visitor_id' => $data['visitor_id']], [
+            'user_id' => $user?->id,
+            'ip_address' => $ipAddress,
+            'path' => '/'.ltrim($data['path'], '/'),
+            'country' => $location['country'],
+            'city' => $location['city'],
+            'device' => $this->device((string) $request->userAgent()),
+            'last_seen_at' => now(),
+        ]);
     }
 
     private function location(Request $request, string $ipAddress): array

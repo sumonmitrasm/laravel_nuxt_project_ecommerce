@@ -34,6 +34,7 @@
                             $canManageOrders = $admin?->hasModuleAccess('order', 'view');
                             $canManageBlogs = $admin?->hasModuleAccess('blog', 'view');
                             $canManageVisitors = $admin?->hasModuleAccess('visitor', 'view');
+                            $canManageLoginActivity = $admin?->hasModuleAccess('login_activity', 'view');
                         @endphp
                         <img src="{{ $admin && $admin->image
                             ? asset('admin/adminimage/' . $admin->image)
@@ -63,17 +64,17 @@
                         <span class="side-menu__label">Dashboard</span>
                     </a>
                 </li>
-                @if ($canManageAdmins)
-                    <li class="slide {{ request()->routeIs('admin-user*') ? 'is-expanded' : '' }}">
+                <li class="slide {{ request()->routeIs('admin-user*', 'admin-my-account*', 'admin-login-activity.*') ? 'is-expanded' : '' }}">
                         <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                             <i class="side-menu__icon fe fe-users"></i>
                             <span class="side-menu__label">Account</span><i class="angle fe fe-chevron-right"></i>
                         </a>
                         <ul class="slide-menu">
-                            <li><a class="slide-item {{ request()->routeIs('admin-user*') ? 'active' : '' }}" href="{{ route('admin-user') }}">Users</a></li>
+                            <li><a class="slide-item {{ request()->routeIs('admin-my-account*') ? 'active' : '' }}" href="{{ route('admin-my-account') }}">My Account</a></li>
+                            @if ($canManageAdmins)<li><a class="slide-item {{ request()->routeIs('admin-user*') ? 'active' : '' }}" href="{{ route('admin-user') }}">Users</a></li>@endif
+                            @if ($canManageLoginActivity)<li><a class="slide-item {{ request()->routeIs('admin-login-activity.*') ? 'active' : '' }}" href="{{ route('admin-login-activity.index') }}">Login activity</a></li>@endif
                         </ul>
                     </li>
-                @endif
                 @if ($canManageSections || $canManageCategories || $canManageHomeSliders)
                     <li class="slide {{ request()->routeIs('section') || request()->routeIs('category') || request()->routeIs('home-sliders') ? 'is-expanded' : '' }}">
                         <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
@@ -196,14 +197,18 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                             stroke-linejoin="round" class="side-menu__icon">
-                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
                         </svg>
                         <span class="side-menu__label">Visitors</span><i class="angle fe fe-chevron-right"></i></a>
                     <ul class="slide-menu">
                         <li class="side-menu-label1">
                             <a href="javascript:void(0)">Visitors</a>
                         </li>
-                        <li><a href="{{ route('visitors.index') }}" class="slide-item {{ request()->routeIs('visitors.*') ? 'active' : '' }}"> Visitor report</a></li>
+                        <li><a href="{{ route('visitors.index') }}" class="slide-item {{ request()->routeIs('visitors.index') ? 'active' : '' }}"> Visitor report</a></li>
+                        <li><a href="{{ route('visitors.live') }}" class="slide-item {{ request()->routeIs('visitors.live') ? 'active' : '' }}">Live visitors</a></li>
+                        <li><a href="{{ route('visitors.traffic-sources') }}" class="slide-item {{ request()->routeIs('visitors.traffic-sources') ? 'active' : '' }}">Traffic sources</a></li>
+                        <li><a href="{{ route('visitors.countries') }}" class="slide-item {{ request()->routeIs('visitors.countries') ? 'active' : '' }}">Countries &amp; cities</a></li>
 
                     </ul>
                 </li>@endif

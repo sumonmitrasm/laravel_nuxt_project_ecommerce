@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use App\Models\Admin;
 use App\Models\AdminRole;
+use App\Models\AdminLoginActivity;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -102,6 +103,12 @@ class AdminController extends Controller
             ])) {
                 RateLimiter::clear($throttleKey);
                 $request->session()->regenerate();
+                AdminLoginActivity::create([
+                    'admin_id' => Auth::guard('admin')->id(),
+                    'ip_address' => $request->ip(),
+                    'device' => $this->deviceName((string) $request->userAgent()),
+                    'logged_in_at' => now(),
+                ]);
                 return response()->json([
                     'status' => true,
                     'message' => 'Login successful.',
@@ -148,6 +155,32 @@ class AdminController extends Controller
             $users = collect([$admin]);
         }
         return view('admin.accounts.admin-user', compact('title', 'users'));
+    }
+
+    public function myAccount()
+    {
+        return view('admin.accounts.my-account', ['admin' => Auth::guard('admin')->user()]);
+    }
+
+    public function updateMyAccount(Request $request)
+    {
+        $admin = Auth::guard('admin')->user();
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'mobile' => ['nullable', 'string', 'max:30'],
+            'password' => ['nullable', 'string', 'min:6', 'max:255', 'confirmed'],
+        ]);
+
+        if (blank($data['password'] ?? null)) {
+            unset($data['password']);
+        }
+
+        $admin->update($data);
+
+        return response()->json([
+            'message' => 'My account has been updated.',
+            'redirect_url' => route('admin-my-account'),
+        ]);
     }
     public function showUser(Admin $user)
     {
@@ -265,6 +298,13 @@ class AdminController extends Controller
     {
     }
 
+    private function deviceName(string $userAgent): string
+    {
+        if (preg_match('/mobile|android|iphone|ipod/i', $userAgent)) return 'Mobile';
+        if (preg_match('/ipad|tablet/i', $userAgent)) return 'Tablet';
+        return 'Desktop';
+    }
+
 
     public function permissionUser($id)
     {
@@ -317,6 +357,6 @@ class AdminController extends Controller
     private function permissionModules()
     {
         return AdminRole::query()->select('module')->distinct()->pluck('module')
-            ->merge(['admin', 'section', 'category', 'setting', 'tag', 'brand', 'product', 'attribute', 'coupon', 'shipping_method', 'home_slider', 'order', 'blog', 'supplier', 'purchase', 'expense', 'visitor'])->unique()->sort()->values();
+            ->merge(['admin', 'section', 'category', 'setting', 'tag', 'brand', 'product', 'attribute', 'coupon', 'shipping_method', 'home_slider', 'order', 'blog', 'supplier', 'purchase', 'expense', 'visitor', 'login_activity'])->unique()->sort()->values();
     }
 }

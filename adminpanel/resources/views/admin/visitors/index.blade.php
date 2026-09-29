@@ -13,8 +13,9 @@
                     <a data-ajax-page href="{{ route('visitors.index', ['period' => $key]) }}" class="btn btn-sm {{ $period === $key ? 'btn-primary' : 'btn-outline-primary' }}">{{ $label }}</a>
                 @endforeach
             </div>
+            @include('admin.visitors.nav')
             @if(Auth::guard('admin')->user()?->hasModuleAccess('visitor', 'delete'))
-                <form data-purchase-form method="POST" action="{{ route('visitors.destroy') }}" onsubmit="return confirm('Delete all visitor data? This cannot be undone.')">
+                <form method="POST" action="{{ route('visitors.destroy') }}" onsubmit="return confirmVisitorDelete(event, this)">
                     @csrf @method('DELETE')
                     <button type="submit" class="btn btn-sm btn-outline-danger">Delete all data</button>
                 </form>
@@ -67,4 +68,40 @@
 <style>
 .visitor-stat{min-height:112px}.visitor-search{min-width:220px}.visitor-page-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid rgba(130,140,160,.18)}.visitor-page-row:last-child{border-bottom:0}@media(max-width:575px){.visitor-search{min-width:0}}
 </style>
+<script>
+function confirmVisitorDelete(event, form) {
+    event.preventDefault();
+
+    Swal.fire({
+        title: 'Delete all visitor data?',
+        text: 'All visit history and live sessions will be permanently deleted.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e74c3c',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete all',
+        cancelButtonText: 'Keep data',
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+
+        var $form = $(form);
+        $form.find('button[type="submit"]').prop('disabled', true);
+
+        $.ajax({
+            url: $form.attr('action'),
+            method: 'POST',
+            data: $form.serialize(),
+            headers: { Accept: 'application/json' },
+        }).done(function (response) {
+            window.loadAjaxPage(response.redirect_url || window.location.href, true);
+            setTimeout(function () { crudToast('success', response.message); }, 200);
+        }).fail(function (xhr) {
+            crudToast('error', xhr.responseJSON?.message || 'Could not delete visitor data.');
+            $form.find('button[type="submit"]').prop('disabled', false);
+        });
+    });
+
+    return false;
+}
+</script>
 @endsection
