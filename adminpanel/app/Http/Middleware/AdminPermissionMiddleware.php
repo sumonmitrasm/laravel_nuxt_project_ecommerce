@@ -39,7 +39,9 @@ class AdminPermissionMiddleware
             'admin-user.update', 'admin-user.status' => ['admin', 'edit'],
             'admin-user.delete' => ['admin', 'delete'],
             'admin-user.permission', 'admin-user.permission.update' => ['admin', 'full'],
-            'visitors.index' => ['visitor', 'view'],
+            'admin-login-activity.index' => ['login_activity', 'view'],
+            'admin-login-activity.destroy' => ['login_activity', 'delete'],
+            'visitors.index', 'visitors.live', 'visitors.traffic-sources', 'visitors.countries' => ['visitor', 'view'],
             'visitors.destroy' => ['visitor', 'delete'],
 
             'section', 'admin-section.show' => ['section', 'view'],

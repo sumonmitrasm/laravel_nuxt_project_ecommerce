@@ -19,6 +19,7 @@ Route::get('/about', [FrontController::class, 'about'])->name('api.about');
 Route::get('/contact', [ContactController::class, 'info']);
 Route::post('/contact', [ContactController::class, 'store']);
 Route::post('/visitors', [VisitorController::class, 'store'])->middleware('throttle:120,1');
+Route::post('/visitors/heartbeat', [VisitorController::class, 'heartbeat'])->middleware('throttle:120,1');
 Route::get('/products', [FrontController::class, 'products'])->name('api.products');
 Route::get('/search', [FrontController::class, 'search'])->middleware('throttle:60,1')->name('api.search');
 Route::get('/recommended-products', [FrontController::class, 'recommendedProducts'])->name('api.recommended-products');

@@ -23,6 +23,7 @@ use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\VisitorController;
+use App\Http\Controllers\AdminLoginActivityController;
 
 // Route::get('/dashboard', function () {
 //     return view('dashboard');
@@ -38,7 +39,14 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
     Route::match(['get', 'post'], 'login', [AdminController::class, 'login'])->name('admin.login');
     Route::middleware(['admin.auth', 'admin.permission'])->group(function () {
         Route::get('dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('my-account', [AdminController::class, 'myAccount'])->name('admin-my-account');
+        Route::put('my-account', [AdminController::class, 'updateMyAccount'])->name('admin-my-account.update');
+        Route::get('login-activity', [AdminLoginActivityController::class, 'index'])->name('admin-login-activity.index');
+        Route::delete('login-activity', [AdminLoginActivityController::class, 'destroy'])->name('admin-login-activity.destroy');
         Route::get('visitors', [VisitorController::class, 'index'])->name('visitors.index');
+        Route::get('visitors/live', [VisitorController::class, 'live'])->name('visitors.live');
+        Route::get('visitors/traffic-sources', [VisitorController::class, 'trafficSources'])->name('visitors.traffic-sources');
+        Route::get('visitors/countries', [VisitorController::class, 'countries'])->name('visitors.countries');
         Route::delete('visitors', [VisitorController::class, 'destroy'])->name('visitors.destroy');
         Route::get('logout', [AdminController::class, 'logout'])->name('logout-admin');
         //>>>>>>>>>>>>>>>>>>>>>>>>User activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

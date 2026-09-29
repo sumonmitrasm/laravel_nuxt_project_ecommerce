@@ -23,5 +23,21 @@ export default defineNuxtPlugin((nuxtApp) => {
     }).catch(() => {})
   }
 
-  nuxtApp.hook('page:finish', () => logVisit(useRoute()))
+  const heartbeat = () => {
+    if (document.visibilityState !== 'visible') return
+
+    $fetch('/visitors/heartbeat', {
+      baseURL: config.public.apiBase,
+      method: 'POST',
+      credentials: 'include',
+      body: { visitor_id: visitorId.value, path: useRoute().fullPath },
+    }).catch(() => {})
+  }
+
+  nuxtApp.hook('page:finish', () => {
+    logVisit(useRoute())
+    heartbeat()
+  })
+
+  window.setInterval(heartbeat, 90 * 1000)
 })

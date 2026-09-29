@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="bn">
 <head>
   <meta charset="utf-8">
@@ -11,31 +11,32 @@
 <body><main class="wrap">
 <header>
   <h1>Laravel + Nuxt Visitor Tracking</h1>
-  <div>Country, city, IP, page visit, customer name, search, pagination এবং delete-all সহ সম্পূর্ণ সহজ implementation guide</div>
+  <div>Country, city, IP, page visit, customer name, search, pagination à¦à¦¬à¦‚ delete-all à¦¸à¦¹ à¦¸à¦®à§à¦ªà§‚à¦°à§à¦£ à¦¸à¦¹à¦œ implementation guide</div>
 </header>
 
-<section class="card"><h2>1. Feature কী করবে</h2>
+<section class="card"><h2>1. Feature à¦•à§€ à¦•à¦°à¦¬à§‡</h2>
 <ul>
-  <li>Storefront-এর প্রতিটি page open হলে একটি visit log হবে।</li>
-  <li>Login করা customer হলে name/email দেখাবে; guest হলে <code>Guest visitor</code> দেখাবে।</li>
-  <li>IP address, country, city, device, referrer ও visited URL save হবে।</li>
-  <li>Admin report থেকে Today, 7 days, This month filter; search; pagination; rows-per-page এবং delete all থাকবে।</li>
-  <li>Country/city না পেলে দুইটি public GeoIP provider fallback করবে।</li>
+  <li>Storefront-à¦à¦° à¦ªà§à¦°à¦¤à¦¿à¦Ÿà¦¿ page open à¦¹à¦²à§‡ à¦à¦•à¦Ÿà¦¿ visit log à¦¹à¦¬à§‡à¥¤</li>
+  <li>Login à¦•à¦°à¦¾ customer à¦¹à¦²à§‡ name/email à¦¦à§‡à¦–à¦¾à¦¬à§‡; guest à¦¹à¦²à§‡ <code>Guest visitor</code> à¦¦à§‡à¦–à¦¾à¦¬à§‡à¥¤</li>
+  <li>IP address, country, city, device, referrer à¦“ visited URL save à¦¹à¦¬à§‡à¥¤</li>
+  <li>Admin report à¦¥à§‡à¦•à§‡ Today, 7 days, This month filter; search; pagination; rows-per-page à¦à¦¬à¦‚ delete all à¦¥à¦¾à¦•à¦¬à§‡à¥¤</li>
+  <li>à¦†à¦²à¦¾à¦¦à¦¾ Live visitors, Traffic sources à¦à¦¬à¦‚ Countries &amp; cities admin pages à¦¥à¦¾à¦•à¦¬à§‡à¥¤</li>
+  <li>Country/city à¦¨à¦¾ à¦ªà§‡à¦²à§‡ à¦¦à§à¦‡à¦Ÿà¦¿ public GeoIP provider fallback à¦•à¦°à¦¬à§‡à¥¤</li>
 </ul>
-<p class="ok"><b>কোনো Composer বা npm package install লাগে না।</b> Laravel-এর built-in <code>Http</code>, <code>Cache</code>, Eloquent এবং Nuxt-এর built-in <code>$fetch</code> ব্যবহার করা হয়েছে।</p>
+<p class="ok"><b>à¦•à§‹à¦¨à§‹ Composer à¦¬à¦¾ npm package install à¦²à¦¾à¦—à§‡ à¦¨à¦¾à¥¤</b> Laravel-à¦à¦° built-in <code>Http</code>, <code>Cache</code>, Eloquent à¦à¦¬à¦‚ Nuxt-à¦à¦° built-in <code>$fetch</code> à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦•à¦°à¦¾ à¦¹à§Ÿà§‡à¦›à§‡à¥¤</p>
 </section>
 
-<section class="card"><h2>2. আগে যা দরকার</h2>
-<table><tr><th>প্রয়োজন</th><th>কারণ</th></tr>
-<tr><td>Laravel API + database</td><td>Visitor logs save ও Admin report-এর জন্য।</td></tr>
-<tr><td>Nuxt storefront</td><td>Browser থেকে page visit API-তে পাঠানোর জন্য।</td></tr>
-<tr><td>Laravel Sanctum SPA login (optional)</td><td>Login করা customer-এর নাম API request থেকে বের করার জন্য। Guest tracking এর জন্য লাগবে না।</td></tr>
-<tr><td>Server outbound HTTPS access</td><td><code>ipwho.is</code>/<code>ipapi.co</code> থেকে country ও city আনার জন্য।</td></tr></table>
-<p class="warn"><b>Localhost:</b> <code>127.0.0.1</code> বা <code>::1</code> একটি local IP, তাই দেশ/শহর পাওয়া যায় না। Production domain-এ real visitor এলে public IP থেকে location আসবে।</p>
+<section class="card"><h2>2. à¦†à¦—à§‡ à¦¯à¦¾ à¦¦à¦°à¦•à¦¾à¦°</h2>
+<table><tr><th>à¦ªà§à¦°à§Ÿà§‹à¦œà¦¨</th><th>à¦•à¦¾à¦°à¦£</th></tr>
+<tr><td>Laravel API + database</td><td>Visitor logs save à¦“ Admin report-à¦à¦° à¦œà¦¨à§à¦¯à¥¤</td></tr>
+<tr><td>Nuxt storefront</td><td>Browser à¦¥à§‡à¦•à§‡ page visit API-à¦¤à§‡ à¦ªà¦¾à¦ à¦¾à¦¨à§‹à¦° à¦œà¦¨à§à¦¯à¥¤</td></tr>
+<tr><td>Laravel Sanctum SPA login (optional)</td><td>Login à¦•à¦°à¦¾ customer-à¦à¦° à¦¨à¦¾à¦® API request à¦¥à§‡à¦•à§‡ à¦¬à§‡à¦° à¦•à¦°à¦¾à¦° à¦œà¦¨à§à¦¯à¥¤ Guest tracking à¦à¦° à¦œà¦¨à§à¦¯ à¦²à¦¾à¦—à¦¬à§‡ à¦¨à¦¾à¥¤</td></tr>
+<tr><td>Server outbound HTTPS access</td><td><code>ipwho.is</code>/<code>ipapi.co</code> à¦¥à§‡à¦•à§‡ country à¦“ city à¦†à¦¨à¦¾à¦° à¦œà¦¨à§à¦¯à¥¤</td></tr></table>
+<p class="warn"><b>Localhost:</b> <code>127.0.0.1</code> à¦¬à¦¾ <code>::1</code> à¦à¦•à¦Ÿà¦¿ local IP, à¦¤à¦¾à¦‡ à¦¦à§‡à¦¶/à¦¶à¦¹à¦° à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿ à¦¨à¦¾à¥¤ Production domain-à¦ real visitor à¦à¦²à§‡ public IP à¦¥à§‡à¦•à§‡ location à¦†à¦¸à¦¬à§‡à¥¤</p>
 </section>
 
 <section class="card"><h2>3. Database migration</h2>
-<p>একটি migration তৈরি করুন:</p>
+<p>à¦à¦•à¦Ÿà¦¿ migration à¦¤à§ˆà¦°à¦¿ à¦•à¦°à§à¦¨:</p>
 <pre><code>php artisan make:migration create_visitor_logs_table</code></pre>
 <p class="path">adminpanel/database/migrations/YYYY_MM_DD_create_visitor_logs_table.php</p>
 <pre><code>&lt;?php
@@ -70,10 +71,10 @@ return new class extends Migration {
         Schema::dropIfExists('visitor_logs');
     }
 };</code></pre>
-<p>তারপর চালান:</p><pre><code>php artisan migrate</code></pre>
+<p>à¦¤à¦¾à¦°à¦ªà¦° à¦šà¦¾à¦²à¦¾à¦¨:</p><pre><code>php artisan migrate</code></pre>
 </section>
 
-<section class="card"><h2>4. Model ও User relation</h2>
+<section class="card"><h2>4. Model à¦“ User relation</h2>
 <p class="path">app/Models/VisitorLog.php</p>
 <pre><code>&lt;?php
 namespace App\Models;
@@ -93,10 +94,10 @@ class VisitorLog extends Model
         return $this->belongsTo(User::class);
     }
 }</code></pre>
-<p>Customer login না থাকলে <code>user_id</code> null থাকবে; তাই guest visitor-ও ঠিকভাবে log হবে।</p>
+<p>Customer login à¦¨à¦¾ à¦¥à¦¾à¦•à¦²à§‡ <code>user_id</code> null à¦¥à¦¾à¦•à¦¬à§‡; à¦¤à¦¾à¦‡ guest visitor-à¦“ à¦ à¦¿à¦•à¦­à¦¾à¦¬à§‡ log à¦¹à¦¬à§‡à¥¤</p>
 </section>
 
-<section class="card"><h2>5. Public API: visit save ও GeoIP lookup</h2>
+<section class="card"><h2>5. Public API: visit save à¦“ GeoIP lookup</h2>
 <p class="path">app/Http/Controllers/Api/VisitorController.php</p>
 <pre><code>&lt;?php
 namespace App\Http\Controllers\Api;
@@ -121,7 +122,7 @@ class VisitorController extends Controller
 
         $ipAddress = $request->ip();
         $location = $this->location($request, $ipAddress);
-        $user = $request->user('sanctum'); // null হলে Guest visitor
+        $user = $request->user('sanctum'); // null à¦¹à¦²à§‡ Guest visitor
 
         VisitorLog::create([
             'user_id' => $user?->id,
@@ -185,22 +186,22 @@ class VisitorController extends Controller
         return 'Desktop';
     }
 }</code></pre>
-<p><b>কেন cache:</b> একই IP-র জন্য প্রতিবার external GeoIP API call না করে 7 দিন location reuse করে। Lookup failure cache করা হয় না, তাই service temporary down হলে পরের visit-এ আবার চেষ্টা হয়।</p>
+<p><b>à¦•à§‡à¦¨ cache:</b> à¦à¦•à¦‡ IP-à¦° à¦œà¦¨à§à¦¯ à¦ªà§à¦°à¦¤à¦¿à¦¬à¦¾à¦° external GeoIP API call à¦¨à¦¾ à¦•à¦°à§‡ 7 à¦¦à¦¿à¦¨ location reuse à¦•à¦°à§‡à¥¤ Lookup failure cache à¦•à¦°à¦¾ à¦¹à§Ÿ à¦¨à¦¾, à¦¤à¦¾à¦‡ service temporary down à¦¹à¦²à§‡ à¦ªà¦°à§‡à¦° visit-à¦ à¦†à¦¬à¦¾à¦° à¦šà§‡à¦·à§à¦Ÿà¦¾ à¦¹à§Ÿà¥¤</p>
 </section>
 
-<section class="card"><h2>6. API route এবং CSRF</h2>
+<section class="card"><h2>6. API route à¦à¦¬à¦‚ CSRF</h2>
 <p class="path">routes/api.php</p>
 <pre><code>use App\Http\Controllers\Api\VisitorController;
 
 Route::post('/visitors', [VisitorController::class, 'store'])
     ->middleware('throttle:120,1');</code></pre>
-<p>Visitor request page-load-এর background request; এটি কোনো account বা order পরিবর্তন করে না। CSRF token না নিয়ে fast রাখার জন্য API route-টি CSRF exception করুন:</p>
+<p>Visitor request page-load-à¦à¦° background request; à¦à¦Ÿà¦¿ à¦•à§‹à¦¨à§‹ account à¦¬à¦¾ order à¦ªà¦°à¦¿à¦¬à¦°à§à¦¤à¦¨ à¦•à¦°à§‡ à¦¨à¦¾à¥¤ CSRF token à¦¨à¦¾ à¦¨à¦¿à§Ÿà§‡ fast à¦°à¦¾à¦–à¦¾à¦° à¦œà¦¨à§à¦¯ API route-à¦Ÿà¦¿ CSRF exception à¦•à¦°à§à¦¨:</p>
 <p class="path">bootstrap/app.php</p>
 <pre><code>$middleware->validateCsrfTokens(except: [
     'api/contact',
     'api/visitors',
 ]);</code></pre>
-<p class="warn">Rate limit অবশ্যই রাখবেন। এখানে প্রতি minute-এ IP অনুযায়ী 120 request limit দেওয়া আছে।</p>
+<p class="warn">Rate limit à¦…à¦¬à¦¶à§à¦¯à¦‡ à¦°à¦¾à¦–à¦¬à§‡à¦¨à¥¤ à¦à¦–à¦¾à¦¨à§‡ à¦ªà§à¦°à¦¤à¦¿ minute-à¦ IP à¦…à¦¨à§à¦¯à¦¾à§Ÿà§€ 120 request limit à¦¦à§‡à¦“à§Ÿà¦¾ à¦†à¦›à§‡à¥¤</p>
 </section>
 
 <section class="card"><h2>7. Nuxt frontend plugin</h2>
@@ -230,14 +231,14 @@ Route::post('/visitors', [VisitorController::class, 'store'])
 
   nuxtApp.hook('page:finish', () => logVisit(useRoute()))
 })</code></pre>
-<p>এটি <code>.client.ts</code>, তাই শুধু browser-এ চলে; Nuxt server-side render বা build-এ visitor log তৈরি করে না। Request background-এ যায়, তাই page navigation slow হয় না।</p>
+<p>à¦à¦Ÿà¦¿ <code>.client.ts</code>, à¦¤à¦¾à¦‡ à¦¶à§à¦§à§ browser-à¦ à¦šà¦²à§‡; Nuxt server-side render à¦¬à¦¾ build-à¦ visitor log à¦¤à§ˆà¦°à¦¿ à¦•à¦°à§‡ à¦¨à¦¾à¥¤ Request background-à¦ à¦¯à¦¾à§Ÿ, à¦¤à¦¾à¦‡ page navigation slow à¦¹à§Ÿ à¦¨à¦¾à¥¤</p>
 <p class="path">nuxt.config.ts</p>
 <pre><code>runtimeConfig: {
   public: {
     apiBase: 'https://admin.example.com/api',
   }
 }</code></pre>
-<p>API ও Nuxt domain আলাদা হলে Laravel <code>config/cors.php</code>-এ storefront domain <code>allowed_origins</code>-এ দিন এবং <code>supports_credentials</code> true রাখুন। Sanctum login আগে কাজ করলে সাধারণত এই config আগেই ঠিক থাকে।</p>
+<p>API à¦“ Nuxt domain à¦†à¦²à¦¾à¦¦à¦¾ à¦¹à¦²à§‡ Laravel <code>config/cors.php</code>-à¦ storefront domain <code>allowed_origins</code>-à¦ à¦¦à¦¿à¦¨ à¦à¦¬à¦‚ <code>supports_credentials</code> true à¦°à¦¾à¦–à§à¦¨à¥¤ Sanctum login à¦†à¦—à§‡ à¦•à¦¾à¦œ à¦•à¦°à¦²à§‡ à¦¸à¦¾à¦§à¦¾à¦°à¦£à¦¤ à¦à¦‡ config à¦†à¦—à§‡à¦‡ à¦ à¦¿à¦• à¦¥à¦¾à¦•à§‡à¥¤</p>
 </section>
 
 <section class="card"><h2>8. Admin report controller</h2>
@@ -294,6 +295,7 @@ class VisitorController extends Controller
     public function destroy()
     {
         VisitorLog::query()->delete();
+        VisitorSession::query()->delete();
         return response()->json([
             'message' => 'All visitor data has been deleted.',
             'redirect_url' => route('visitors.index'),
@@ -302,20 +304,20 @@ class VisitorController extends Controller
 }</code></pre>
 </section>
 
-<section class="card"><h2>9. Admin web routes, permission ও sidebar</h2>
+<section class="card"><h2>9. Admin web routes, permission à¦“ sidebar</h2>
 <p class="path">routes/web.php</p>
 <pre><code>use App\Http\Controllers\VisitorController;
 
 Route::get('visitors', [VisitorController::class, 'index'])->name('visitors.index');
 Route::delete('visitors', [VisitorController::class, 'destroy'])->name('visitors.destroy');</code></pre>
-<p>নিজের permission middleware-এ add করুন:</p>
+<p>à¦¨à¦¿à¦œà§‡à¦° permission middleware-à¦ add à¦•à¦°à§à¦¨:</p>
 <pre><code>'visitors.index' => ['visitor', 'view'],
 'visitors.destroy' => ['visitor', 'delete'],</code></pre>
-<p>Permission module list-এ <code>visitor</code> যোগ করুন। Sidebar-এ report link কেবল <code>visitor/view</code> access থাকলেই দেখান। Delete button কেবল <code>visitor/delete</code> access থাকলেই দেখান।</p>
+<p>Permission module list-à¦ <code>visitor</code> à¦¯à§‹à¦— à¦•à¦°à§à¦¨à¥¤ Sidebar-à¦ report link à¦•à§‡à¦¬à¦² <code>visitor/view</code> access à¦¥à¦¾à¦•à¦²à§‡à¦‡ à¦¦à§‡à¦–à¦¾à¦¨à¥¤ Delete button à¦•à§‡à¦¬à¦² <code>visitor/delete</code> access à¦¥à¦¾à¦•à¦²à§‡à¦‡ à¦¦à§‡à¦–à¦¾à¦¨à¥¤</p>
 </section>
 
-<section class="card"><h2>10. Admin Blade page-এ কী থাকবে</h2>
-<p>নিজের existing admin layout wrapper ব্যবহার করুন। এই project-এ wrapper:</p>
+<section class="card"><h2>10. Admin Blade page-à¦ à¦•à§€ à¦¥à¦¾à¦•à¦¬à§‡</h2>
+<p>à¦¨à¦¿à¦œà§‡à¦° existing admin layout wrapper à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦•à¦°à§à¦¨à¥¤ à¦à¦‡ project-à¦ wrapper:</p>
 <pre><code>&lt;div class="app-content main-content"&gt;
   &lt;div class="side-app"&gt;
     &lt;div class="container-fluid main-container"&gt;
@@ -323,8 +325,8 @@ Route::delete('visitors', [VisitorController::class, 'destroy'])->name('visitors
     &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;</code></pre>
-<p>Page-এ এই অংশগুলো রাখুন:</p>
-<ol><li><b>Period buttons:</b> Today, 7 days, This month</li><li><b>Stats cards:</b> page visits, unique visitors, signed-in customers</li><li><b>Search form:</b> <code>search</code> input এবং hidden <code>period</code></li><li><b>Table columns:</b> Time, Visitor, IP address, Page, Country/City, Device</li><li><b>Pagination:</b> <code>{{ '$logs->links()' }}</code></li><li><b>Rows per page:</b> 15 / 30 / 50 select</li><li><b>Delete all form:</b> CSRF + DELETE method + JavaScript confirm</li></ol>
+<p>Page-à¦ à¦à¦‡ à¦…à¦‚à¦¶à¦—à§à¦²à§‹ à¦°à¦¾à¦–à§à¦¨:</p>
+<ol><li><b>Period buttons:</b> Today, 7 days, This month</li><li><b>Stats cards:</b> page visits, unique visitors, signed-in customers</li><li><b>Search form:</b> <code>search</code> input à¦à¦¬à¦‚ hidden <code>period</code></li><li><b>Table columns:</b> Time, Visitor, IP address, Page, Country/City, Device</li><li><b>Pagination:</b> <code>{{ '$logs->links()' }}</code></li><li><b>Rows per page:</b> 15 / 30 / 50 select</li><li><b>Delete all form:</b> CSRF + DELETE method + JavaScript confirm; visitor logs এবং live sessions দুটিই clear হবে</li></ol>
 <pre><code>&lt;form method="GET" action="{{ route('visitors.index') }}"&gt;
   &lt;input type="hidden" name="period" value="{{ $period }}"&gt;
   &lt;input name="search" value="{{ $search }}" placeholder="Search country, name, IP..."&gt;
@@ -340,16 +342,63 @@ Route::delete('visitors', [VisitorController::class, 'destroy'])->name('visitors
 @endif</code></pre>
 </section>
 
-<section class="card"><h2>11. Deploy ও verify checklist</h2>
+<section class="card"><h2>11. Live visitors, Traffic sources à¦“ Countries &amp; cities</h2>
+<h3>Live visitors: à¦†à¦²à¦¾à¦¦à¦¾ à¦›à§‹à¦Ÿ session table</h3>
+<p>à¦ªà§à¦°à¦¤à¦¿ heartbeat-à¦ à¦¨à¦¤à§à¦¨ visit log insert à¦•à¦°à¦²à§‡ table à¦¦à§à¦°à§à¦¤ à¦¬à§œ à¦¹à¦¬à§‡à¥¤ à¦¤à¦¾à¦‡ <code>visitor_sessions</code> à¦¨à¦¾à¦®à§‡ à¦†à¦²à¦¾à¦¦à¦¾ table à¦°à¦¾à¦–à§à¦¨; à¦à¦–à¦¾à¦¨à§‡ <code>visitor_id</code> unique à¦¥à¦¾à¦•à¦¬à§‡ à¦à¦¬à¦‚ à¦à¦•à¦‡ browser-à¦à¦° row à¦¶à§à¦§à§ update à¦¹à¦¬à§‡à¥¤</p>
+<pre><code>Schema::create('visitor_sessions', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+    $table->string('visitor_id', 64)->unique();
+    $table->string('ip_address', 45)->nullable();
+    $table->string('path', 500);
+    $table->string('country', 80)->nullable();
+    $table->string('city', 100)->nullable();
+    $table->string('device', 20)->nullable();
+    $table->timestamp('last_seen_at')->index();
+    $table->timestamps();
+});</code></pre>
+<p>API-à¦¤à§‡ heartbeat route à¦¦à¦¿à¦¨:</p>
+<pre><code>Route::post('/visitors/heartbeat', [VisitorController::class, 'heartbeat'])
+    ->middleware('throttle:120,1');</code></pre>
+<p>Heartbeat method-à¦ <code>VisitorSession::updateOrCreate(['visitor_id' =&gt; $visitorId], [..., 'last_seen_at' =&gt; now()])</code> à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦•à¦°à§à¦¨à¥¤ Admin live page-à¦ à¦¶à§à¦§à§ <code>last_seen_at &gt;= now()-&gt;subMinutes(5)</code> rows à¦¦à§‡à¦–à¦¾à¦¨à¥¤</p>
+<p>Nuxt plugin-à¦ page finish-à¦à¦° à¦¸à¦®à§Ÿ heartbeat à¦ªà¦¾à¦ à¦¾à¦¨ à¦à¦¬à¦‚ visible browser-à¦à¦° à¦œà¦¨à§à¦¯ à¦ªà§à¦°à¦¤à¦¿ 90 seconds-à¦ à¦†à¦¬à¦¾à¦° à¦ªà¦¾à¦ à¦¾à¦¨:</p>
+<pre><code>const heartbeat = () => {
+  if (document.visibilityState !== 'visible') return
+  $fetch('/visitors/heartbeat', {
+    baseURL: config.public.apiBase,
+    method: 'POST', credentials: 'include',
+    body: { visitor_id: visitorId.value, path: useRoute().fullPath },
+  }).catch(() => {})
+}
+
+nuxtApp.hook('page:finish', heartbeat)
+window.setInterval(heartbeat, 90 * 1000)</code></pre>
+<h3>Traffic sources</h3>
+<p><code>visitor_logs.referrer</code> à¦¥à§‡à¦•à§‡ source à¦¬à§‡à¦° à¦•à¦°à§à¦¨à¥¤ Referrer à¦–à¦¾à¦²à¦¿ à¦¹à¦²à§‡ <b>Direct</b>; Google/Facebook/Instagram/YouTube/TikTok hostname à¦†à¦²à¦¾à¦¦à¦¾ group; à¦…à¦¨à§à¦¯ hostname à¦¤à¦¾à¦° à¦¨à¦¿à¦œà§‡à¦° à¦¨à¦¾à¦®à§‡ à¦¦à§‡à¦–à¦¾à¦¨à¥¤ SQL query-à¦¤à§‡ latest 100 referrer group à¦¨à¦¿à§Ÿà§‡ PHP collection-à¦ source group à¦•à¦°à¦²à§‡ memory à¦¸à§€à¦®à¦¿à¦¤ à¦¥à¦¾à¦•à§‡à¥¤</p>
+<pre><code>$rows = VisitorLog::select('referrer', DB::raw('COUNT(*) as visits'),
+    DB::raw('COUNT(DISTINCT visitor_id) as visitors'))
+    ->groupBy('referrer')->orderByDesc('visits')->limit(100)->get();</code></pre>
+<h3>Countries &amp; cities</h3>
+<pre><code>$locations = VisitorLog::whereNotNull('country')
+    ->select('country', 'city', DB::raw('COUNT(*) as visits'),
+        DB::raw('COUNT(DISTINCT visitor_id) as visitors'))
+    ->groupBy('country', 'city')->orderByDesc('visits')->paginate(50);</code></pre>
+<p>Admin routes:</p>
+<pre><code>Route::get('visitors/live', [VisitorController::class, 'live'])->name('visitors.live');
+Route::get('visitors/traffic-sources', [VisitorController::class, 'trafficSources'])->name('visitors.traffic-sources');
+Route::get('visitors/countries', [VisitorController::class, 'countries'])->name('visitors.countries');</code></pre>
+</section>
+
+<section class="card"><h2>12. Deploy à¦“ verify checklist</h2>
 <ol>
-  <li>সব file Git-এ add/commit করুন।</li>
-  <li>Production server-এ migration চালান: <code>php artisan migrate --force</code></li>
-  <li>Cache clear করুন: <code>php artisan optimize:clear</code></li>
-  <li>Nuxt build/generate করে public build deploy করুন।</li>
-  <li>Storefront-এ একটি page খুলুন, তারপর Admin → Visitors refresh করুন।</li>
-  <li>Customer name test করতে storefront-এ customer account দিয়ে login করে একটি page খুলুন।</li>
-  <li><code>Bangladesh</code>, <code>Dhaka</code>, customer name বা IP লিখে search test করুন।</li>
-  <li>30-এর বেশি log হলে pagination এবং 15/30/50 selector test করুন।</li>
+  <li>à¦¸à¦¬ file Git-à¦ add/commit à¦•à¦°à§à¦¨à¥¤</li>
+  <li>Production server-à¦ migration à¦šà¦¾à¦²à¦¾à¦¨: <code>php artisan migrate --force</code></li>
+  <li>Cache clear à¦•à¦°à§à¦¨: <code>php artisan optimize:clear</code></li>
+  <li>Nuxt build/generate à¦•à¦°à§‡ public build deploy à¦•à¦°à§à¦¨à¥¤</li>
+  <li>Storefront-à¦ à¦à¦•à¦Ÿà¦¿ page à¦–à§à¦²à§à¦¨, à¦¤à¦¾à¦°à¦ªà¦° Admin â†’ Visitors refresh à¦•à¦°à§à¦¨à¥¤</li>
+  <li>Customer name test à¦•à¦°à¦¤à§‡ storefront-à¦ customer account à¦¦à¦¿à§Ÿà§‡ login à¦•à¦°à§‡ à¦à¦•à¦Ÿà¦¿ page à¦–à§à¦²à§à¦¨à¥¤</li>
+  <li><code>Bangladesh</code>, <code>Dhaka</code>, customer name à¦¬à¦¾ IP à¦²à¦¿à¦–à§‡ search test à¦•à¦°à§à¦¨à¥¤</li>
+  <li>30-à¦à¦° à¦¬à§‡à¦¶à¦¿ log à¦¹à¦²à§‡ pagination à¦à¦¬à¦‚ 15/30/50 selector test à¦•à¦°à§à¦¨à¥¤</li>
 </ol>
 <pre><code>php artisan migrate --force
 php artisan optimize:clear
@@ -357,26 +406,28 @@ php artisan view:cache
 php artisan route:list --name=visitors</code></pre>
 </section>
 
-<section class="card"><h2>12. গুরুত্বপূর্ণ বাস্তব সীমা</h2>
+<section class="card"><h2>13. à¦—à§à¦°à§à¦¤à§à¦¬à¦ªà§‚à¦°à§à¦£ à¦¬à¦¾à¦¸à§à¦¤à¦¬ à¦¸à§€à¦®à¦¾</h2>
 <ul>
-  <li>IP-based city আনুমানিক; exact বাড়ির address নয়।</li>
-  <li>Guest-এর নাম browser থেকে পাওয়া যায় না। Name/email কেবল logged-in customer-এর জন্য।</li>
-  <li>VPN/proxy ব্যবহার করলে country/city VPN/proxy-এর location হতে পারে।</li>
-  <li>GeoIP provider temporary unavailable হলে IP save হবে, location খালি থাকবে; পরের visit-এ আবার চেষ্টা হবে।</li>
-  <li>Database ছোট রাখতে Admin-এর Delete all button ব্যবহার করুন। পরে চাইলে 90 দিনের পুরোনো log auto-delete করার scheduled command যোগ করা যায়।</li>
-  <li>Privacy policy-তে website analytics ও IP-based approximate location ব্যবহারের কথা উল্লেখ করা উচিত।</li>
+  <li>IP-based city à¦†à¦¨à§à¦®à¦¾à¦¨à¦¿à¦•; exact à¦¬à¦¾à§œà¦¿à¦° address à¦¨à§Ÿà¥¤</li>
+  <li>Guest-à¦à¦° à¦¨à¦¾à¦® browser à¦¥à§‡à¦•à§‡ à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿ à¦¨à¦¾à¥¤ Name/email à¦•à§‡à¦¬à¦² logged-in customer-à¦à¦° à¦œà¦¨à§à¦¯à¥¤</li>
+  <li>VPN/proxy à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦•à¦°à¦²à§‡ country/city VPN/proxy-à¦à¦° location à¦¹à¦¤à§‡ à¦ªà¦¾à¦°à§‡à¥¤</li>
+  <li>GeoIP provider temporary unavailable à¦¹à¦²à§‡ IP save à¦¹à¦¬à§‡, location à¦–à¦¾à¦²à¦¿ à¦¥à¦¾à¦•à¦¬à§‡; à¦ªà¦°à§‡à¦° visit-à¦ à¦†à¦¬à¦¾à¦° à¦šà§‡à¦·à§à¦Ÿà¦¾ à¦¹à¦¬à§‡à¥¤</li>
+  <li>Database à¦›à§‹à¦Ÿ à¦°à¦¾à¦–à¦¤à§‡ Admin-à¦à¦° Delete all button à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦•à¦°à§à¦¨à¥¤ à¦ªà¦°à§‡ à¦šà¦¾à¦‡à¦²à§‡ 90 à¦¦à¦¿à¦¨à§‡à¦° à¦ªà§à¦°à§‹à¦¨à§‹ log auto-delete à¦•à¦°à¦¾à¦° scheduled command à¦¯à§‹à¦— à¦•à¦°à¦¾ à¦¯à¦¾à§Ÿà¥¤</li>
+  <li>Privacy policy-à¦¤à§‡ website analytics à¦“ IP-based approximate location à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦°à§‡à¦° à¦•à¦¥à¦¾ à¦‰à¦²à§à¦²à§‡à¦– à¦•à¦°à¦¾ à¦‰à¦šà¦¿à¦¤à¥¤</li>
 </ul>
 </section>
 
-<section class="card"><h2>13. এই project-এ file list</h2>
-<table><tr><th>File</th><th>কাজ</th></tr>
-<tr><td>adminpanel/database/migrations/2026_09_29_000006_create_visitor_logs_table.php</td><td>visitor_logs table তৈরি</td></tr>
-<tr><td>adminpanel/database/migrations/2026_09_29_000007_add_ip_address_to_visitor_logs_table.php</td><td>existing table-এ IP column যোগ</td></tr>
-<tr><td>adminpanel/app/Models/VisitorLog.php</td><td>Database model ও User relation</td></tr>
+<section class="card"><h2>14. à¦à¦‡ project-à¦ file list</h2>
+<table><tr><th>File</th><th>à¦•à¦¾à¦œ</th></tr>
+<tr><td>adminpanel/database/migrations/2026_09_29_000006_create_visitor_logs_table.php</td><td>visitor_logs table à¦¤à§ˆà¦°à¦¿</td></tr>
+<tr><td>adminpanel/database/migrations/2026_09_29_000007_add_ip_address_to_visitor_logs_table.php</td><td>existing table-à¦ IP column à¦¯à§‹à¦—</td></tr>
+<tr><td>adminpanel/database/migrations/2026_09_29_000008_create_visitor_sessions_table.php</td><td>Live visitor heartbeat-à¦à¦° à¦à¦•à¦Ÿà¦¿ row per browser</td></tr>
+<tr><td>adminpanel/app/Models/VisitorLog.php</td><td>Database model à¦“ User relation</td></tr>
+<tr><td>adminpanel/app/Models/VisitorSession.php</td><td>Current live browser session model</td></tr>
 <tr><td>adminpanel/app/Http/Controllers/Api/VisitorController.php</td><td>Visit save, IP, country/city, device</td></tr>
 <tr><td>adminpanel/app/Http/Controllers/VisitorController.php</td><td>Admin report, search, pagination, delete all</td></tr>
 <tr><td>adminpanel/routes/api.php</td><td>Public POST /api/visitors route</td></tr>
-<tr><td>adminpanel/routes/web.php</td><td>Admin report এবং delete routes</td></tr>
+<tr><td>adminpanel/routes/web.php</td><td>Admin report à¦à¦¬à¦‚ delete routes</td></tr>
 <tr><td>adminpanel/bootstrap/app.php</td><td>Visitor API CSRF exception</td></tr>
 <tr><td>adminpanel/app/Http/Middleware/AdminPermissionMiddleware.php</td><td>visitor view/delete permission</td></tr>
 <tr><td>adminpanel/resources/views/admin/visitors/index.blade.php</td><td>Admin interface</td></tr>
@@ -385,3 +436,4 @@ php artisan route:list --name=visitors</code></pre>
 </table>
 </section>
 </main></body></html>
+
