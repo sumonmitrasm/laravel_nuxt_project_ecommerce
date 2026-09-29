@@ -42,7 +42,7 @@
             <div class="table-responsive"><table class="table table-hover align-middle mb-0">
                 <thead><tr><th class="ps-4">Time</th><th>Visitor</th><th>IP address</th><th>Page</th><th>Country / city</th><th class="pe-4">Device</th></tr></thead>
                 <tbody>@forelse($logs as $log)<tr>
-                    <td class="ps-4 text-nowrap">{{ $log->created_at->format('d M, h:i A') }}</td>
+                    <td class="ps-4 text-nowrap">{{ $log->created_at->copy()->timezone('Asia/Dhaka')->format('d M, h:i A') }}</td>
                     <td>@if($log->user)<b>{{ $log->user->name }}</b><small class="d-block text-muted">{{ $log->user->email }}</small>@else <span class="text-muted">Guest visitor</span>@endif</td>
                     <td class="text-nowrap">{{ $log->ip_address ?: 'Not available' }}</td>
                     <td class="text-break">{{ $log->path }}</td>
