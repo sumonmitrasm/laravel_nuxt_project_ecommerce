@@ -18,6 +18,10 @@ class PageSeo
             'name' => trim((string) (($setting['side_name'] ?? null) ?: 'NovaCart')),
             'logo' => $this->settingLogo($setting),
             'phone' => trim((string) (($setting['phone'] ?? null) ?: ($setting['perronal_phone'] ?? null))),
+            'email' => trim((string) ($setting['email'] ?? null)),
+            'address' => trim((string) ($setting['address'] ?? null)),
+            'description' => $this->plainText($setting['description'] ?? null),
+            'copyright_year' => trim((string) (($setting['developed_year'] ?? null) ?: now()->year)),
         ];
     }
 
