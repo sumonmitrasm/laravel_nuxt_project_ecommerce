@@ -9,7 +9,7 @@ class OrderItem extends Model
 {
     protected $fillable = [
         'order_id', 'product_id', 'product_variant_id', 'product_name', 'product_code',
-        'sku', 'image', 'options', 'quantity', 'regular_price', 'unit_price',
+        'sku', 'image', 'options', 'quantity', 'regular_price', 'unit_price', 'cost_price',
         'discount_amount', 'line_total',
     ];
 
@@ -17,7 +17,7 @@ class OrderItem extends Model
     {
         return [
             'options' => 'array', 'quantity' => 'integer', 'regular_price' => 'decimal:2',
-            'unit_price' => 'decimal:2', 'discount_amount' => 'decimal:2', 'line_total' => 'decimal:2',
+            'unit_price' => 'decimal:2', 'cost_price' => 'decimal:2', 'discount_amount' => 'decimal:2', 'line_total' => 'decimal:2',
         ];
     }
 

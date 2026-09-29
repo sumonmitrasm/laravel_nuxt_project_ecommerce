@@ -108,6 +108,7 @@ class PurchaseController extends Controller
                     'unit_cost' => $item['unit_cost'],
                     'line_total' => $lineTotal,
                 ]);
+                $variant->update(['cost_price' => $item['unit_cost']]);
                 $inventory->receivePurchase($variant, (int) $item['quantity'], $purchase, Auth::guard('admin')->id());
             }
             if ($paid > 0) {
@@ -173,6 +174,7 @@ class PurchaseController extends Controller
                     );
                 }
                 $item->update(['quantity' => $newQuantity, 'unit_cost' => $newCost, 'line_total' => $newQuantity * $newCost]);
+                ProductVariant::query()->whereKey($item->product_variant_id)->update(['cost_price' => $newCost]);
             }
             if ((float) $purchase->paid_amount > $total) abort(422, 'New total cannot be less than the amount already paid.');
             $purchase->update([

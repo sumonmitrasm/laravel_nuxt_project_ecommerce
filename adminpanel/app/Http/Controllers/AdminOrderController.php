@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\OrderStatusMail;
 
 use App\Models\CouponUsage;
+use App\Models\Expense;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderReturn;
@@ -105,6 +106,22 @@ class AdminOrderController extends Controller
                 })->when($from, fn ($query) => $query->whereBetween('placed_at', [$from, $to]));
         })->sum('quantity');
 
+        $costOfGoods = (float) DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.order_status', '!=', 'cancelled')
+            ->where(function ($query) {
+                $query->where('orders.payment_status', 'paid')
+                    ->orWhere(fn ($query) => $query->where('orders.payment_method', 'cod')->where('orders.order_status', 'delivered'));
+            })
+            ->when($from, fn ($query) => $query->whereBetween('orders.placed_at', [$from, $to]))
+            ->sum(DB::raw('order_items.quantity * order_items.cost_price'));
+        $expenseTotal = (float) Expense::query()
+            ->when($from, fn ($query) => $query->whereBetween('expense_date', [$from, $to]))
+            ->sum('amount');
+        $expenseByCategory = Expense::query()
+            ->when($from, fn ($query) => $query->whereBetween('expense_date', [$from, $to]))
+            ->selectRaw('category, SUM(amount) as total')->groupBy('category')->pluck('total', 'category');
+
         $topProducts = OrderItem::query()
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('orders.order_status', '!=', 'cancelled')
@@ -127,6 +144,7 @@ class AdminOrderController extends Controller
         return view('admin.order.analytics', [
             'title' => 'Sales Analytics', 'period' => $period, 'periodLabel' => $periodLabel,
             'revenue' => $revenue, 'orderCount' => $orderCount, 'soldQuantity' => $soldQuantity,
+            'costOfGoods' => $costOfGoods, 'expenseTotal' => $expenseTotal, 'netProfit' => $revenue - $costOfGoods - $expenseTotal, 'expenseByCategory' => $expenseByCategory,
             'averageOrderValue' => $orderCount > 0 ? $revenue / $orderCount : 0,
             'topProducts' => $topProducts, 'paymentBreakdown' => $paymentBreakdown,
             'statusBreakdown' => $statusBreakdown,
