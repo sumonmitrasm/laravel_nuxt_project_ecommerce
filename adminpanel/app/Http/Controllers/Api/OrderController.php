@@ -331,7 +331,7 @@ class OrderController extends Controller
                     'product_name' => $product->product_name, 'product_code' => $product->product_code,
                     'sku' => $variant?->sku, 'image' => $product->product_image, 'options' => $item['options'],
                     'quantity' => $item['quantity'], 'regular_price' => $item['regular_price'],
-                    'unit_price' => $item['unit_price'],
+                    'unit_price' => $item['unit_price'], 'cost_price' => $variant?->cost_price ?? 0,
                     'discount_amount' => round(($item['regular_price'] - $item['unit_price']) * $item['quantity'], 2),
                     'line_total' => $item['line_total'],
                 ]);

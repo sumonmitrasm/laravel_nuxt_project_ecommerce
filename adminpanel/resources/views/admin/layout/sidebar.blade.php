@@ -24,6 +24,9 @@
                             $canManageTags = $admin?->hasModuleAccess('tag', 'view');
                             $canManageBrands = $admin?->hasModuleAccess('brand', 'view');
                             $canManageProducts = $admin?->hasModuleAccess('product', 'view');
+                            $canManageSuppliers = $admin?->hasModuleAccess('supplier', 'view');
+                            $canManagePurchases = $admin?->hasModuleAccess('purchase', 'view');
+                            $canManageExpenses = $admin?->hasModuleAccess('expense', 'view');
                             $canManageAttributes = $admin?->hasModuleAccess('attribute', 'view');
                             $canManageCoupons = $admin?->hasModuleAccess('coupon', 'view');
                             $canManageShippingMethods = $admin?->hasModuleAccess('shipping_method', 'view');
@@ -83,8 +86,8 @@
                         </ul>
                     </li>
                 @endif
-                @if ($canManageProducts || $canManageAttributes || $canManageCoupons || $canManageShippingMethods)
-                <li class="slide {{ request()->routeIs('products') || request()->routeIs('inventory.*') || request()->routeIs('suppliers.*') || request()->routeIs('purchases.*') || request()->routeIs('admin-reviews.*') || request()->routeIs('product-attributes*') || request()->routeIs('coupons') || request()->routeIs('shipping-methods') ? 'is-expanded' : '' }}">
+                @if ($canManageProducts || $canManageBrands || $canManageAttributes || $canManageCoupons || $canManageShippingMethods)
+                <li class="slide {{ request()->routeIs('products') || request()->routeIs('inventory.*') || request()->routeIs('brands') || request()->routeIs('admin-reviews.*') || request()->routeIs('product-attributes*') || request()->routeIs('coupons') || request()->routeIs('shipping-methods') ? 'is-expanded' : '' }}">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -99,8 +102,7 @@
                         </li>
                          @if ($canManageProducts)<li><a href="{{ route('products') }}" class="slide-item {{ request()->routeIs('products') ? 'active' : '' }}">Products</a></li>@endif
                          @if ($canManageProducts)<li><a href="{{ route('inventory.index') }}" class="slide-item {{ request()->routeIs('inventory.*') ? 'active' : '' }}">Inventory</a></li>@endif
-                         @if ($canManageProducts)<li><a href="{{ route('purchases.index') }}" class="slide-item {{ request()->routeIs('purchases.*') ? 'active' : '' }}">Purchases</a></li>@endif
-                         @if ($canManageProducts)<li><a href="{{ route('suppliers.index') }}" class="slide-item {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">Suppliers</a></li>@endif
+                         @if ($canManageBrands)<li><a href="{{ route('brands') }}" class="slide-item {{ request()->routeIs('brands') ? 'active' : '' }}">Brands</a></li>@endif
                          @if ($canManageProducts)<li><a href="{{ route('admin-reviews.index') }}" class="slide-item {{ request()->routeIs('admin-reviews.*') ? 'active' : '' }}">Reviews</a></li>@endif
                          @if ($canManageAttributes)<li><a href="{{ route('product-attributes') }}" class="slide-item {{ request()->routeIs('product-attributes*') ? 'active' : '' }}">Attributes</a></li>@endif
                          @if ($canManageCoupons)<li><a href="{{ route('coupons') }}" class="slide-item {{ request()->routeIs('coupons') ? 'active' : '' }}">Coupons</a></li>@endif
@@ -136,8 +138,8 @@
                         <span class="side-menu__label">About</span>
                     </a>
                 </li>
-                @if ($canManageSettings || $canManageTags || $canManageBrands)
-                <li class="slide {{ request()->routeIs('settings') || request()->routeIs('tags') || request()->routeIs('brands') ? 'is-expanded' : '' }}">
+                @if ($canManageSettings || $canManageTags || $canManageSuppliers || $canManagePurchases || $canManageExpenses)
+                <li class="slide {{ request()->routeIs('settings') || request()->routeIs('tags') || request()->routeIs('suppliers.*') || request()->routeIs('purchases.*') || request()->routeIs('expenses.*') ? 'is-expanded' : '' }}">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg class="side-menu__icon" xmlns="http://www.w3.org/2000/svg" width="24"
                             height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -158,7 +160,9 @@
                         <li class="side-menu-label1">
                             <a href="javascript:void(0)">Utilities</a>
                         </li>
-                        @if ($canManageBrands)<li><a href="{{ route('brands') }}" class="slide-item {{ request()->routeIs('brands') ? 'active' : '' }}">Brands</a></li>@endif
+                        @if ($canManageSuppliers)<li><a href="{{ route('suppliers.index') }}" class="slide-item {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">Suppliers</a></li>@endif
+                        @if ($canManagePurchases)<li><a href="{{ route('purchases.index') }}" class="slide-item {{ request()->routeIs('purchases.*') ? 'active' : '' }}">Purchases</a></li>@endif
+                        @if ($canManageExpenses)<li><a href="{{ route('expenses.index') }}" class="slide-item {{ request()->routeIs('expenses.*') ? 'active' : '' }}">Expenses</a></li>@endif
                         @if ($canManageSettings)<li><a href="{{ route('settings') }}" class="slide-item {{ request()->routeIs('settings') ? 'active' : '' }}">General Settings</a></li>@endif
                         @if ($canManageSettings)<li><a href="{{ route('admin-contact.index') }}" class="slide-item {{ request()->routeIs('admin-contact.*') ? 'active' : '' }}">Contact Messages</a></li>@endif
 
