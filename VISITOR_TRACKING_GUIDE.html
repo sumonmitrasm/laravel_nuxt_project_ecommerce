@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Laravel + Nuxt Visitor Tracking Guide</title>
+  <style>
+    body{margin:0;background:#f4f6fa;color:#172033;font:16px/1.65 Arial,sans-serif}.wrap{max-width:1100px;margin:auto;padding:32px 20px 70px}header{background:#101b42;color:#fff;padding:34px;border-radius:14px}h1{margin:0 0 8px;font-size:30px}h2{margin-top:42px;color:#101b42;border-bottom:2px solid #e2e7f0;padding-bottom:8px}h3{margin-top:26px;color:#243b78}.card{background:#fff;padding:24px 28px;border-radius:12px;box-shadow:0 2px 10px #17203312;margin-top:18px}code{font-family:Consolas,monospace;color:#c7254e;background:#f7f2f4;padding:2px 5px;border-radius:3px}pre{overflow:auto;background:#101b42;color:#ecf2ff;padding:18px;border-radius:8px;font-size:13px;line-height:1.5}pre code{color:inherit;background:none;padding:0}table{border-collapse:collapse;width:100%;background:#fff}th,td{border:1px solid #dfe5ee;padding:10px;text-align:left;vertical-align:top}th{background:#edf2ff}li{margin:6px 0}.ok{border-left:4px solid #20a464;background:#eefaf4;padding:14px}.warn{border-left:4px solid #d88a19;background:#fff8e9;padding:14px}.path{font-weight:bold;color:#243b78}a{color:#2557c3}
+  </style>
+</head>
+<body><main class="wrap">
+<header>
+  <h1>Laravel + Nuxt Visitor Tracking</h1>
+  <div>Country, city, IP, page visit, customer name, search, pagination এবং delete-all সহ সম্পূর্ণ সহজ implementation guide</div>
+</header>
+
+<section class="card"><h2>1. Feature কী করবে</h2>
+<ul>
+  <li>Storefront-এর প্রতিটি page open হলে একটি visit log হবে।</li>
+  <li>Login করা customer হলে name/email দেখাবে; guest হলে <code>Guest visitor</code> দেখাবে।</li>
+  <li>IP address, country, city, device, referrer ও visited URL save হবে।</li>
+  <li>Admin report থেকে Today, 7 days, This month filter; search; pagination; rows-per-page এবং delete all থাকবে।</li>
+  <li>Country/city না পেলে দুইটি public GeoIP provider fallback করবে।</li>
+</ul>
+<p class="ok"><b>কোনো Composer বা npm package install লাগে না।</b> Laravel-এর built-in <code>Http</code>, <code>Cache</code>, Eloquent এবং Nuxt-এর built-in <code>$fetch</code> ব্যবহার করা হয়েছে।</p>
+</section>
+
+<section class="card"><h2>2. আগে যা দরকার</h2>
+<table><tr><th>প্রয়োজন</th><th>কারণ</th></tr>
+<tr><td>Laravel API + database</td><td>Visitor logs save ও Admin report-এর জন্য।</td></tr>
+<tr><td>Nuxt storefront</td><td>Browser থেকে page visit API-তে পাঠানোর জন্য।</td></tr>
+<tr><td>Laravel Sanctum SPA login (optional)</td><td>Login করা customer-এর নাম API request থেকে বের করার জন্য। Guest tracking এর জন্য লাগবে না।</td></tr>
+<tr><td>Server outbound HTTPS access</td><td><code>ipwho.is</code>/<code>ipapi.co</code> থেকে country ও city আনার জন্য।</td></tr></table>
+<p class="warn"><b>Localhost:</b> <code>127.0.0.1</code> বা <code>::1</code> একটি local IP, তাই দেশ/শহর পাওয়া যায় না। Production domain-এ real visitor এলে public IP থেকে location আসবে।</p>
+</section>
+
+<section class="card"><h2>3. Database migration</h2>
+<p>একটি migration তৈরি করুন:</p>
+<pre><code>php artisan make:migration create_visitor_logs_table</code></pre>
+<p class="path">adminpanel/database/migrations/YYYY_MM_DD_create_visitor_logs_table.php</p>
+<pre><code>&lt;?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('visitor_logs', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('visitor_id', 64)->index();
+            $table->string('ip_address', 45)->nullable()->index();
+            $table->string('path', 500);
+            $table->string('page_title', 160)->nullable();
+            $table->string('country', 80)->nullable();
+            $table->string('city', 100)->nullable();
+            $table->string('device', 20)->nullable();
+            $table->string('referrer', 500)->nullable();
+            $table->timestamps();
+
+            $table->index(['created_at', 'visitor_id']);
+            $table->index(['created_at', 'user_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('visitor_logs');
+    }
+};</code></pre>
+<p>তারপর চালান:</p><pre><code>php artisan migrate</code></pre>
+</section>
+
+<section class="card"><h2>4. Model ও User relation</h2>
+<p class="path">app/Models/VisitorLog.php</p>
+<pre><code>&lt;?php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class VisitorLog extends Model
+{
+    protected $fillable = [
+        'user_id', 'visitor_id', 'ip_address', 'path', 'page_title',
+        'country', 'city', 'device', 'referrer',
+    ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+}</code></pre>
+<p>Customer login না থাকলে <code>user_id</code> null থাকবে; তাই guest visitor-ও ঠিকভাবে log হবে।</p>
+</section>
+
+<section class="card"><h2>5. Public API: visit save ও GeoIP lookup</h2>
+<p class="path">app/Http/Controllers/Api/VisitorController.php</p>
+<pre><code>&lt;?php
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\VisitorLog;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+
+class VisitorController extends Controller
+{
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'visitor_id' => ['required', 'string', 'max:64'],
+            'path' => ['required', 'string', 'max:500'],
+            'page_title' => ['nullable', 'string', 'max:160'],
+            'referrer' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $ipAddress = $request->ip();
+        $location = $this->location($request, $ipAddress);
+        $user = $request->user('sanctum'); // null হলে Guest visitor
+
+        VisitorLog::create([
+            'user_id' => $user?->id,
+            'visitor_id' => $data['visitor_id'],
+            'ip_address' => $ipAddress,
+            'path' => '/'.ltrim($data['path'], '/'),
+            'page_title' => $data['page_title'] ?? null,
+            'country' => $location['country'],
+            'city' => $location['city'],
+            'device' => $this->device((string) $request->userAgent()),
+            'referrer' => $data['referrer'] ?? null,
+        ]);
+
+        return response()->json(['status' => true]);
+    }
+
+    private function location(Request $request, string $ip): array
+    {
+        $cloudflareCountry = trim((string) $request->header('CF-IPCountry'));
+        $cloudflareCity = trim((string) $request->header('CF-IPCity'));
+
+        if (in_array($ip, ['127.0.0.1', '::1'], true)) {
+            return ['country' => 'Local development', 'city' => null];
+        }
+        if ($cloudflareCountry !== '' && $cloudflareCountry !== 'XX') {
+            return ['country' => $cloudflareCountry, 'city' => $cloudflareCity ?: null];
+        }
+
+        $cacheKey = 'visitor-location-'.sha1($ip);
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached) && !empty($cached['country'])) return $cached;
+
+        $location = $this->lookupIpLocation($ip);
+        if ($location['country']) Cache::put($cacheKey, $location, now()->addDays(7));
+        return $location;
+    }
+
+    private function lookupIpLocation(string $ip): array
+    {
+        try {
+            $response = Http::timeout(3)->get("https://ipwho.is/{$ip}");
+            if ($response->successful() && $response->json('success') !== false) {
+                return ['country' => $response->json('country'), 'city' => $response->json('city')];
+            }
+        } catch (\Throwable) {}
+
+        try {
+            $response = Http::timeout(3)->get("https://ipapi.co/{$ip}/json/");
+            if ($response->successful()) {
+                return ['country' => $response->json('country_name'), 'city' => $response->json('city')];
+            }
+        } catch (\Throwable) {}
+
+        return ['country' => null, 'city' => null];
+    }
+
+    private function device(string $agent): string
+    {
+        if (preg_match('/mobile|android|iphone|ipod/i', $agent)) return 'Mobile';
+        if (preg_match('/ipad|tablet/i', $agent)) return 'Tablet';
+        return 'Desktop';
+    }
+}</code></pre>
+<p><b>কেন cache:</b> একই IP-র জন্য প্রতিবার external GeoIP API call না করে 7 দিন location reuse করে। Lookup failure cache করা হয় না, তাই service temporary down হলে পরের visit-এ আবার চেষ্টা হয়।</p>
+</section>
+
+<section class="card"><h2>6. API route এবং CSRF</h2>
+<p class="path">routes/api.php</p>
+<pre><code>use App\Http\Controllers\Api\VisitorController;
+
+Route::post('/visitors', [VisitorController::class, 'store'])
+    ->middleware('throttle:120,1');</code></pre>
+<p>Visitor request page-load-এর background request; এটি কোনো account বা order পরিবর্তন করে না। CSRF token না নিয়ে fast রাখার জন্য API route-টি CSRF exception করুন:</p>
+<p class="path">bootstrap/app.php</p>
+<pre><code>$middleware->validateCsrfTokens(except: [
+    'api/contact',
+    'api/visitors',
+]);</code></pre>
+<p class="warn">Rate limit অবশ্যই রাখবেন। এখানে প্রতি minute-এ IP অনুযায়ী 120 request limit দেওয়া আছে।</p>
+</section>
+
+<section class="card"><h2>7. Nuxt frontend plugin</h2>
+<p class="path">frontend/app/plugins/visitor-tracking.client.ts</p>
+<pre><code>export default defineNuxtPlugin((nuxtApp) => {
+  const config = useRuntimeConfig()
+  const visitorId = useCookie&lt;string | null&gt;('store_visitor_id', {
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: 'lax',
+  })
+
+  if (!visitorId.value) visitorId.value = crypto.randomUUID()
+
+  const logVisit = (to: { fullPath: string }) => {
+    $fetch('/visitors', {
+      baseURL: config.public.apiBase,
+      method: 'POST',
+      credentials: 'include',
+      body: {
+        visitor_id: visitorId.value,
+        path: to.fullPath,
+        page_title: document.title,
+        referrer: document.referrer || null,
+      },
+    }).catch(() => {})
+  }
+
+  nuxtApp.hook('page:finish', () => logVisit(useRoute()))
+})</code></pre>
+<p>এটি <code>.client.ts</code>, তাই শুধু browser-এ চলে; Nuxt server-side render বা build-এ visitor log তৈরি করে না। Request background-এ যায়, তাই page navigation slow হয় না।</p>
+<p class="path">nuxt.config.ts</p>
+<pre><code>runtimeConfig: {
+  public: {
+    apiBase: 'https://admin.example.com/api',
+  }
+}</code></pre>
+<p>API ও Nuxt domain আলাদা হলে Laravel <code>config/cors.php</code>-এ storefront domain <code>allowed_origins</code>-এ দিন এবং <code>supports_credentials</code> true রাখুন। Sanctum login আগে কাজ করলে সাধারণত এই config আগেই ঠিক থাকে।</p>
+</section>
+
+<section class="card"><h2>8. Admin report controller</h2>
+<p class="path">app/Http/Controllers/VisitorController.php</p>
+<pre><code>&lt;?php
+namespace App\Http\Controllers;
+
+use App\Models\VisitorLog;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class VisitorController extends Controller
+{
+    public function index(Request $request)
+    {
+        $filters = $request->validate([
+            'period' => ['nullable', 'in:today,week,month'],
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'in:15,30,50'],
+        ]);
+        $period = $filters['period'] ?? 'today';
+        $search = trim((string) ($filters['search'] ?? ''));
+        $perPage = (int) ($filters['per_page'] ?? 15);
+        $from = match ($period) {
+            'week' => now()->subDays(6)->startOfDay(),
+            'month' => now()->startOfMonth(),
+            default => now()->startOfDay(),
+        };
+
+        $logs = VisitorLog::with('user:id,name,email')
+            ->where('created_at', '>=', $from)
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('country', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%")
+                        ->orWhere('ip_address', 'like', "%{$search}%")
+                        ->orWhere('path', 'like', "%{$search}%")
+                        ->orWhereHas('user', fn ($user) => $user
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%"));
+                });
+            })->latest()->paginate($perPage)->withQueryString();
+
+        $base = VisitorLog::where('created_at', '>=', $from);
+        $totalVisits = (clone $base)->count();
+        $uniqueVisitors = (clone $base)->distinct('visitor_id')->count('visitor_id');
+        $loggedInVisitors = (clone $base)->whereNotNull('user_id')->distinct('user_id')->count('user_id');
+        $topPages = (clone $base)->select('path', DB::raw('COUNT(*) as visits'))
+            ->groupBy('path')->orderByDesc('visits')->limit(6)->get();
+
+        return view('admin.visitors.index', compact('period','search','perPage','logs','totalVisits','uniqueVisitors','loggedInVisitors','topPages'));
+    }
+
+    public function destroy()
+    {
+        VisitorLog::query()->delete();
+        return response()->json([
+            'message' => 'All visitor data has been deleted.',
+            'redirect_url' => route('visitors.index'),
+        ]);
+    }
+}</code></pre>
+</section>
+
+<section class="card"><h2>9. Admin web routes, permission ও sidebar</h2>
+<p class="path">routes/web.php</p>
+<pre><code>use App\Http\Controllers\VisitorController;
+
+Route::get('visitors', [VisitorController::class, 'index'])->name('visitors.index');
+Route::delete('visitors', [VisitorController::class, 'destroy'])->name('visitors.destroy');</code></pre>
+<p>নিজের permission middleware-এ add করুন:</p>
+<pre><code>'visitors.index' => ['visitor', 'view'],
+'visitors.destroy' => ['visitor', 'delete'],</code></pre>
+<p>Permission module list-এ <code>visitor</code> যোগ করুন। Sidebar-এ report link কেবল <code>visitor/view</code> access থাকলেই দেখান। Delete button কেবল <code>visitor/delete</code> access থাকলেই দেখান।</p>
+</section>
+
+<section class="card"><h2>10. Admin Blade page-এ কী থাকবে</h2>
+<p>নিজের existing admin layout wrapper ব্যবহার করুন। এই project-এ wrapper:</p>
+<pre><code>&lt;div class="app-content main-content"&gt;
+  &lt;div class="side-app"&gt;
+    &lt;div class="container-fluid main-container"&gt;
+      ... page content ...
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>Page-এ এই অংশগুলো রাখুন:</p>
+<ol><li><b>Period buttons:</b> Today, 7 days, This month</li><li><b>Stats cards:</b> page visits, unique visitors, signed-in customers</li><li><b>Search form:</b> <code>search</code> input এবং hidden <code>period</code></li><li><b>Table columns:</b> Time, Visitor, IP address, Page, Country/City, Device</li><li><b>Pagination:</b> <code>{{ '$logs->links()' }}</code></li><li><b>Rows per page:</b> 15 / 30 / 50 select</li><li><b>Delete all form:</b> CSRF + DELETE method + JavaScript confirm</li></ol>
+<pre><code>&lt;form method="GET" action="{{ route('visitors.index') }}"&gt;
+  &lt;input type="hidden" name="period" value="{{ $period }}"&gt;
+  &lt;input name="search" value="{{ $search }}" placeholder="Search country, name, IP..."&gt;
+  &lt;button&gt;Search&lt;/button&gt;
+&lt;/form&gt;
+
+@if(Auth::guard('admin')->user()?->hasModuleAccess('visitor', 'delete'))
+  &lt;form method="POST" action="{{ route('visitors.destroy') }}"
+    onsubmit="return confirm('Delete all visitor data? This cannot be undone.')"&gt;
+    @csrf @method('DELETE')
+    &lt;button&gt;Delete all data&lt;/button&gt;
+  &lt;/form&gt;
+@endif</code></pre>
+</section>
+
+<section class="card"><h2>11. Deploy ও verify checklist</h2>
+<ol>
+  <li>সব file Git-এ add/commit করুন।</li>
+  <li>Production server-এ migration চালান: <code>php artisan migrate --force</code></li>
+  <li>Cache clear করুন: <code>php artisan optimize:clear</code></li>
+  <li>Nuxt build/generate করে public build deploy করুন।</li>
+  <li>Storefront-এ একটি page খুলুন, তারপর Admin → Visitors refresh করুন।</li>
+  <li>Customer name test করতে storefront-এ customer account দিয়ে login করে একটি page খুলুন।</li>
+  <li><code>Bangladesh</code>, <code>Dhaka</code>, customer name বা IP লিখে search test করুন।</li>
+  <li>30-এর বেশি log হলে pagination এবং 15/30/50 selector test করুন।</li>
+</ol>
+<pre><code>php artisan migrate --force
+php artisan optimize:clear
+php artisan view:cache
+php artisan route:list --name=visitors</code></pre>
+</section>
+
+<section class="card"><h2>12. গুরুত্বপূর্ণ বাস্তব সীমা</h2>
+<ul>
+  <li>IP-based city আনুমানিক; exact বাড়ির address নয়।</li>
+  <li>Guest-এর নাম browser থেকে পাওয়া যায় না। Name/email কেবল logged-in customer-এর জন্য।</li>
+  <li>VPN/proxy ব্যবহার করলে country/city VPN/proxy-এর location হতে পারে।</li>
+  <li>GeoIP provider temporary unavailable হলে IP save হবে, location খালি থাকবে; পরের visit-এ আবার চেষ্টা হবে।</li>
+  <li>Database ছোট রাখতে Admin-এর Delete all button ব্যবহার করুন। পরে চাইলে 90 দিনের পুরোনো log auto-delete করার scheduled command যোগ করা যায়।</li>
+  <li>Privacy policy-তে website analytics ও IP-based approximate location ব্যবহারের কথা উল্লেখ করা উচিত।</li>
+</ul>
+</section>
+
+<section class="card"><h2>13. এই project-এ file list</h2>
+<table><tr><th>File</th><th>কাজ</th></tr>
+<tr><td>adminpanel/database/migrations/2026_09_29_000006_create_visitor_logs_table.php</td><td>visitor_logs table তৈরি</td></tr>
+<tr><td>adminpanel/database/migrations/2026_09_29_000007_add_ip_address_to_visitor_logs_table.php</td><td>existing table-এ IP column যোগ</td></tr>
+<tr><td>adminpanel/app/Models/VisitorLog.php</td><td>Database model ও User relation</td></tr>
+<tr><td>adminpanel/app/Http/Controllers/Api/VisitorController.php</td><td>Visit save, IP, country/city, device</td></tr>
+<tr><td>adminpanel/app/Http/Controllers/VisitorController.php</td><td>Admin report, search, pagination, delete all</td></tr>
+<tr><td>adminpanel/routes/api.php</td><td>Public POST /api/visitors route</td></tr>
+<tr><td>adminpanel/routes/web.php</td><td>Admin report এবং delete routes</td></tr>
+<tr><td>adminpanel/bootstrap/app.php</td><td>Visitor API CSRF exception</td></tr>
+<tr><td>adminpanel/app/Http/Middleware/AdminPermissionMiddleware.php</td><td>visitor view/delete permission</td></tr>
+<tr><td>adminpanel/resources/views/admin/visitors/index.blade.php</td><td>Admin interface</td></tr>
+<tr><td>adminpanel/resources/views/admin/layout/sidebar.blade.php</td><td>Visitors sidebar menu</td></tr>
+<tr><td>frontend/app/plugins/visitor-tracking.client.ts</td><td>Nuxt page-visit tracker</td></tr>
+</table>
+</section>
+</main></body></html>
