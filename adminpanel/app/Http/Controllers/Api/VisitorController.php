@@ -57,22 +57,53 @@ class VisitorController extends Controller
             return ['country' => $country, 'city' => $city];
         }
 
-        return Cache::remember('visitor-location-'.sha1($ipAddress), now()->addDays(7), function () use ($ipAddress) {
-            try {
-                $response = Http::timeout(2)->get("https://ipapi.co/{$ipAddress}/json/");
+        $cacheKey = 'visitor-location-'.sha1($ipAddress);
+        $savedLocation = Cache::get($cacheKey);
 
-                if ($response->successful()) {
-                    return [
-                        'country' => $response->json('country_name'),
-                        'city' => $response->json('city'),
-                    ];
-                }
-            } catch (\Throwable) {
-                // Visitor logging must never slow down or break the storefront.
+        if (is_array($savedLocation) && ! empty($savedLocation['country'])) {
+            return $savedLocation;
+        }
+
+        $location = $this->lookupIpLocation($ipAddress);
+
+        // Only save a successful lookup. If a provider is temporarily down,
+        // the next visitor request can try again.
+        if ($location['country']) {
+            Cache::put($cacheKey, $location, now()->addDays(7));
+        }
+
+        return $location;
+    }
+
+    private function lookupIpLocation(string $ipAddress): array
+    {
+        try {
+            $response = Http::timeout(3)->get("https://ipwho.is/{$ipAddress}");
+
+            if ($response->successful() && $response->json('success') !== false) {
+                return [
+                    'country' => $response->json('country'),
+                    'city' => $response->json('city'),
+                ];
             }
+        } catch (\Throwable) {
+            // Try the second provider below.
+        }
 
-            return ['country' => null, 'city' => null];
-        });
+        try {
+            $response = Http::timeout(3)->get("https://ipapi.co/{$ipAddress}/json/");
+
+            if ($response->successful()) {
+                return [
+                    'country' => $response->json('country_name'),
+                    'city' => $response->json('city'),
+                ];
+            }
+        } catch (\Throwable) {
+            // Visitor logging must never slow down or break the storefront.
+        }
+
+        return ['country' => null, 'city' => null];
     }
 
     private function header(Request $request, string $name): ?string

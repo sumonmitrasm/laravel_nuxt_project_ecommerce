@@ -35,4 +35,14 @@ class VisitorController extends Controller
             'period', 'logs', 'totalVisits', 'uniqueVisitors', 'loggedInVisitors', 'topPages'
         ));
     }
+
+    public function destroy(): \Illuminate\Http\JsonResponse
+    {
+        VisitorLog::query()->delete();
+
+        return response()->json([
+            'message' => 'All visitor data has been deleted.',
+            'redirect_url' => route('visitors.index'),
+        ]);
+    }
 }
