@@ -105,7 +105,6 @@ onMounted(() => {
                 <div class="shop-main-nav d-none d-lg-flex">
                     <NuxtLink to="/">Home</NuxtLink><NuxtLink to="/shop">Shop</NuxtLink
                     ><span class="shop-nav-dropdown"><button type="button" class="nav-placeholder">Product <i class="bi bi-chevron-down"></i></button><span><NuxtLink to="/shop">All products</NuxtLink><NuxtLink :to="{ path: '/shop', query: { sort: 'newest' } }">New arrivals</NuxtLink><NuxtLink :to="{ path: '/shop', query: { sort: 'best_selling' } }">Best sellers</NuxtLink></span></span
-                    ><button type="button" class="nav-placeholder">Pages</button
                     ><span class="shop-nav-dropdown"
                         ><NuxtLink to="/blog">Blog <i class="bi bi-chevron-down"></i></NuxtLink
                         ><span
