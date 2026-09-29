@@ -22,6 +22,7 @@ use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\VisitorController;
 
 // Route::get('/dashboard', function () {
 //     return view('dashboard');
@@ -37,6 +38,7 @@ Route::namespace('App\Http\Controllers\Admin')->prefix('/admin')->group(function
     Route::match(['get', 'post'], 'login', [AdminController::class, 'login'])->name('admin.login');
     Route::middleware(['admin.auth', 'admin.permission'])->group(function () {
         Route::get('dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('visitors', [VisitorController::class, 'index'])->name('visitors.index');
         Route::get('logout', [AdminController::class, 'logout'])->name('logout-admin');
         //>>>>>>>>>>>>>>>>>>>>>>>>User activity<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         Route::get('users', [AdminController::class, 'users'])->name('admin-user');

@@ -33,6 +33,7 @@
                             $canManageHomeSliders = $admin?->hasModuleAccess('home_slider', 'view');
                             $canManageOrders = $admin?->hasModuleAccess('order', 'view');
                             $canManageBlogs = $admin?->hasModuleAccess('blog', 'view');
+                            $canManageVisitors = $admin?->hasModuleAccess('visitor', 'view');
                         @endphp
                         <img src="{{ $admin && $admin->image
                             ? asset('admin/adminimage/' . $admin->image)
@@ -190,7 +191,23 @@
                     </ul>
                 </li>
                 @endif
-                <li class="slide">
+                @if ($canManageVisitors)<li class="slide {{ request()->routeIs('visitors.*') ? 'is-expanded' : '' }}">
+                    <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" class="side-menu__icon">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                        </svg>
+                        <span class="side-menu__label">Visitors</span><i class="angle fe fe-chevron-right"></i></a>
+                    <ul class="slide-menu">
+                        <li class="side-menu-label1">
+                            <a href="javascript:void(0)">Visitors</a>
+                        </li>
+                        <li><a href="{{ route('visitors.index') }}" class="slide-item {{ request()->routeIs('visitors.*') ? 'active' : '' }}"> Visitor report</a></li>
+
+                    </ul>
+                </li>@endif
+                {{-- <li class="slide">
                     <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -205,58 +222,7 @@
                         <li><a href="icons.html" class="slide-item"> Font Awesome</a></li>
 
                     </ul>
-                </li>
-
-                <li class="slide">
-                    <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" class="side-menu__icon">
-                            <line x1="4" y1="21" x2="4" y2="14"></line>
-                            <line x1="4" y1="10" x2="4" y2="3"></line>
-                            <line x1="12" y1="21" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12" y2="3"></line>
-                            <line x1="20" y1="21" x2="20" y2="16"></line>
-                            <line x1="20" y1="12" x2="20" y2="3"></line>
-                            <line x1="1" y1="14" x2="7" y2="14"></line>
-                            <line x1="9" y1="8" x2="15" y2="8"></line>
-                            <line x1="17" y1="16" x2="23" y2="16"></line>
-                        </svg>
-                        <span class="side-menu__label">Submenus</span><i class="angle fe fe-chevron-right"></i></a>
-                    <ul class="slide-menu">
-                        <li class="side-menu-label1"><a href="javascript:void(0)"></a>Submenus</li>
-                        <li><a href="javascript:void(0)" class="slide-item">Level-1</a></li>
-                        <li class="sub-slide">
-                            <a class="sub-side-menu__item" data-bs-toggle="sub-slide" href="javascript:void(0)"><span
-                                    class="sub-side-menu__label">Level-2</span><i
-                                    class="sub-angle fe fe-chevron-right"></i></a>
-                            <ul class="sub-slide-menu">
-                                <li><a class="sub-slide-item" href="javascript:void(0)">Level-2.1</a></li>
-
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="slide">
-                    <a class="side-menu__item" data-bs-toggle="slide" href="javascript:void(0)">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" class="side-menu__icon">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="12"></line>
-                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                        </svg>
-                        <span class="side-menu__label">Error Pages</span><i class="angle fe fe-chevron-right"></i></a>
-                    <ul class="slide-menu">
-                        <li class="side-menu-label1">
-                            <a href="javascript:void(0)">Error Pages</a>
-                        </li>
-                        <li><a href="400.html" class="slide-item"> 400</a></li>
-
-                    </ul>
-                </li>
-
+                </li> --}}
             </ul>
             <div class="app-sidebar-help">
                 <div class="dropdown text-center">

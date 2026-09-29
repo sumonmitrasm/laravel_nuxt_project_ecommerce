@@ -39,6 +39,7 @@ class AdminPermissionMiddleware
             'admin-user.update', 'admin-user.status' => ['admin', 'edit'],
             'admin-user.delete' => ['admin', 'delete'],
             'admin-user.permission', 'admin-user.permission.update' => ['admin', 'full'],
+            'visitors.index' => ['visitor', 'view'],
 
             'section', 'admin-section.show' => ['section', 'view'],
             'admin-section.store' => ['section', 'add'],

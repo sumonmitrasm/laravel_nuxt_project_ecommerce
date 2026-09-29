@@ -17,7 +17,7 @@
                             <img src="{{ asset('admin/assets/images/brand/favicon.png') }}" class="header-brand-img mobile-logo" alt="Dashtic logo">
                             <img src="{{ asset('admin/assets/images/brand/favicon1.png') }}" class="header-brand-img darkmobile-logo" alt="Dashtic logo">
                         </a>
-                        <div class="dropdown  header-option">
+                        {{-- <div class="dropdown  header-option">
                             <a class="nav-link icon p-0" data-bs-toggle="dropdown">
                                 <svg class="header-icon" x="1008" y="1248" viewBox="0 0 24 24" height="100%" width="100%" preserveAspectRatio="xMidYMid meet" focusable="false">
                                         <path opacity=".3" d="M19.28,8.6 L18.58,7.39 L17.31,7.9 L16.25,8.33 L15.34,7.63 C14.95,7.33 14.54,7.09 14.11,6.92 L13.05,6.49 L12.89,5.36 L12.7,4 L11.3,4 L11.11,5.35 L10.95,6.48 L9.89,6.92 C9.48,7.09 9.07,7.33 8.64,7.65 L7.74,8.33 L6.69,7.91 L5.42,7.39 L4.72,8.6 L5.8,9.44 L6.69,10.14 L6.55,11.27 C6.52,11.57 6.5,11.8 6.5,12 C6.5,12.2 6.52,12.43 6.55,12.73 L6.69,13.86 L5.8,14.56 L4.72,15.4 L5.42,16.61 L6.69,16.1 L7.75,15.67 L8.66,16.37 C9.05,16.67 9.46,16.91 9.89,17.08 L10.95,17.51 L11.11,18.64 L11.3,20 L12.69,20 L12.88,18.65 L13.04,17.52 L14.1,17.09 C14.51,16.92 14.92,16.68 15.35,16.36 L16.25,15.68 L17.29,16.1 L18.56,16.61 L19.26,15.4 L18.18,14.56 L17.29,13.86 L17.43,12.73 C17.47,12.42 17.48,12.21 17.48,12 C17.48,11.79 17.46,11.57 17.43,11.27 L17.29,10.14 L18.18,9.44 L19.28,8.6 Z M12,16 C9.79,16 8,14.21 8,12 C8,9.79 9.79,8 12,8 C14.21,8 16,9.79 16,12 C16,14.21 14.21,16 12,16 Z"></path>
@@ -42,7 +42,7 @@
                                     <a href="javascript:void(0)" class="">View Projects</a>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="d-flex order-lg-2 ms-lg-auto">
                             <button class="navbar-toggler navresponsive-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent-4" aria-controls="navbarSupportedContent-4" aria-expanded="false" aria-label="Toggle navigation">
 								<span class="navbar-toggler-icon fe fe-more-vertical "></span>
@@ -55,7 +55,7 @@
                                                     <path d="M0 0h24v24H0V0z" fill="none"/><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
                                             </svg>
                                         </a>
-                                        <div class="mt-2 me-md-2">
+                                        {{-- <div class="mt-2 me-md-2">
                                             <form class="form-inline">
                                                 <div class="search-element">
                                                     <input type="search" class="form-control header-search" placeholder="Search…" aria-label="Search" tabindex="1">
@@ -66,7 +66,7 @@
                                                     </button>
                                                 </div>
                                             </form>
-                                        </div>
+                                        </div> --}}
                                         <!-- SEARCH -->
                                         <div class="dropdown header-theme">
                                             <a class="nav-link icon layout-setting">
