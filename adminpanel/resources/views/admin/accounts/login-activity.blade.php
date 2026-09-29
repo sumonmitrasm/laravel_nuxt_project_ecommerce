@@ -37,7 +37,7 @@
                             <tbody>
                                 @forelse($activities as $activity)
                                     <tr>
-                                        <td class="ps-4">{{ $activity->logged_in_at->format('d M Y, h:i A') }}</td>
+                                        <td class="ps-4">{{ $activity->logged_in_at->copy()->timezone('Asia/Dhaka')->format('d M Y, h:i A') }}</td>
                                         <td><b>{{ $activity->admin?->name ?? 'Deleted admin' }}</b><small
                                                 class="d-block text-muted">{{ $activity->admin?->email }}</small></td>
                                         <td>{{ $activity->ip_address ?: 'Not available' }}</td>

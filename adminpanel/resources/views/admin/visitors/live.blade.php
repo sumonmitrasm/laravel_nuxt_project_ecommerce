@@ -29,7 +29,7 @@
                             <tbody>
                                 @forelse($visitors as $visitor)
                                     <tr>
-                                        <td class="ps-4 text-nowrap">{{ $visitor->last_seen_at->format('h:i A') }}</td>
+                                        <td class="ps-4 text-nowrap">{{ $visitor->last_seen_at->copy()->timezone('Asia/Dhaka')->format('h:i A') }}</td>
                                         <td>
                                             @if ($visitor->user)
                                                 <b>{{ $visitor->user->name }}</b><small
