@@ -30,7 +30,14 @@
 
     <div class="row row-sm">
         <div class="col-xl-8"><div class="card">
-            <div class="card-header"><h3 class="card-title">Recent visits</h3></div>
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 class="card-title mb-0">Recent visits</h3>
+                <form method="GET" action="{{ route('visitors.index') }}" data-ajax-filter class="d-flex gap-2">
+                    <input type="hidden" name="period" value="{{ $period }}">
+                    <input class="form-control form-control-sm visitor-search" name="search" value="{{ $search }}" placeholder="Search country, name, IP...">
+                    <button class="btn btn-sm btn-primary">Search</button>
+                </form>
+            </div>
             <div class="table-responsive"><table class="table table-hover align-middle mb-0">
                 <thead><tr><th class="ps-4">Time</th><th>Visitor</th><th>IP address</th><th>Page</th><th>Country / city</th><th class="pe-4">Device</th></tr></thead>
                 <tbody>@forelse($logs as $log)<tr>
@@ -42,7 +49,14 @@
                     <td class="pe-4">{{ $log->device ?: 'Unknown' }}</td>
                 </tr>@empty<tr><td colspan="6" class="text-center text-muted py-5">No visits recorded for this period yet.</td></tr>@endforelse</tbody>
             </table></div>
-            @if($logs->hasPages())<div class="card-footer">{{ $logs->links() }}</div>@endif
+            <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <form method="GET" action="{{ route('visitors.index') }}" data-ajax-filter class="d-flex align-items-center gap-2">
+                    <input type="hidden" name="period" value="{{ $period }}"><input type="hidden" name="search" value="{{ $search }}">
+                    <span class="text-muted text-nowrap">Show</span>
+                    <select name="per_page" class="form-select form-select-sm w-auto" data-ajax-filter-auto>@foreach([15,30,50] as $size)<option value="{{ $size }}" @selected($perPage === $size)>{{ $size }}</option>@endforeach</select>
+                </form>
+                @if($logs->hasPages()){{ $logs->links() }}@endif
+            </div>
         </div></div>
         <div class="col-xl-4"><div class="card">
             <div class="card-header"><h3 class="card-title">Most visited pages</h3></div>
@@ -51,6 +65,6 @@
     </div>
 </div></div></div>
 <style>
-.visitor-stat{min-height:112px}.visitor-page-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid rgba(130,140,160,.18)}.visitor-page-row:last-child{border-bottom:0}
+.visitor-stat{min-height:112px}.visitor-search{min-width:220px}.visitor-page-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid rgba(130,140,160,.18)}.visitor-page-row:last-child{border-bottom:0}@media(max-width:575px){.visitor-search{min-width:0}}
 </style>
 @endsection

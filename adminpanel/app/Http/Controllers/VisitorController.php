@@ -10,7 +10,14 @@ class VisitorController extends Controller
 {
     public function index(Request $request)
     {
-        $period = $request->query('period', 'today');
+        $filters = $request->validate([
+            'period' => ['nullable', 'in:today,week,month'],
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'in:15,30,50'],
+        ]);
+        $period = $filters['period'] ?? 'today';
+        $search = trim((string) ($filters['search'] ?? ''));
+        $perPage = (int) ($filters['per_page'] ?? 15);
         $from = match ($period) {
             'week' => now()->subDays(6)->startOfDay(),
             'month' => now()->startOfMonth(),
@@ -20,8 +27,19 @@ class VisitorController extends Controller
         $logs = VisitorLog::query()
             ->with('user:id,name,email')
             ->where('created_at', '>=', $from)
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('country', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%")
+                        ->orWhere('ip_address', 'like', "%{$search}%")
+                        ->orWhere('path', 'like', "%{$search}%")
+                        ->orWhereHas('user', fn ($userQuery) => $userQuery
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%"));
+                });
+            })
             ->latest()
-            ->paginate(30)
+            ->paginate($perPage)
             ->withQueryString();
 
         $base = VisitorLog::query()->where('created_at', '>=', $from);
@@ -32,7 +50,7 @@ class VisitorController extends Controller
             ->groupBy('path')->orderByDesc('visits')->limit(6)->get();
 
         return view('admin.visitors.index', compact(
-            'period', 'logs', 'totalVisits', 'uniqueVisitors', 'loggedInVisitors', 'topPages'
+            'period', 'search', 'perPage', 'logs', 'totalVisits', 'uniqueVisitors', 'loggedInVisitors', 'topPages'
         ));
     }
 
