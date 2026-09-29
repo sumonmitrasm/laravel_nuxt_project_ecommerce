@@ -2,6 +2,10 @@
 const config = useRuntimeConfig()
 const { data } = useCatalogMenu()
 const sections = computed(() => data.value?.categories ?? [])
+const site = computed(() => data.value?.site ?? {})
+const siteName = computed(() => site.value.name || 'NovaCart')
+const siteDescription = computed(() => site.value.description || `Shop with ${siteName.value}.`)
+const copyrightYear = computed(() => site.value.copyright_year || new Date().getFullYear())
 const mobileSectionId = section => `mobile-section-${section.id}`
 const mobileSearchText = ref('')
 const mobileSuggestions = ref([])
@@ -75,28 +79,36 @@ onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
 </script>
 
 <template>
-    <footer class="footer py-5">
+    <footer class="footer site-footer">
         <div class="container">
-            <div class="row g-4">
+            <div class="row g-4 align-items-start">
                 <div class="col-lg-5">
-                    <h3 class="text-white">NOVA<span class="brand-dot">CART</span></h3>
-                    <p class="col-lg-8">An original Bootstrap 5 commerce UI foundation, ready for your backend.</p>
+                    <NuxtLink class="footer-brand" to="/" :aria-label="`${siteName} home`">
+                        <img v-if="site.logo" :src="site.logo" :alt="siteName">
+                        <strong v-else>{{ siteName }}</strong>
+                    </NuxtLink>
+                    <p class="footer-description">{{ siteDescription }}</p>
                 </div>
                 <div class="col-6 col-lg-2">
-                    <h6 class="text-white">Shop</h6>
+                    <h6>Shop</h6>
                     <NuxtLink class="d-block my-2" to="/shop">All products</NuxtLink>
                     <NuxtLink class="d-block my-2" to="/wishlist">Wishlist</NuxtLink>
                 </div>
                 <div class="col-6 col-lg-2">
-                    <h6 class="text-white">Account</h6>
+                    <h6>Account</h6>
                     <NuxtLink class="d-block my-2" to="/login">Login</NuxtLink>
                     <NuxtLink class="d-block my-2" to="/register">Register</NuxtLink>
                 </div>
                 <div class="col-lg-3">
-                    <h6 class="text-white">Newsletter</h6>
-                    <div class="input-group"><input class="form-control" placeholder="Email address"><button
-                            class="btn btn-brand">Join</button></div>
+                    <h6>Contact</h6>
+                    <a v-if="site.phone" class="footer-contact" :href="`tel:${site.phone}`"><i class="bi bi-telephone"></i>{{ site.phone }}</a>
+                    <a v-if="site.email" class="footer-contact" :href="`mailto:${site.email}`"><i class="bi bi-envelope"></i>{{ site.email }}</a>
+                    <p v-if="site.address" class="footer-contact"><i class="bi bi-geo-alt"></i>{{ site.address }}</p>
                 </div>
+            </div>
+            <div class="footer-bottom">
+                <span>© {{ copyrightYear }} {{ siteName }}. All rights reserved.</span>
+                <NuxtLink to="/contact">Contact us</NuxtLink>
             </div>
         </div>
     </footer>
@@ -232,6 +244,121 @@ onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
 </template>
 
 <style scoped>
+.site-footer {
+    padding: 52px 0 22px;
+    border-top: 3px solid var(--brand);
+}
+
+.footer-brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: #fff;
+    font-size: 1.55rem;
+    text-decoration: none;
+}
+
+.footer-brand img {
+    display: block;
+    width: auto;
+    max-width: 210px;
+    height: 52px;
+    object-fit: contain;
+}
+
+.footer-description {
+    max-width: 410px;
+    margin: 15px 0 0;
+    color: #b9c5bf;
+    font-size: .9rem;
+    line-height: 1.7;
+}
+
+.site-footer h6 {
+    margin-bottom: 14px;
+    color: #fff;
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+.site-footer a {
+    font-size: .86rem;
+}
+
+.footer-contact {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    margin: 0 0 11px;
+    color: #c9d1cd;
+    font-size: .86rem;
+    line-height: 1.5;
+    text-decoration: none;
+    word-break: break-word;
+}
+
+.footer-contact i {
+    flex: 0 0 auto;
+    margin-top: 3px;
+    color: var(--brand);
+}
+
+.footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 36px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(201, 209, 205, .18);
+    color: #9eaaa4;
+    font-size: .78rem;
+}
+
+.footer-bottom a {
+    color: #fff;
+    font-weight: 600;
+}
+
+@media (max-width: 575.98px) {
+    .site-footer {
+        padding: 34px 0 18px;
+        text-align: center;
+    }
+
+    .footer-brand {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .footer-brand img {
+        max-width: 175px;
+        height: 44px;
+    }
+
+    .footer-description {
+        margin: 12px auto 0;
+        font-size: .82rem;
+    }
+
+    .site-footer h6 {
+        margin-top: 14px;
+    }
+
+    .footer-contact {
+        justify-content: center;
+        font-size: .8rem;
+    }
+
+    .footer-bottom {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        margin-top: 24px;
+        padding-top: 15px;
+        font-size: .72rem;
+    }
+}
+
 .mobile-nav-group>button span img {
     width: 20px;
     height: 20px;
