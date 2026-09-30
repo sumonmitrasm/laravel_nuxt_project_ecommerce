@@ -2,6 +2,10 @@
 useSeoMeta({ robots: 'noindex, nofollow' })
 const route = useRoute()
 const { login, isAuthenticated } = useAuth()
+const { data: catalogData } = useCatalogMenu()
+const site = computed(() => catalogData.value?.site ?? {})
+const siteName = computed(() => site.value.name || 'Store')
+const siteInitials = computed(() => siteName.value.split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase())
 const form = reactive({ email: '', password: '', remember: false })
 const loading = ref(false)
 const showPassword = ref(false)
@@ -42,8 +46,8 @@ onMounted(() => {
     <div class="account-shell">
       <aside class="account-visual">
         <div class="account-visual-content">
-          <NuxtLink to="/" class="account-mark">N<span>C</span></NuxtLink><small>Your shopping, simplified</small>
-          <h1>Welcome back to NovaCart.</h1>
+          <NuxtLink to="/" class="account-mark">{{ siteInitials }}</NuxtLink><small>Your shopping, simplified</small>
+          <h1>Welcome back to {{ siteName }}.</h1>
           <p>Sign in to track orders, save favourites and continue securely.</p>
           <div class="account-benefit-list"><span><i class="bi bi-box-seam"></i><b>Track every order</b><small>Updates
                 from checkout to delivery</small></span><span><i class="bi bi-heart"></i><b>Save
@@ -55,7 +59,7 @@ onMounted(() => {
       </aside>
       <section class="account-form-panel">
         <div class="account-form-wrap">
-          <NuxtLink class="account-mobile-logo" to="/">NOVA<span>CART</span></NuxtLink>
+          <NuxtLink class="account-mobile-logo" to="/"><img v-if="site.logo" :src="site.logo" :alt="siteName"><span v-else>{{ siteName }}</span></NuxtLink>
           <div class="account-title"><small>Welcome back</small>
             <h2>Sign in to your account</h2>
             <p>Only verified accounts can sign in.</p>

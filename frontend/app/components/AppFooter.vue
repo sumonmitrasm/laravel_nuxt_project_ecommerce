@@ -3,7 +3,7 @@ const config = useRuntimeConfig()
 const { data } = useCatalogMenu()
 const sections = computed(() => data.value?.categories ?? [])
 const site = computed(() => data.value?.site ?? {})
-const siteName = computed(() => site.value.name || 'NovaCart')
+const siteName = computed(() => site.value.name || 'Store')
 const siteDescription = computed(() => site.value.description || `Shop with ${siteName.value}.`)
 const copyrightYear = computed(() => site.value.copyright_year || new Date().getFullYear())
 const mobileSectionId = section => `mobile-section-${section.id}`
@@ -236,7 +236,7 @@ onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
     </div>
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="liveToast" class="toast">
-            <div class="toast-header"><strong class="me-auto">NovaCart</strong><button class="btn-close"
+            <div class="toast-header"><strong class="me-auto">{{ siteName }}</strong><button class="btn-close"
                     data-bs-dismiss="toast"></button></div>
             <div class="toast-body">Added</div>
         </div>

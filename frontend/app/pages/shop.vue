@@ -29,7 +29,7 @@ onMounted(() => {
     if (isAuthenticated.value) fetchWishlist().catch(() => null)
 })
 const { data: catalogData } = useCatalogMenu()
-const siteName = computed(() => catalogData.value?.site?.name || 'NovaCart')
+const siteName = computed(() => catalogData.value?.site?.name || 'Store')
 const searchTerm = computed(() => {
     const value = Array.isArray(route.query.q) ? route.query.q[0] : route.query.q
     return value?.toString().trim() ?? ''

@@ -14,7 +14,7 @@ const site = computed(() =>
   (catalogData.value as CatalogSiteResponse | null)?.site
 )
 
-const siteName = computed(() => site.value?.name || 'NovaCart')
+const siteName = computed(() => site.value?.name || 'Store')
 </script>
 
 <template>

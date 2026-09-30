@@ -2,6 +2,10 @@
 useSeoMeta({ robots: 'noindex, nofollow' })
 const route = useRoute()
 const { register, isAuthenticated } = useAuth()
+const { data: catalogData } = useCatalogMenu()
+const site = computed(() => catalogData.value?.site ?? {})
+const siteName = computed(() => site.value.name || 'Store')
+const siteInitials = computed(() => siteName.value.split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase())
 const form = reactive({ name: '', email: '', password: '', password_confirmation: '', terms: false })
 const loading = ref(false)
 const showPassword = ref(false)
@@ -31,12 +35,12 @@ onMounted(() => { if (isAuthenticated.value) navigateTo(redirect.value) })
 <template>
   <main class="account-main"><div class="account-shell register-shell">
     <aside class="account-visual register-visual"><div class="account-visual-content">
-      <NuxtLink to="/" class="account-mark">N<span>C</span></NuxtLink><small>Join NovaCart today</small>
+      <NuxtLink to="/" class="account-mark">{{ siteInitials }}</NuxtLink><small>Join {{ siteName }} today</small>
       <h1>Your next great find starts here.</h1><p>Create a secure account to shop, track orders and check out faster.</p>
       <div class="account-benefit-list"><span><i class="bi bi-envelope-check"></i><b>Verified membership</b><small>We verify every new email address</small></span><span><i class="bi bi-box-seam"></i><b>Order tracking</b><small>Follow purchases from one place</small></span><span><i class="bi bi-shield-check"></i><b>Secure checkout</b><small>Your account stays protected</small></span></div>
     </div><div class="account-visual-footer"><span><i class="bi bi-shield-check"></i> Secure &amp; private</span><span>Trusted shopping</span></div></aside>
     <section class="account-form-panel"><div class="account-form-wrap register-wrap">
-      <NuxtLink class="account-mobile-logo" to="/">NOVA<span>CART</span></NuxtLink>
+      <NuxtLink class="account-mobile-logo" to="/"><img v-if="site.logo" :src="site.logo" :alt="siteName"><span v-else>{{ siteName }}</span></NuxtLink>
       <div class="account-title"><small>Start shopping smarter</small><h2>Create your account</h2><p>We will send a verification link to your email.</p></div>
       <div v-if="message" class="form-alert"><i class="bi bi-exclamation-circle"></i>{{ message }}</div>
       <form class="account-form" novalidate @submit.prevent="submit">
