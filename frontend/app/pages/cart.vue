@@ -1,6 +1,8 @@
 <script setup lang="ts">
 useSeoMeta({ robots: 'noindex, nofollow' })
 const { cart, fetchCart, updateCartItem, removeCartItem, clearCart } = useCart()
+const { data: catalogData } = useCatalogMenu()
+const siteName = computed(() => catalogData.value?.site?.name || 'Store')
 const loading = ref(!cart.value)
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -8,7 +10,7 @@ const working = ref<number[]>([])
 const clearing = ref(false)
 const showClearConfirm = ref(false)
 
-useHead({ title: 'Shopping Cart | NOVACART' })
+useHead(() => ({ title: `Shopping Cart | ${siteName.value}` }))
 const busy = (id: number) => working.value.includes(id)
 const money = (value: number | string) => Number(value || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })
 const optionText = (item: { options: Array<{ name: string | null; value: string }> }) =>

@@ -30,16 +30,16 @@ export const usePageSeo = (seo: Ref<PageSeoData | null | undefined>) => {
   })
 
   useSeoMeta({
-    title: () => seo.value?.title || 'NovaCart',
+    title: () => seo.value?.title || 'Website',
     description: () => seo.value?.description || undefined,
     robots: () => seo.value?.robots || 'index, follow',
-    ogTitle: () => seo.value?.title || 'NovaCart',
+    ogTitle: () => seo.value?.title || 'Website',
     ogDescription: () => seo.value?.description || undefined,
     ogUrl: () => seo.value?.canonical || undefined,
     ogImage: () => seo.value?.image || undefined,
     ogType: 'website',
     twitterCard: 'summary_large_image',
-    twitterTitle: () => seo.value?.title || 'NovaCart',
+    twitterTitle: () => seo.value?.title || 'Website',
     twitterDescription: () => seo.value?.description || undefined,
     twitterImage: () => seo.value?.image || undefined,
   })

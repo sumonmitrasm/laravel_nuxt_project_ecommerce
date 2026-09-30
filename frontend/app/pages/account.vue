@@ -1,6 +1,8 @@
 ﻿<script setup lang="ts">
 useSeoMeta({ robots: 'noindex, nofollow' })
 const route = useRoute()
+const { data: catalogData } = useCatalogMenu()
+const siteName = computed(() => catalogData.value?.site?.name || 'Store')
 const activeSection = ref(route.query.section === 'orders' ? 'orders' : 'dashboard')
 const { user, logout, updateProfile } = useAuth()
 const { cartCount, fetchCart } = useCart()
@@ -63,10 +65,10 @@ const profileMessage = ref('')
 const profileError = ref('')
 const profileFieldErrors = ref<Record<string, string[]>>({})
 
-useHead({
-  title: 'My Account | NOVACART',
-  meta: [{ name: 'description', content: 'Manage your NOVACART orders, addresses and account details.' }]
-})
+useHead(() => ({
+  title: `My Account | ${siteName.value}`,
+  meta: [{ name: 'description', content: `Manage your ${siteName.value} orders, addresses and account details.` }]
+}))
 
 //auth user detailsshow
 const profileForm = reactive({

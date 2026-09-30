@@ -3,6 +3,10 @@ useSeoMeta({ title: 'Reset password', robots: 'noindex, nofollow' })
 
 const route = useRoute()
 const { resetPassword, isAuthenticated } = useAuth()
+const { data: catalogData } = useCatalogMenu()
+const site = computed(() => catalogData.value?.site ?? {})
+const siteName = computed(() => site.value.name || 'Store')
+const siteInitials = computed(() => siteName.value.split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase())
 const email = computed(() => typeof route.query.email === 'string' ? route.query.email : '')
 const token = computed(() => typeof route.query.token === 'string' ? route.query.token : '')
 const form = reactive({ password: '', password_confirmation: '' })
@@ -38,12 +42,12 @@ onMounted(() => { if (isAuthenticated.value) navigateTo('/account') })
 <template>
   <main class="account-main"><div class="account-shell">
     <aside class="account-visual"><div class="account-visual-content">
-      <NuxtLink to="/" class="account-mark">N<span>C</span></NuxtLink><small>Account security</small>
+      <NuxtLink to="/" class="account-mark">{{ siteInitials }}</NuxtLink><small>Account security</small>
       <h1>Create a new password.</h1><p>Choose a strong password that you do not use on other websites.</p>
       <div class="account-benefit-list"><span><i class="bi bi-shield-lock"></i><b>Your account stays protected</b><small>Use at least eight characters</small></span></div>
     </div><div class="account-visual-footer"><span><i class="bi bi-shield-check"></i> Secure &amp; private</span></div></aside>
     <section class="account-form-panel"><div class="account-form-wrap">
-      <NuxtLink class="account-mobile-logo" to="/">NOVA<span>CART</span></NuxtLink>
+      <NuxtLink class="account-mobile-logo" to="/"><img v-if="site.logo" :src="site.logo" :alt="siteName"><span v-else>{{ siteName }}</span></NuxtLink>
       <div class="account-title"><small>Password reset</small><h2>Set a new password</h2><p v-if="linkIsValid">Create a password for {{ email }}.</p><p v-else>Your reset link is incomplete or invalid.</p></div>
       <div v-if="message" class="reset-alert" role="alert">{{ message }}</div>
       <form v-if="linkIsValid" class="account-form" @submit.prevent="submit">

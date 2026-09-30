@@ -1,6 +1,8 @@
 <script setup>
 const config = useRuntimeConfig()
 const route = useRoute()
+const { data: catalogData } = useCatalogMenu()
+const siteName = computed(() => catalogData.value?.site?.name || 'Store')
 
 const page = computed(() => Number(route.query.page || 1))
 
@@ -28,7 +30,7 @@ const formatDate = (date) => {
         <section class="blog-masthead">
             <div class="container">
                 <div>
-                    <span class="blog-eyebrow">NOVACART JOURNAL</span>
+                    <span class="blog-eyebrow">{{ siteName }} JOURNAL</span>
                     <h1>Ideas for better<br>everyday living.</h1>
                     <p>Useful buying guides, fresh product stories and thoughtful inspiration curated by our team.</p>
                 </div>

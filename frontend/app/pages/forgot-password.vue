@@ -2,6 +2,10 @@
 useSeoMeta({ title: 'Forgot password', robots: 'noindex, nofollow' })
 
 const { forgotPassword, isAuthenticated } = useAuth()
+const { data: catalogData } = useCatalogMenu()
+const site = computed(() => catalogData.value?.site ?? {})
+const siteName = computed(() => site.value.name || 'Store')
+const siteInitials = computed(() => siteName.value.split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase())
 const email = ref('')
 const loading = ref(false)
 const message = ref('')
@@ -28,12 +32,12 @@ onMounted(() => { if (isAuthenticated.value) navigateTo('/account') })
 <template>
   <main class="account-main"><div class="account-shell">
     <aside class="account-visual"><div class="account-visual-content">
-      <NuxtLink to="/" class="account-mark">N<span>C</span></NuxtLink><small>Account security</small>
+      <NuxtLink to="/" class="account-mark">{{ siteInitials }}</NuxtLink><small>Account security</small>
       <h1>Reset your password securely.</h1><p>We will email you a link to create a new password for your account.</p>
       <div class="account-benefit-list"><span><i class="bi bi-envelope-check"></i><b>Secure email link</b><small>Only you can access your reset link</small></span><span><i class="bi bi-clock-history"></i><b>Time limited</b><small>The link expires after one hour</small></span></div>
     </div><div class="account-visual-footer"><span><i class="bi bi-shield-check"></i> Secure &amp; private</span></div></aside>
     <section class="account-form-panel"><div class="account-form-wrap">
-      <NuxtLink class="account-mobile-logo" to="/">NOVA<span>CART</span></NuxtLink>
+      <NuxtLink class="account-mobile-logo" to="/"><img v-if="site.logo" :src="site.logo" :alt="siteName"><span v-else>{{ siteName }}</span></NuxtLink>
       <div class="account-title"><small>Password help</small><h2>Forgot your password?</h2><p>Enter your email and we will send a reset link.</p></div>
       <div v-if="message" class="reset-alert success" role="status">{{ message }}</div>
       <div v-if="errorMessage" class="reset-alert" role="alert">{{ errorMessage }}</div>
