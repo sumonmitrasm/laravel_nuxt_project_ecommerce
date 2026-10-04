@@ -31,10 +31,23 @@ const lcpSlide = computed(() => sliders.value[0] ?? null)
 const hotDeals = computed(() => data.value?.hot_deals ?? [])
 const trendingGroups = computed(() => data.value?.trending_products ?? {})
 const trendingProducts = computed(() => trendingGroups.value[activeTrendingFilter.value] ?? [])
-const recommendedProducts = ref([...(recommendedData.value?.products ?? [])])
-const recommendedPage = ref(recommendedData.value?.pagination?.current_page ?? 1)
-const recommendedLastPage = ref(recommendedData.value?.pagination?.last_page ?? 1)
-const recommendedTotal = ref(recommendedData.value?.pagination?.total ?? recommendedProducts.value.length)
+// Keep the first page reactive during SSR and hydration. Copying it into a ref
+// before the request finishes leaves the server rendering the empty-state box.
+const additionalProducts = ref([])
+const loadedPagination = ref(null)
+const recommendedProducts = computed(() => {
+  let firstPageProducts = []
+
+  if (recommendedData.value && recommendedData.value.products) {
+    firstPageProducts = recommendedData.value.products
+  }
+
+  return firstPageProducts.concat(additionalProducts.value)
+})
+const recommendedPagination = computed(() => loadedPagination.value ?? recommendedData.value?.pagination)
+const recommendedPage = computed(() => recommendedPagination.value?.current_page ?? 1)
+const recommendedLastPage = computed(() => recommendedPagination.value?.last_page ?? 1)
+const recommendedTotal = computed(() => recommendedPagination.value?.total ?? recommendedProducts.value.length)
 const loadingMoreProducts = ref(false)
 const hasMoreProducts = computed(() => recommendedPage.value < recommendedLastPage.value)
 
@@ -47,10 +60,8 @@ const loadMoreProducts = async () => {
       baseURL: config.public.apiBase,
       query: { page: recommendedPage.value + 1 }
     })
-    recommendedProducts.value.push(...response.products)
-    recommendedPage.value = response.pagination.current_page
-    recommendedLastPage.value = response.pagination.last_page
-    recommendedTotal.value = response.pagination.total
+    additionalProducts.value = additionalProducts.value.concat(response.products)
+    loadedPagination.value = response.pagination
   } finally {
     loadingMoreProducts.value = false
   }

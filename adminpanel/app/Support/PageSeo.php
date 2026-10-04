@@ -5,7 +5,6 @@ namespace App\Support;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Setting;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class PageSeo
@@ -110,11 +109,10 @@ class PageSeo
 
     private function setting(): ?array
     {
-        return Cache::remember(
-            'api.general-setting.seo.v2',
-            now()->addHours(6),
-            fn () => Setting::query()->where('status', true)->latest('id')->first()?->toArray(),
-        );
+        // Settings power the storefront logo, contact details and SEO tags.
+        // Read the active record directly so an admin update is visible on the
+        // next storefront request instead of showing a stale value for hours.
+        return Setting::query()->where('status', true)->latest('id')->first()?->toArray();
     }
 
     private function frontendUrl(string $path = ''): string

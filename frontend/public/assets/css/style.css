@@ -1686,6 +1686,14 @@ body {
     color: var(--brand)
 }
 
+.mobile-menu-brand img {
+    display: block;
+    width: auto;
+    max-width: 150px;
+    height: 38px;
+    object-fit: contain;
+}
+
 .mobile-menu-body {
     padding: 18px 20px 24px;
     overflow-y: auto

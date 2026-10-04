@@ -114,7 +114,7 @@ onBeforeUnmount(() => clearTimeout(mobileSearchTimer))
     </footer>
     <div class="offcanvas offcanvas-start" id="menu" @click="handleMobileMenuClick">
         <div class="mobile-menu-head">
-            <NuxtLink class="mobile-menu-brand" to="/">NOVA<span>CART</span></NuxtLink><button class="btn-close"
+            <NuxtLink class="mobile-menu-brand" to="/"><img v-if="site.logo" :src="site.logo" :alt="siteName"><span v-else>{{ siteName }}</span></NuxtLink><button class="btn-close"
                 type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="mobile-menu-body">
