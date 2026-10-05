@@ -142,6 +142,14 @@
             </div>
         </div>
 
+        <div id="global-loader" hidden role="status" aria-live="polite" aria-label="Opening dashboard">
+            <div class="newsroom-loader" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="newsroom-loader-copy">
+                <strong>Preparing your workspace</strong>
+                <small>Loading your dashboard&hellip;</small>
+            </div>
+        </div>
+
         <!-- Jquery js-->
         <script src="{{ url('admin/assets/js/vendors/jquery.min.js') }}"></script>
 
@@ -206,12 +214,9 @@
                         },
                         success: function (response) {
                             if (response.status === true) {
-                                $("#alertContainer").html(`
-                        <div class="alert alert-success">
-                            ${response.message} Redirecting...
-                        </div>
-                    `);
-
+                                const loader = document.getElementById("global-loader");
+                                loader.hidden = false;
+                                loader.style.display = "flex";
                                 window.location.replace(response.redirect_url);
                             } else {
                                 $("#alertContainer").html(`
