@@ -5,7 +5,14 @@ type CatalogSeoResponse = {
   seo?: PageSeoData
 }
 
-const { data: catalogData } = useCatalogMenu()
+const { data: catalogData, refresh: refreshCatalog } = useCatalogMenu()
+const route = useRoute()
+
+// Prerendered HTML may contain settings from deployment day. Refresh only
+// after hydration, and when navigating, so server and browser markup agree.
+onMounted(() => { void refreshCatalog({ dedupe: 'defer' }) })
+// Search, sort and pagination queries do not change the shared site menu.
+watch(() => route.path, () => { void refreshCatalog({ dedupe: 'defer' }) })
 
 const favicon = computed(() =>
   (catalogData.value as CatalogSeoResponse | null)?.seo?.favicon

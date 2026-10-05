@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\Setting;
 use Illuminate\Support\Str;
 
 class PageSeo
@@ -109,10 +108,7 @@ class PageSeo
 
     private function setting(): ?array
     {
-        // Settings power the storefront logo, contact details and SEO tags.
-        // Read the active record directly so an admin update is visible on the
-        // next storefront request instead of showing a stale value for hours.
-        return Setting::query()->where('status', true)->latest('id')->first()?->toArray();
+        return SiteSettings::get();
     }
 
     private function frontendUrl(string $path = ''): string

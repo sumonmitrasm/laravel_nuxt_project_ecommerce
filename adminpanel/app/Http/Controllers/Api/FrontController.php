@@ -14,11 +14,12 @@ use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use App\Models\Section;
 use App\Support\PageSeo;
-use App\Support\ShopFilterCache;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+use App\Support\ContentCache;
 use Illuminate\Support\Facades\DB;
 use App\Models\Blog;
 use App\Models\Tag;
@@ -29,15 +30,13 @@ class FrontController extends Controller
 
     public function menu(): JsonResponse
     {
-        $sections = Cache::remember(
-            'api.sections-with-categories.v5',
-            now()->addHours(6),
+        $sections = ContentCache::remember(
+            'menu', 'data',
             fn () => Section::sections(),
         );
 
-        $sliders = Cache::remember(
-            'api.home-sliders.v1',
-            now()->addHours(6),
+        $sliders = ContentCache::remember(
+            'sliders', 'data',
             fn () => HomeSlider::query()
                 ->where('status', true)
                 ->orderBy('position')
@@ -59,9 +58,8 @@ class FrontController extends Controller
 
     public function about(): JsonResponse
     {
-        $about = Cache::remember(
-            'api.about.v1',
-            now()->addHours(6),
+        $about = ContentCache::remember(
+            'about', 'data',
             fn () => AboutPage::query()->first()?->toArray() ?? [],
         );
 
@@ -190,7 +188,7 @@ class FrontController extends Controller
             'pagination' => $this->paginationData($products),
         ]);
     }
-    private function productCards($products, string $badge): array
+    private function productCards(Collection $products, string $badge): array
     {
         return $products->map(function (Product $product) use ($badge) {
             $resolvedBadge = $badge ?: ($product->effective_discount > 0 ? 'Sale' : ($product->is_featured === 'Yes' ? 'Featured' : 'New'));
@@ -332,7 +330,7 @@ class FrontController extends Controller
         ], 200);
     }
 
-    private function applySearch($query, string $term): void
+    private function applySearch(Builder $query, string $term): void
     {
         $query->where(function ($search) use ($term) {
             $search->where('product_name', 'like', "%{$term}%")
@@ -382,7 +380,7 @@ class FrontController extends Controller
             : 'popular';
     }
 
-    private function applyCollectionFilter($query, string $sort): void
+    private function applyCollectionFilter(Builder $query, string $sort): void
     {
         if ($sort === 'newest') {
             $query->where('products.created_at', '>=', now()->subDays(30));
@@ -403,7 +401,7 @@ class FrontController extends Controller
             });
         }
     }
-    private function applySorting($query, string $sort): void
+    private function applySorting(Builder $query, string $sort): void
     {
         if ($sort === 'newest') {
             $query->latest('products.id');
@@ -445,7 +443,7 @@ class FrontController extends Controller
             ->orderByDesc('products.id');
     }
 
-    private function applyPriceFilter($query, array $range): void
+    private function applyPriceFilter(Builder $query, array $range): void
     {
         $discount = 'COALESCE(NULLIF(products.product_discount, 0), (SELECT category_discount FROM categories WHERE categories.id = products.category_id), 0)';
         $basePrice = "GREATEST(0, products.product_price * (1 - ({$discount} / 100)))";
@@ -462,7 +460,7 @@ class FrontController extends Controller
         });
     }
 
-    private function applyPriceBounds($query, string $priceExpression, array $range): void
+    private function applyPriceBounds(Builder $query, string $priceExpression, array $range): void
     {
         if ($range['min'] !== null) {
             $query->whereRaw("{$priceExpression} >= ?", [$range['min']]);
@@ -476,9 +474,8 @@ class FrontController extends Controller
     {
         sort($categoryIds);
         $scope = $categoryIds === [] ? 'all' : sha1(implode(',', $categoryIds));
-        $version = ShopFilterCache::version();
 
-        return Cache::remember("api.shop-filter.price.{$scope}.v{$version}", now()->addMinutes(10), function () use ($categoryIds) {
+        return ContentCache::remember('shop-filters', "price.{$scope}", function () use ($categoryIds) {
             $discount = 'COALESCE(NULLIF(product.product_discount, 0), category.category_discount, 0)';
             $effectivePrice = "GREATEST(0, COALESCE(variant.price, product.product_price) * (1 - ({$discount} / 100)))";
 
@@ -561,9 +558,8 @@ class FrontController extends Controller
         sort($categoryIds);
         sort($attributeIds);
         $scope = sha1(implode(',', $categoryIds).'|'.implode(',', $attributeIds));
-        $version = ShopFilterCache::version();
 
-        return Cache::remember("api.shop-filter.attributes.{$scope}.v{$version}", now()->addMinutes(10), function () use ($categoryIds, $attributeIds) {
+        return ContentCache::remember('shop-filters', "attributes.{$scope}", function () use ($categoryIds, $attributeIds) {
             $columns = [
                 'attribute.id as attribute_id', 'attribute.name as attribute_name',
                 'attribute.slug as attribute_slug', 'attribute.type as attribute_type',
@@ -579,7 +575,7 @@ class FrontController extends Controller
                 ->join('products as product', 'product.id', '=', 'variant.product_id')
                 ->whereIn('attribute.id', $attributeIds)->whereIn('product.category_id', $categoryIds)
                 ->where('attribute.status', true)->where('value.status', true)
-                ->where('variant.status', true)->where('product.status', true)->get($columns);
+                ->where('variant.status', true)->where('product.status', true)->select($columns);
 
             $specificationRows = DB::table('attributes as attribute')
                 ->join('attribute_values as value', 'value.attribute_id', '=', 'attribute.id')
@@ -587,16 +583,22 @@ class FrontController extends Controller
                 ->join('products as product', 'product.id', '=', 'pivot.product_id')
                 ->whereIn('attribute.id', $attributeIds)->whereIn('product.category_id', $categoryIds)
                 ->where('attribute.status', true)->where('value.status', true)
-                ->where('product.status', true)->get($columns);
+                ->where('product.status', true)->select($columns);
 
-            $rows = $variantRows->concat($specificationRows)
-                ->groupBy(fn ($row) => $row->attribute_id.'-'.$row->value_id)
-                ->map(function ($matches) {
-                    $row = $matches->first();
-                    $row->product_count = $matches->pluck('product_id')->unique()->count();
-
-                    return $row;
-                })->sortBy(fn ($row) => sprintf('%010d-%s-%010d-%s', $row->attribute_position, $row->attribute_name, $row->value_position, $row->value));
+            // Count in SQL instead of loading one PHP object per product/variant.
+            // UNION ALL is safe here: DISTINCT product_id counts each product once.
+            $groupColumns = [
+                'attribute_id', 'attribute_name', 'attribute_slug', 'attribute_type',
+                'attribute_position', 'value_id', 'value', 'color_code', 'value_position',
+            ];
+            $rows = DB::query()
+                ->fromSub($variantRows->unionAll($specificationRows), 'filter_values')
+                ->select($groupColumns)
+                ->selectRaw('COUNT(DISTINCT product_id) as product_count')
+                ->groupBy($groupColumns)
+                ->orderBy('attribute_position')->orderBy('attribute_name')
+                ->orderBy('value_position')->orderBy('value')
+                ->get();
 
             return $rows->groupBy('attribute_id')->map(fn ($values) => [
                 'id' => (int) $values->first()->attribute_id,
@@ -617,9 +619,8 @@ class FrontController extends Controller
     {
         sort($categoryIds);
         $scope = $categoryIds === [] ? 'all' : sha1(implode(',', $categoryIds));
-        $version = ShopFilterCache::version();
 
-        return Cache::remember("api.shop-filter.brands.{$scope}.v{$version}", now()->addMinutes(120), function () use ($categoryIds) {
+        return ContentCache::remember('shop-filters', "brands.{$scope}", function () use ($categoryIds) {
             return Brand::query()
                 ->select(['brands.id', 'brands.name'])
                 ->selectRaw('COUNT(DISTINCT products.id) AS product_count')
@@ -692,7 +693,7 @@ class FrontController extends Controller
         ]);
     }
 
-    private function productDetailsQuery()
+    private function productDetailsQuery(): Builder
     {
         return Product::with([
             'section:id,name',
@@ -755,7 +756,7 @@ class FrontController extends Controller
         return response()->json($payload, 200);
     }
 
-    public function blog(Request $request): JsonResponse
+    public function blog(): JsonResponse
     {
         $blogs = Blog::query()
             ->select(['id', 'title', 'slug', 'image', 'excerpt', 'published_at'])

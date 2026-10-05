@@ -2,13 +2,13 @@
 <div class="sticky">
     <aside class="app-sidebar sidebar-scroll">
         <div class="main-sidebar-header active">
-            <a class="desktop-logo logo-light active" href="{{ route('admin.dashboard') }}"><img
+            <a class="desktop-logo logo-light active" href="{{ route('admin.dashboard') }}" data-ajax-page><img
                     src="{{ optional($generalSetting)->image ? asset('admin/site_settings/' . basename($generalSetting->image)) : asset('admin/assets/images/brand/logo.png') }}" class="main-logo" alt="logo"></a>
-            <a class="desktop-logo logo-dark active" href="{{ route('admin.dashboard') }}"><img
+            <a class="desktop-logo logo-dark active" href="{{ route('admin.dashboard') }}" data-ajax-page><img
                     src="{{ optional($generalSetting)->image ? asset('admin/site_settings/' . basename($generalSetting->image)) : asset('admin/assets/images/brand/logo1.png') }}" class="main-logo" alt="logo"></a>
-            <a class="logo-icon mobile-logo icon-light active" href="{{ route('admin.dashboard') }}"><img
+            <a class="logo-icon mobile-logo icon-light active" href="{{ route('admin.dashboard') }}" data-ajax-page><img
                     src="{{ optional($generalSetting)->favicon ? asset('admin/site_settings/' . basename($generalSetting->favicon)) : asset('admin/assets/images/brand/favicon.png') }}" alt="logo"></a>
-            <a class="logo-icon mobile-logo icon-dark active" href="{{ route('admin.dashboard') }}"><img
+            <a class="logo-icon mobile-logo icon-dark active" href="{{ route('admin.dashboard') }}" data-ajax-page><img
                     src="{{ optional($generalSetting)->favicon ? asset('admin/site_settings/' . basename($generalSetting->favicon)) : asset('admin/assets/images/brand/favicon1.png') }}" alt="logo"></a>
         </div>
         <div class="main-sidemenu">

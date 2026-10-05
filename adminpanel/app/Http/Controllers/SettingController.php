@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Setting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class SettingController extends Controller
@@ -42,7 +41,6 @@ class SettingController extends Controller
     public function store(Request $request)
     {
         Setting::create($this->validatedData($request));
-        $this->clearSettingCache();
 
         return response()->json(['message' => 'Setting saved successfully.'], 201);
     }
@@ -77,7 +75,6 @@ class SettingController extends Controller
     public function update(Request $request, Setting $setting)
     {
         $setting->update($this->validatedData($request, $setting));
-        $this->clearSettingCache();
 
         return response()->json(['message' => 'Setting updated successfully.']);
     }
@@ -91,7 +88,6 @@ class SettingController extends Controller
         $this->deleteImage($setting->favicon);
         $this->deleteImage($setting->meta_image);
         $setting->delete();
-        $this->clearSettingCache();
 
         return response()->json(['message' => 'Setting deleted successfully.']);
     }
@@ -99,7 +95,6 @@ class SettingController extends Controller
     public function updateStatus(Request $request, Setting $setting)
     {
         $setting->update(['status' => ! $setting->status]);
-        $this->clearSettingCache();
 
         return response()->json(['message' => 'Setting status updated successfully.']);
     }
@@ -172,12 +167,5 @@ class SettingController extends Controller
         return $path ? asset('admin/site_settings/'.basename($path)) : null;
     }
 
-    private function clearSettingCache(): void
-    {
-        Cache::forget('general_setting');
-        Cache::forget('general_setting.v2');
-        Cache::forget('api.general-setting.seo.v1');
-        Cache::forget('api.general-setting.seo.v2');
-    }
 }
 

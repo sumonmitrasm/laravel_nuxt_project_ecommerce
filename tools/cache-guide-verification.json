@@ -1,0 +1,11 @@
+{
+  "date": "৫ অক্টোবর ২০২৬ — local verification",
+  "checks": [
+    "ContentCacheTest + FilterCachePerformanceTest + AdminPerformanceTest: ১৬টি test, ৩২৫টি assertion পাস।",
+    "content_cache_versions migration: local database-এ Ran status নিশ্চিত।",
+    "Local API smoke check: /api/menu, /api/contact, /api/about, /api/shipping-methods, /api/locations/divisions, /api/listing/t-shirt — সব HTTP 200 এবং valid JSON।",
+    "HTML guide: ৩৪টি source snapshot; ৩০টি embedded PHP file/example syntax check পাস।",
+    "Headless Chrome: ১৪৪০px desktop ও ৩৯০px mobile-এ horizontal overflow নেই; search, expand/collapse, source link এবং copy/select fallback পরীক্ষা পাস; JavaScript exception নেই।"
+  ],
+  "limit": "Tests isolated SQLite এবং array/database cache driver-এ চালানো। Redis service বন্ধ করে real Redis failover বা production concurrent traffic পরীক্ষা করা হয়নি। Live deployment করা হয়নি।"
+}

@@ -6,15 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\District;
 use App\Models\Division;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Cache;
+use App\Support\ContentCache;
 
 class LocationController extends Controller
 {
     public function divisions(): JsonResponse
     {
-        $divisions = Cache::remember(
+        $divisions = ContentCache::remember('locations',
             'api.locations.divisions.v2',
-            now()->addDay(),
             fn () => Division::query()->orderBy('name')->get(['id', 'name', 'bn_name'])->toArray(),
         );
 
@@ -23,9 +22,8 @@ class LocationController extends Controller
 
     public function districts(Division $division): JsonResponse
     {
-        $districts = Cache::remember(
+        $districts = ContentCache::remember('locations',
             "api.locations.division.{$division->id}.districts.v2",
-            now()->addDay(),
             fn () => $division->districts()->orderBy('name')->get(['id', 'name', 'bn_name'])->toArray(),
         );
 
@@ -34,9 +32,8 @@ class LocationController extends Controller
 
     public function upazilas(District $district): JsonResponse
     {
-        $upazilas = Cache::remember(
+        $upazilas = ContentCache::remember('locations',
             "api.locations.district.{$district->id}.upazilas.v2",
-            now()->addDay(),
             fn () => $district->upazilas()->orderBy('name')->get(['id', 'name', 'bn_name'])->toArray(),
         );
 

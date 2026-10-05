@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContactMessage;
-use App\Models\Setting;
+use App\Support\SiteSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -12,14 +12,14 @@ class ContactController extends Controller
 {
     public function info(): JsonResponse
     {
-        $setting = Setting::where('status', 1)->latest('id')->first();
+        $setting = SiteSettings::get();
 
         return response()->json([
-            'site_name' => $setting?->side_name,
-            'phone' => $setting?->phone ?: $setting?->perronal_phone,
-            'email' => $setting?->email,
-            'address' => $setting?->address,
-            'map_url' => $setting?->map_url,
+            'site_name' => $setting['side_name'] ?? null,
+            'phone' => ($setting['phone'] ?? null) ?: ($setting['perronal_phone'] ?? null),
+            'email' => $setting['email'] ?? null,
+            'address' => $setting['address'] ?? null,
+            'map_url' => $setting['map_url'] ?? null,
         ]);
     }
 

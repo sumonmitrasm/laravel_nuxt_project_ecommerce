@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\HomeSlider;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\Encoders\WebpEncoder;
@@ -22,7 +21,6 @@ class HomeSliderController extends Controller
         $data = $this->validated($request);
         if ($request->hasFile('image')) $data['image'] = $this->upload($request->file('image'));
         HomeSlider::create($data);
-        $this->clearCache();
         return response()->json(['message' => 'Home slider created successfully.'], 201);
     }
 
@@ -40,14 +38,12 @@ class HomeSliderController extends Controller
             $this->deleteImage($old);
         }
         $homeSlider->update($data);
-        $this->clearCache();
         return response()->json(['message' => 'Home slider updated successfully.']);
     }
 
     public function status(HomeSlider $homeSlider)
     {
         $homeSlider->update(['status' => ! $homeSlider->status]);
-        $this->clearCache();
         return response()->json(['message' => 'Slider status updated.']);
     }
 
@@ -56,7 +52,6 @@ class HomeSliderController extends Controller
         $image = $homeSlider->image;
         $homeSlider->delete();
         $this->deleteImage($image);
-        $this->clearCache();
         return response()->json(['message' => 'Home slider deleted.']);
     }
 
@@ -88,5 +83,4 @@ class HomeSliderController extends Controller
         if ($name && is_file($path = public_path('admin/home_sliders/'.basename($name)))) @unlink($path);
     }
 
-    private function clearCache(): void { Cache::forget('api.home-sliders.v1'); }
 }
