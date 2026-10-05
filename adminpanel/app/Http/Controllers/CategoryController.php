@@ -55,7 +55,7 @@ class CategoryController extends Controller
         return response()->json([
             'record' => $category,
             'image_url' => $category->image ? asset('admin/categoryimage/' . $category->image) : null,
-            'category_attributes' => $category->attributes->map(fn ($attribute) => [
+            'category_attributes' => $category->getRelation('attributes')->map(fn ($attribute) => [
                 'id' => $attribute->id,
                 'is_variant' => (bool) $attribute->pivot->is_variant,
                 'is_filterable' => (bool) $attribute->pivot->is_filterable,
@@ -160,8 +160,12 @@ class CategoryController extends Controller
             ]]);
 
         $category->attributes()->sync($sync->all());
+        \Illuminate\Support\Facades\DB::afterCommit(function () {
+            \App\Support\ContentCache::forget('shop-filters');
+        });
     }
 
+    /** @param \Illuminate\Http\UploadedFile $file */
     private function uploadImage($file): string
     {
         return $this->images->store($file, 'admin/categoryimage', 'category', 1200, 1200, 84);
@@ -172,13 +176,7 @@ class CategoryController extends Controller
         $this->images->delete($imageName, 'admin/categoryimage');
     }
 
-    private function isArrayList(mixed $value): bool
-    {
-        return is_array($value) && array_is_list($value) && collect($value)->every(fn ($record) => is_array($record));
-    }
-
-
-    private function isDescendant(int $candidateParentId, int $categoryId): bool
+private function isDescendant(int $candidateParentId, int $categoryId): bool
     {
         $currentParentId = $candidateParentId;
 

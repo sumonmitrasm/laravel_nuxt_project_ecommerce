@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ShippingMethod;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
 class ShippingMethodController extends Controller
@@ -26,7 +25,6 @@ class ShippingMethodController extends Controller
     public function store(Request $request)
     {
         ShippingMethod::create($this->validated($request));
-        $this->clearCache();
         return response()->json(['message' => 'Shipping method created successfully.'], 201);
     }
 
@@ -38,21 +36,18 @@ class ShippingMethodController extends Controller
     public function update(Request $request, ShippingMethod $shippingMethod)
     {
         $shippingMethod->update($this->validated($request, $shippingMethod));
-        $this->clearCache();
         return response()->json(['message' => 'Shipping method updated successfully.']);
     }
 
     public function updateStatus(ShippingMethod $shippingMethod)
     {
         $shippingMethod->update(['status' => ! $shippingMethod->status]);
-        $this->clearCache();
         return response()->json(['message' => 'Shipping method status updated successfully.']);
     }
 
     public function destroy(ShippingMethod $shippingMethod)
     {
         $shippingMethod->delete();
-        $this->clearCache();
         return response()->json(['message' => 'Shipping method deleted successfully.']);
     }
 
@@ -70,8 +65,4 @@ class ShippingMethodController extends Controller
         ]);
     }
 
-    private function clearCache(): void
-    {
-        Cache::forget('api.shipping-methods.v1');
-    }
 }

@@ -2,10 +2,8 @@
 
 namespace App\Notifications;
 
-use App\Models\Setting;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\Cache;
 
 class StorefrontResetPasswordNotification extends Notification
 {
@@ -24,14 +22,10 @@ class StorefrontResetPasswordNotification extends Notification
             'email' => $notifiable->getEmailForPasswordReset(),
         ], '', '&', PHP_QUERY_RFC3986);
 
-        $setting = Cache::remember(
-            'general_setting.v2',
-            now()->addHours(6),
-            fn () => Setting::query()->where('status', true)->latest('id')->first(['side_name', 'image']),
-        );
-        $siteName = $setting?->side_name ?: config('app.name', 'Store');
-        $logoUrl = $setting?->image
-            ? asset('admin/site_settings/'.basename($setting->image))
+        $setting = \App\Support\SiteSettings::get();
+        $siteName = ($setting['side_name'] ?? null) ?: config('app.name', 'Store');
+        $logoUrl = !empty($setting['image'])
+            ? asset('admin/site_settings/'.basename($setting['image']))
             : null;
 
         return (new MailMessage)

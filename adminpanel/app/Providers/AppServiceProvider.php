@@ -12,13 +12,6 @@ use App\Models\Product;
 use App\Models\ProductAttributeDefinition;
 use App\Models\ProductAttributeValue;
 use App\Models\Section;
-use App\Observers\BrandObserver;
-use App\Observers\CategoryObserver;
-use App\Observers\ProductObserver;
-use App\Observers\ProductAttributeObserver;
-use App\Observers\SectionObserver;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 class AppServiceProvider extends ServiceProvider
@@ -36,21 +29,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Product::observe(ProductObserver::class);
-        ProductAttributeDefinition::observe(ProductAttributeObserver::class);
-        ProductAttributeValue::observe(ProductAttributeObserver::class);
-        Brand::observe(BrandObserver::class);
-        Category::observe(CategoryObserver::class);
-        Section::observe(SectionObserver::class);
+        $cachedModels = [
+            Setting::class, Product::class, Category::class, Section::class,
+            Brand::class, ProductAttributeDefinition::class, ProductAttributeValue::class,
+            \App\Models\ProductVariant::class, \App\Models\HomeSlider::class,
+            \App\Models\AboutPage::class, \App\Models\ShippingMethod::class,
+            \App\Models\Division::class, \App\Models\District::class, \App\Models\Upazila::class,
+        ];
+        foreach ($cachedModels as $model) {
+            $model::observe(\App\Observers\ContentCacheObserver::class);
+        }
 
         Paginator::useBootstrap();
         // Read site settings only when a view needs them, not on every API/Artisan call.
         View::composer(['admin.login', 'admin.layout.*', 'emails.order-placed'], function ($view) {
-            $generalSetting = Cache::remember(
-                'general_setting.v2',
-                now()->addHours(6),
-                fn () => Setting::query()->where('status', true)->latest('id')->first()?->toArray(),
-            );
+            $generalSetting = \App\Support\SiteSettings::get();
             $view->with('generalSetting', $generalSetting ? (object) $generalSetting : null);
         });
 

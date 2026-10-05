@@ -6,7 +6,6 @@ use App\Models\AboutPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class AboutPageController extends Controller
@@ -43,7 +42,6 @@ class AboutPageController extends Controller
         ]);
 
         AboutPage::query()->firstOrCreate([])->update($data);
-        Cache::forget('api.about.v1');
 
         if ($request->expectsJson()) {
             return response()->json(['message' => 'About page updated successfully.']);

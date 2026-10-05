@@ -20,7 +20,7 @@
                                 ? asset('admin/site_settings/' . basename($generalSetting->favicon))
                                 : $siteLogo;
                         @endphp
-                        <a class="header-brand" href="{{ route('admin.dashboard') }}">
+                        <a class="header-brand" href="{{ route('admin.dashboard') }}" data-ajax-page>
                             <img src="{{ $siteLogo }}" class="header-brand-img desktop-lgo" alt="{{ $siteName }} logo">
                             <img src="{{ $siteLogo }}" class="header-brand-img dark-logo" alt="{{ $siteName }} logo">
                             <img src="{{ $siteFavicon }}" class="header-brand-img mobile-logo" alt="{{ $siteName }} logo">
