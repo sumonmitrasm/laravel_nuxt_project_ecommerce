@@ -19,6 +19,15 @@ export const useCatalogMenu = () => {
   return useFetch<CatalogMenuResponse>('/menu', {
     baseURL: config.public.apiBase,
     key: 'catalog-menu',
+    // Reuse generated data only for the first hydration. A refresh must
+    // request current settings, even if hydration has not finished yet.
+    getCachedData(key, nuxtApp, context) {
+      if (context.cause === 'initial' && nuxtApp.isHydrating) {
+        return nuxtApp.payload.data[key]
+      }
+      return undefined
+    },
+    cache: 'no-store',
     // Do not wait for the menu API before changing pages.
     lazy: true,
   })

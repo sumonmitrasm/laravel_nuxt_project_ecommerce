@@ -10,9 +10,20 @@ const route = useRoute()
 
 // Prerendered HTML may contain settings from deployment day. Refresh only
 // after hydration, and when navigating, so server and browser markup agree.
-onMounted(() => { void refreshCatalog({ dedupe: 'defer' }) })
+const refreshSite = () => { void refreshCatalog({ dedupe: 'defer' }) }
+const refreshVisibleSite = () => {
+  if (document.visibilityState === 'visible') refreshSite()
+}
+onNuxtReady(() => {
+  refreshSite()
+  // Returning from the admin tab should also pick up a newly saved logo.
+  document.addEventListener('visibilitychange', refreshVisibleSite)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', refreshVisibleSite)
+})
 // Search, sort and pagination queries do not change the shared site menu.
-watch(() => route.path, () => { void refreshCatalog({ dedupe: 'defer' }) })
+watch(() => route.path, refreshSite)
 
 const favicon = computed(() =>
   (catalogData.value as CatalogSeoResponse | null)?.seo?.favicon
